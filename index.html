@@ -12,20 +12,20 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
         
         body {
             color: #333;
             line-height: 1.6;
-            background-color: #f8f9fa;
+            background-color: #FFFFFF;
         }
         
         .container {
             width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 15px;
+            padding: 0 20px;
         }
         
         a {
@@ -39,53 +39,58 @@
         
         .btn {
             display: inline-block;
-            background-color: #4CAF50;
+            background-color: #00a553;
             color: white;
-            padding: 12px 24px;
-            border-radius: 4px;
+            padding: 14px 32px;
+            border-radius: 50px;
             font-weight: 600;
             transition: all 0.3s ease;
             border: none;
             cursor: pointer;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
         }
         
         .btn:hover {
-            background-color: #3d8b40;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            background-color: #008a45;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 165, 83, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: #1772af;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #145c92;
+            box-shadow: 0 8px 20px rgba(23, 114, 175, 0.3);
         }
         
         .section-title {
             text-align: center;
-            margin-bottom: 40px;
-            color: #2c5e1a;
-            font-size: 2.2rem;
-            position: relative;
-            padding-bottom: 15px;
-        }
-        
-        .section-title:after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 3px;
-            background-color: #4CAF50;
+            margin-bottom: 50px;
+            color: #111;
+            font-size: 2.4rem;
+            font-weight: 700;
         }
         
         /* Header */
         header {
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
+            background-color: #FFFFFF;
+            position: fixed;
             top: 0;
+            left: 0;
+            width: 100%;
             z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        header.scrolled {
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
         }
         
         .main-header {
-            padding: 15px 0;
+            padding: 20px 0;
         }
         
         .main-header .container {
@@ -95,7 +100,7 @@
         }
         
         .logo {
-            height: 60px;
+            height: 50px;
             display: flex;
             align-items: center;
         }
@@ -103,26 +108,29 @@
         .logo img {
             height: 100%;
             width: auto;
-            max-width: 250px;
+            max-width: 200px;
+            filter: brightness(0.9);
         }
         
         .mobile-menu-btn {
             display: none;
             font-size: 1.5rem;
             cursor: pointer;
-            color: #2c5e1a;
+            color: #111;
+            background: none;
+            border: none;
+            padding: 5px;
         }
         
-        /* Hero Section con YouTube - NUEVO */
+        /* Hero Section con YouTube - Minimalista */
         .hero {
             position: relative;
-            height: 70vh;
-            min-height: 500px;
+            height: 100vh;
+            min-height: 700px;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            text-align: center;
             color: white;
         }
         
@@ -133,7 +141,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
+            z-index: 0;
             overflow: hidden;
         }
         
@@ -141,7 +149,7 @@
             position: relative;
             width: 100%;
             height: 100%;
-            padding-bottom: 56.25%; /* Relación 16:9 */
+            padding-bottom: 56.25%;
             height: 0;
         }
         
@@ -155,146 +163,147 @@
             min-width: 100%;
             min-height: 100%;
             object-fit: cover;
-            pointer-events: none; /* Para evitar interferencias */
+            pointer-events: none;
+            filter: brightness(0.8);
         }
         
-        /* Overlay para mejorar legibilidad */
+        /* Overlay minimalista */
         .hero-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+            z-index: 1;
         }
         
-        /* Fondo de respaldo por si falla YouTube */
-        .hero-fallback {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #2c5e1a 0%, #4CAF50 100%);
-            z-index: -2;
-            display: none; /* Oculto por defecto */
-        }
-        
+        /* Contenido Hero - Minimalista */
         .hero-content {
             position: relative;
-            z-index: 1;
-            max-width: 800px;
-            padding: 0 20px;
+            z-index: 2;
+            max-width: 600px;
+            padding: 0 30px;
+            text-align: center;
         }
         
         .hero h1 {
-            font-size: 3rem;
+            font-size: 3.5rem;
             margin-bottom: 20px;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            font-weight: 700;
+            line-height: 1.1;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
         
-        .hero p {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        .hero-subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            text-shadow: 0 1px 5px rgba(0,0,0,0.3);
+        }
+        
+        .hero-cta {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
         
         /* Servicios */
         .servicios {
-            padding: 80px 0;
-            background-color: white;
+            padding: 100px 0;
+            background-color: #FFFFFF;
         }
         
         .servicios-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
+            gap: 40px;
         }
         
         .servicio-card {
-            background-color: #f8f9fa;
-            border-radius: 8px;
+            background-color: #FFFFFF;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            transition: transform 0.3s;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
         }
         
         .servicio-card:hover {
             transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-color: #00a553;
         }
         
         .servicio-icon {
-            background-color: #e8f5e9;
+            background-color: #f8f9fa;
             height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 3rem;
-            color: #2c5e1a;
+            color: #00a553;
         }
         
         .servicio-content {
-            padding: 25px;
+            padding: 30px;
         }
         
         .servicio-content h3 {
             margin-bottom: 15px;
-            color: #2c5e1a;
+            color: #111;
+            font-size: 1.4rem;
+        }
+        
+        .servicio-content p {
+            color: #666;
+            line-height: 1.7;
         }
         
         /* Contacto */
         .contacto {
-            padding: 80px 0;
-            background-color: #2c5e1a;
-            color: white;
-        }
-        
-        .contacto .section-title {
-            color: white;
-        }
-        
-        .contacto .section-title:after {
-            background-color: #4CAF50;
+            padding: 100px 0;
+            background-color: #f8f9fa;
         }
         
         .contacto-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 40px;
+            gap: 50px;
         }
         
         .contact-info-card {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #FFFFFF;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
         }
         
         .contact-info-card h3 {
-            margin-bottom: 25px;
+            margin-bottom: 30px;
+            color: #111;
             font-size: 1.8rem;
-            color: #a8d5a5;
         }
         
         .contact-item {
             display: flex;
             align-items: center;
             margin-bottom: 25px;
-            padding: 15px;
-            background-color: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            background-color: #FFFFFF;
             border-radius: 8px;
             transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
         }
         
         .contact-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            border-color: #1772af;
             transform: translateX(5px);
         }
         
         .contact-icon {
-            background-color: #4CAF50;
+            background-color: #1772af;
             color: white;
             width: 50px;
             height: 50px;
@@ -309,29 +318,30 @@
         
         .contact-text h4 {
             margin-bottom: 5px;
+            color: #111;
             font-size: 1.1rem;
         }
         
         .contact-text a {
-            color: #a8d5a5;
+            color: #1772af;
             transition: color 0.3s;
+            font-weight: 500;
         }
         
         .contact-text a:hover {
-            color: white;
-            text-decoration: underline;
+            color: #00a553;
         }
         
         .contact-text p {
+            color: #666;
             font-size: 0.95rem;
-            opacity: 0.9;
         }
         
         .map-container {
             height: 400px;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         
         .map-container iframe {
@@ -342,29 +352,57 @@
         
         /* Footer */
         footer {
-            background-color: #1a3d11;
-            color: white;
-            padding: 40px 0 20px;
+            background-color: #FFFFFF;
+            color: #333;
+            padding: 60px 0 30px;
             text-align: center;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
         }
         
         .footer-logo {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .footer-logo img {
-            height: 60px;
+            height: 50px;
             width: auto;
+            filter: brightness(0.9);
+        }
+        
+        .footer-text {
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
         }
         
         .copyright {
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 30px;
+            border-top: 1px solid #f0f0f0;
             font-size: 0.9rem;
-            color: rgba(255,255,255,0.7);
+            color: #888;
+            width: 100%;
+            margin-top: 20px;
         }
         
         /* Responsive */
+        @media (max-width: 992px) {
+            .hero h1 {
+                font-size: 2.8rem;
+            }
+            
+            .section-title {
+                font-size: 2.2rem;
+            }
+        }
+        
         @media (max-width: 768px) {
             .mobile-menu-btn {
                 display: block;
@@ -374,13 +412,13 @@
                 position: fixed;
                 top: 0;
                 right: -100%;
-                width: 250px;
+                width: 280px;
                 height: 100vh;
-                background-color: white;
-                box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+                background-color: #FFFFFF;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.1);
                 transition: right 0.3s;
                 z-index: 1001;
-                padding: 80px 20px 20px;
+                padding: 90px 30px 30px;
             }
             
             nav.active {
@@ -389,22 +427,37 @@
             
             nav ul {
                 flex-direction: column;
+                gap: 20px;
             }
             
-            nav ul li {
-                margin: 0 0 20px 0;
+            nav ul li a {
+                font-weight: 600;
+                color: #111;
+                font-size: 1.1rem;
+                display: block;
+                padding: 10px 0;
+            }
+            
+            .hero {
+                min-height: 600px;
             }
             
             .hero h1 {
-                font-size: 2.2rem;
+                font-size: 2.4rem;
             }
             
-            .hero p {
-                font-size: 1rem;
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .hero-cta {
+                flex-direction: column;
+                align-items: center;
             }
             
             .section-title {
-                font-size: 1.8rem;
+                font-size: 2rem;
+                margin-bottom: 40px;
             }
             
             .contact-item {
@@ -414,10 +467,9 @@
             
             .contact-icon {
                 margin-right: 0;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
             }
             
-            /* Ajustes para YouTube en móviles */
             .youtube-video-wrapper iframe {
                 width: 300%;
                 height: 100%;
@@ -427,20 +479,24 @@
         
         @media (max-width: 480px) {
             .hero {
-                height: 60vh;
-                min-height: 400px;
+                min-height: 500px;
             }
             
             .hero h1 {
-                font-size: 1.8rem;
+                font-size: 2rem;
             }
             
-            .servicios {
-                padding: 50px 0;
+            .hero-subtitle {
+                font-size: 1rem;
+                margin-bottom: 30px;
             }
             
-            .contacto {
-                padding: 50px 0;
+            .servicios, .contacto {
+                padding: 70px 0;
+            }
+            
+            .contact-info-card {
+                padding: 30px 20px;
             }
             
             .youtube-video-wrapper iframe {
@@ -450,9 +506,9 @@
             }
         }
         
-        @media (max-height: 600px) {
+        @media (max-height: 700px) {
             .hero {
-                height: 80vh;
+                min-height: 600px;
             }
         }
         
@@ -463,31 +519,112 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #2c5e1a;
+            background: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: -1;
-            color: white;
+            z-index: 3;
+            color: #111;
             font-size: 1.2rem;
         }
         
         .youtube-loading.hidden {
             display: none;
         }
+        
+        /* Estilos de navegación */
+        nav ul {
+            display: flex;
+            gap: 35px;
+        }
+        
+        nav ul li a {
+            font-weight: 600;
+            color: #111;
+            padding: 8px 0;
+            position: relative;
+            font-size: 1rem;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            color: #00a553;
+        }
+        
+        nav ul li a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #00a553;
+            transition: width 0.3s;
+        }
+        
+        nav ul li a:hover:after {
+            width: 100%;
+        }
+        
+        /* Scroll suave */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Animaciones */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .fade-in.delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .fade-in.delay-2 {
+            animation-delay: 0.4s;
+        }
+        
+        /* Pulse animation for CTA */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 165, 83, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 165, 83, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 165, 83, 0);
+            }
+        }
+        
+        .btn-pulse {
+            animation: pulse 2s infinite;
+        }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <header>
+    <header id="mainHeader">
         <div class="main-header">
             <div class="container">
                 <div class="logo">
                     <img src="logo.png" alt="Agrosistemas Logo">
                 </div>
-                <div class="mobile-menu-btn" id="mobileMenuBtn">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
                     <i class="fas fa-bars"></i>
-                </div>
+                </button>
                 <nav id="mainNav">
                     <ul>
                         <li><a href="#inicio">Inicio</a></li>
@@ -501,9 +638,6 @@
 
     <!-- Hero Section con YouTube -->
     <section class="hero" id="inicio">
-        <!-- Fondo de respaldo -->
-        <div class="hero-fallback" id="heroFallback"></div>
-        
         <!-- Pantalla de carga -->
         <div class="youtube-loading" id="youtubeLoading">
             <div>Cargando video...</div>
@@ -518,51 +652,54 @@
         
         <div class="hero-overlay"></div>
         <div class="hero-content">
-            <h1>Soluciones Agrícolas Integrales</h1>
-            <p>Tecnología, equipos y asesoría especializada para optimizar la producción agrícola y maximizar el rendimiento de tus cultivos.</p>
-            <a href="#contacto" class="btn">Contáctanos</a>
+            <h1 class="fade-in">Soluciones Agrícolas Integrales</h1>
+            <p class="hero-subtitle fade-in delay-1">Tecnología y asesoría especializada para optimizar tu producción</p>
+            <div class="hero-cta fade-in delay-2">
+                <a href="#contacto" class="btn btn-pulse">Contáctanos</a>
+                <a href="#servicios" class="btn btn-secondary">Nuestros Servicios</a>
+            </div>
         </div>
     </section>
 
     <!-- Servicios -->
     <section class="servicios" id="servicios">
         <div class="container">
-            <h2 class="section-title">Nuestros Servicios</h2>
+            <h2 class="section-title">Servicios Especializados</h2>
             <div class="servicios-grid">
-                <div class="servicio-card">
+                <div class="servicio-card fade-in">
                     <div class="servicio-icon">
                         <i class="fas fa-seedling"></i>
                     </div>
                     <div class="servicio-content">
                         <h3>Asesoría Técnica</h3>
-                        <p>Asesoramiento especializado para la planificación, manejo y optimización de sistemas de producción agrícola.</p>
+                        <p>Planificación y optimización de sistemas de producción agrícola con tecnología de punta.</p>
                     </div>
                 </div>
-                <div class="servicio-card">
+                <div class="servicio-card fade-in delay-1">
                     <div class="servicio-icon">
                         <i class="fas fa-tint"></i>
                     </div>
                     <div class="servicio-content">
                         <h3>Sistemas de Riego</h3>
-                        <p>Diseño e implementación de sistemas de riego eficientes que optimizan el uso del agua y mejoran la productividad.</p>
+                        <p>Diseño e implementación de sistemas eficientes que optimizan el uso del agua.</p>
                     </div>
                 </div>
-                <div class="servicio-card">
+                <div class="servicio-card fade-in delay-2">
                     <div class="servicio-icon">
                         <i class="fas fa-solar-panel"></i>
                     </div>
                     <div class="servicio-content">
                         <h3>Energía Solar</h3>
-                        <p>Soluciones de energía renovable para operaciones agrícolas, reduciendo costos y minimizando el impacto ambiental.</p>
+                        <p>Soluciones renovables que reducen costos y el impacto ambiental.</p>
                     </div>
                 </div>
-                <div class="servicio-card">
+                <div class="servicio-card fade-in">
                     <div class="servicio-icon">
                         <i class="fas fa-cogs"></i>
                     </div>
                     <div class="servicio-content">
-                        <h3>Equipamiento Agrícola</h3>
-                        <p>Venta y mantenimiento de maquinaria y equipos especializados para todo tipo de cultivos y operaciones.</p>
+                        <h3>Equipamiento</h3>
+                        <p>Venta y mantenimiento de maquinaria especializada para todo tipo de cultivos.</p>
                     </div>
                 </div>
             </div>
@@ -574,7 +711,7 @@
         <div class="container">
             <h2 class="section-title">Contáctanos</h2>
             <div class="contacto-grid">
-                <div class="contact-info-card">
+                <div class="contact-info-card fade-in">
                     <h3>Información de Contacto</h3>
                     
                     <div class="contact-item">
@@ -584,9 +721,9 @@
                         <div class="contact-text">
                             <h4>Ubicación</h4>
                             <a href="https://maps.google.com/?q=Av.+Agricultura+123,+Zona+Industrial,+Ciudad,+Estado,+México" target="_blank">
-                                Av. Agricultura 123, Zona Industrial, Ciudad, Estado, México
+                                Av. Agricultura 123, Zona Industrial
                             </a>
-                            <p>Visítanos en nuestras instalaciones</p>
+                            <p>Ciudad, Estado, México</p>
                         </div>
                     </div>
                     
@@ -628,7 +765,7 @@
                     </div>
                 </div>
                 
-                <div class="map-container">
+                <div class="map-container fade-in delay-1">
                     <iframe 
                         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15050.383979960279!2d-99.1458383!3d19.4326077!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b75aa014d%3A0x17e617c6c8c7c1a7!2sCentro%20Hist%C3%B3rico%20de%20la%20Ciudad%20de%20M%C3%A9xico%2C%20Centro%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX%2C%20M%C3%A9xico!5e0!3m2!1ses!2sus!4v1618940657559!5m2!1ses!2sus" 
                         allowfullscreen="" 
@@ -642,12 +779,14 @@
     <!-- Footer -->
     <footer>
         <div class="container">
-            <div class="footer-logo">
-                <img src="logo.png" alt="Agrosistemas Logo">
-            </div>
-            <p>Proveedores líderes de soluciones integrales para el sector agrícola</p>
-            <div class="copyright">
-                <p>&copy; 2023 Agrosistemas. Todos los derechos reservados. | Hosteado en GitHub Pages</p>
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="logo.png" alt="Agrosistemas Logo">
+                </div>
+                <p class="footer-text">Proveedores líderes de soluciones integrales para el sector agrícola. Tecnología, equipos y asesoría especializada para optimizar la producción agrícola.</p>
+                <div class="copyright">
+                    <p>&copy; 2023 Agrosistemas. Todos los derechos reservados.</p>
+                </div>
             </div>
         </div>
     </footer>
@@ -656,7 +795,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const mainNav = document.getElementById('mainNav');
-            const heroFallback = document.getElementById('heroFallback');
+            const mainHeader = document.getElementById('mainHeader');
             const youtubeLoading = document.getElementById('youtubeLoading');
             
             // Menú móvil
@@ -667,9 +806,11 @@
                 if (mainNav.classList.contains('active')) {
                     icon.classList.remove('fa-bars');
                     icon.classList.add('fa-times');
+                    document.body.style.overflow = 'hidden';
                 } else {
                     icon.classList.remove('fa-times');
                     icon.classList.add('fa-bars');
+                    document.body.style.overflow = '';
                 }
             });
             
@@ -680,30 +821,22 @@
                     mainNav.classList.remove('active');
                     mobileMenuBtn.querySelector('i').classList.remove('fa-times');
                     mobileMenuBtn.querySelector('i').classList.add('fa-bars');
+                    document.body.style.overflow = '';
                 });
             });
             
-            // Smooth scroll para enlaces internos
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    const targetId = this.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        window.scrollTo({
-                            top: targetElement.offsetTop - 80,
-                            behavior: 'smooth'
-                        });
-                    }
-                });
+            // Header scroll effect
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    mainHeader.classList.add('scrolled');
+                } else {
+                    mainHeader.classList.remove('scrolled');
+                }
             });
             
             // ========== REPRODUCTOR DE YOUTUBE ==========
             
-            // ID del video de YouTube (extraído de la URL: https://www.youtube.com/watch?v=vM0KY4ys2yM)
+            // ID del video de YouTube
             const youtubeVideoId = 'vM0KY4ys2yM';
             
             // Función para crear el iframe de YouTube
@@ -712,19 +845,19 @@
                 
                 // Parámetros para autoplay, silenciado, controles, etc.
                 const youtubeParams = {
-                    autoplay: 1,           // Autoplay activado
-                    mute: 1,              // Silenciado (requerido para autoplay)
-                    controls: 0,          // Sin controles
-                    showinfo: 0,          // Sin información del video
-                    rel: 0,               // Sin videos relacionados al final
-                    loop: 1,              // Loop activado
-                    playlist: youtubeVideoId, // Necesario para loop
-                    enablejsapi: 1,       // Habilitar API de JavaScript
-                    iv_load_policy: 3,    // Sin anotaciones
-                    modestbranding: 1,    // Branding mínimo
-                    fs: 0,                // Sin pantalla completa
-                    disablekb: 1,         // Deshabilitar teclado
-                    playsinline: 1        // Reproducir en línea (iOS)
+                    autoplay: 1,
+                    mute: 1,
+                    controls: 0,
+                    showinfo: 0,
+                    rel: 0,
+                    loop: 1,
+                    playlist: youtubeVideoId,
+                    enablejsapi: 1,
+                    iv_load_policy: 3,
+                    modestbranding: 1,
+                    fs: 0,
+                    disablekb: 1,
+                    playsinline: 1
                 };
                 
                 // Construir URL de parámetros
@@ -748,94 +881,54 @@
                 iframe.addEventListener('load', function() {
                     setTimeout(() => {
                         youtubeLoading.classList.add('hidden');
-                        console.log('Video de YouTube cargado correctamente');
                     }, 500);
                 });
                 
                 // Manejar errores
                 iframe.addEventListener('error', function() {
-                    console.error('Error al cargar el video de YouTube');
                     youtubeLoading.classList.add('hidden');
-                    heroFallback.style.display = 'flex';
-                    heroFallback.style.zIndex = '-1';
+                    // Si falla YouTube, mostrar overlay más oscuro
+                    document.querySelector('.hero-overlay').style.background = 'rgba(0, 0, 0, 0.8)';
                 });
-            }
-            
-            // Función para verificar si YouTube está disponible
-            function checkYouTubeAvailability() {
-                // Intentar cargar el video de YouTube
-                loadYouTubeVideo();
-                
-                // Plan B: Si después de 5 segundos no se carga, usar fallback
-                setTimeout(function() {
-                    const iframe = document.querySelector('.youtube-video-wrapper iframe');
-                    if (!iframe || !iframe.src) {
-                        console.log('YouTube no está disponible, usando fondo de respaldo');
-                        youtubeLoading.classList.add('hidden');
-                        heroFallback.style.display = 'flex';
-                        heroFallback.style.zIndex = '-1';
-                    }
-                }, 5000);
             }
             
             // Cargar YouTube cuando la página esté lista
             window.addEventListener('load', function() {
-                // Pequeño retraso para asegurar que todo esté listo
-                setTimeout(checkYouTubeAvailability, 100);
+                setTimeout(loadYouTubeVideo, 100);
+                
+                // Plan B: Si después de 5 segundos no se carga
+                setTimeout(function() {
+                    const iframe = document.querySelector('.youtube-video-wrapper iframe');
+                    if (!iframe || !iframe.src) {
+                        youtubeLoading.classList.add('hidden');
+                        document.querySelector('.hero-overlay').style.background = 'rgba(0, 0, 0, 0.8)';
+                    }
+                }, 5000);
             });
             
-            // Manejar la visibilidad del video para ahorrar recursos
-            const videoObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    const iframe = document.querySelector('.youtube-video-wrapper iframe');
-                    if (iframe) {
-                        if (entry.isIntersecting) {
-                            // Video visible, enviar comando de play (si la API está disponible)
-                            try {
-                                iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-                            } catch (e) {
-                                // Silenciar error si no se puede acceder
-                            }
-                        } else {
-                            // Video no visible, enviar comando de pausa
-                            try {
-                                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-                            } catch (e) {
-                                // Silenciar error si no se puede acceder
-                            }
-                        }
-                    }
-                });
-            }, { threshold: 0.5 });
-            
-            // Observar la sección hero
-            const heroSection = document.querySelector('.hero');
-            videoObserver.observe(heroSection);
-            
-            // Efecto de aparición al hacer scroll
-            const scrollObserverOptions = {
+            // Animaciones al hacer scroll
+            const observerOptions = {
                 threshold: 0.1,
                 rootMargin: '0px 0px -50px 0px'
             };
             
-            const scrollObserver = new IntersectionObserver((entries) => {
+            const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('visible');
                     }
                 });
-            }, scrollObserverOptions);
+            }, observerOptions);
             
-            document.querySelectorAll('.servicio-card, .contact-item').forEach(el => {
-                el.classList.add('fade-in');
-                scrollObserver.observe(el);
+            // Observar elementos con clase fade-in
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
             });
             
-            // Detectar si estamos en un dispositivo móvil y ajustar el video
+            // Detectar dispositivo móvil y ajustar video
             function adjustVideoForMobile() {
                 const iframe = document.querySelector('.youtube-video-wrapper iframe');
                 if (iframe && window.innerWidth <= 768) {
-                    // Para móviles, aumentar el tamaño del iframe para cubrir más área
                     iframe.style.width = '300%';
                     iframe.style.height = '100%';
                     iframe.style.left = '-100%';
@@ -847,98 +940,99 @@
             
             // Ajustar inicialmente
             setTimeout(adjustVideoForMobile, 1000);
+            
+            // Smooth scroll para botones CTA
+            document.querySelectorAll('.btn[href^="#"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    if (href !== '#') {
+                        e.preventDefault();
+                        const targetElement = document.querySelector(href);
+                        if (targetElement) {
+                            window.scrollTo({
+                                top: targetElement.offsetTop - 100,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                });
+            });
+            
+            // Inicializar animaciones para elementos ya visibles
+            setTimeout(() => {
+                const heroContent = document.querySelector('.hero-content');
+                if (heroContent) {
+                    heroContent.style.visibility = 'visible';
+                }
+            }, 500);
         });
         
-        // Estilos adicionales para animaciones
+        // Estilo adicional para mejorar la legibilidad
         const style = document.createElement('style');
         style.textContent = `
-            .fade-in {
-                opacity: 0;
-                transform: translateY(20px);
-                transition: opacity 0.5s ease, transform 0.5s ease;
+            /* Mejorar legibilidad del hero */
+            .hero-content {
+                visibility: hidden;
+                animation: none;
             }
             
-            .fade-in.visible {
-                opacity: 1;
-                transform: translateY(0);
+            .hero h1 {
+                margin-bottom: 15px;
             }
             
-            nav ul {
-                display: flex;
+            .hero-subtitle {
+                margin-bottom: 40px;
+                font-weight: 400;
             }
             
-            nav ul li {
-                margin-left: 25px;
+            /* Asegurar que el overlay oscurezca suficiente el video */
+            .hero-overlay {
+                background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
             }
             
-            nav ul li a {
-                font-weight: 600;
-                color: #333;
-                padding: 5px 0;
-                position: relative;
+            /* Estilo para navegación en móvil */
+            @media (max-width: 768px) {
+                nav ul li a {
+                    font-size: 1.2rem;
+                    padding: 12px 0;
+                    border-bottom: 1px solid #f0f0f0;
+                }
+                
+                nav ul li:last-child a {
+                    border-bottom: none;
+                }
             }
             
-            nav ul li a:after {
-                content: '';
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 0;
-                height: 2px;
-                background-color: #4CAF50;
-                transition: width 0.3s;
-            }
-            
-            nav ul li a:hover:after {
-                width: 100%;
-            }
-            
-            /* Animación de carga */
+            /* Animación de carga para YouTube */
             .youtube-loading div {
-                animation: pulse 1.5s infinite;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                font-weight: 600;
             }
             
-            @keyframes pulse {
-                0% { opacity: 0.6; }
-                50% { opacity: 1; }
-                100% { opacity: 0.6; }
+            .youtube-loading div:before {
+                content: '';
+                width: 30px;
+                height: 30px;
+                border: 3px solid #f0f0f0;
+                border-top-color: #00a553;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            /* Mejorar contraste en dispositivos móviles */
+            @media (max-width: 768px) {
+                .hero-overlay {
+                    background: rgba(0, 0, 0, 0.8);
+                }
             }
         `;
         document.head.appendChild(style);
-        
-        // Script adicional para manejar mejor YouTube
-        const youtubeScript = document.createElement('script');
-        youtubeScript.textContent = `
-            // Manejar mensajes de YouTube API
-            window.addEventListener('message', function(event) {
-                // Manejar mensajes del iframe de YouTube
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data && data.event === 'onStateChange') {
-                        console.log('Estado del video de YouTube:', data.info);
-                    }
-                } catch (e) {
-                    // No es un mensaje JSON, ignorar
-                }
-            });
-            
-            // Detectar si hay problemas con YouTube
-            window.onYouTubeIframeAPIReady = function() {
-                console.log('YouTube API está lista');
-            };
-            
-            // Fallback para navegadores muy antiguos
-            if (!window.addEventListener) {
-                document.querySelector('.youtube-loading').innerHTML = 
-                    '<div>Video no disponible en este navegador</div>';
-                setTimeout(function() {
-                    document.querySelector('.youtube-loading').classList.add('hidden');
-                    document.getElementById('heroFallback').style.display = 'flex';
-                    document.getElementById('heroFallback').style.zIndex = '-1';
-                }, 2000);
-            }
-        `;
-        document.head.appendChild(youtubeScript);
     </script>
 </body>
 </html>
