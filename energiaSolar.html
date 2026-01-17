@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energía Solar - Agrosistemas</title>
+    <link rel="icon" type="image/webp" href="favicon.webp">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Reset y estilos base - Mismos que en index.html */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            color: #333;
+            line-height: 1.6;
+            background-color: #FFFFFF;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        ul {
+            list-style: none;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #00a553;
+            color: white;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn:hover {
+            background-color: #008a45;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 165, 83, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: #1772af;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #145c92;
+            box-shadow: 0 8px 20px rgba(23, 114, 175, 0.3);
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+            color: #111;
+            font-size: 2.4rem;
+            font-weight: 700;
+        }
+        
+        /* Header */
+        header {
+            background-color: #FFFFFF;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        header.scrolled {
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .main-header {
+            padding: 20px 0;
+        }
+        
+        .main-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            height: 100px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo img {
+            height: 100%;
+            width: auto;
+            max-width: 200px;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #111;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+        
+        /* Hero Section - Específico para Energía Solar */
+        .page-hero {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.9) 0%, rgba(245, 124, 0, 0.9) 100%);
+            color: white;
+            padding: 160px 0 80px;
+            text-align: center;
+            margin-top: 80px;
+        }
+        
+        .page-hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+        
+        .page-hero p {
+            font-size: 1.3rem;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            opacity: 0.9;
+        }
+        
+        /* Soluciones Solares */
+        .soluciones-solares {
+            padding: 100px 0;
+            background-color: #FFFFFF;
+        }
+        
+        .soluciones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+        
+        .solucion-card {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .solucion-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-color: #ffc107;
+        }
+        
+        .solucion-header {
+            background-color: #fff8e1;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .solucion-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #ffc107;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+        }
+        
+        .solucion-header h3 {
+            color: #111;
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+        }
+        
+        .solucion-content {
+            padding: 30px;
+        }
+        
+        .solucion-content p {
+            color: #666;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        
+        .solucion-aplicaciones {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .solucion-aplicaciones h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .solucion-aplicaciones ul {
+            list-style: disc;
+            padding-left: 20px;
+            color: #666;
+        }
+        
+        .solucion-aplicaciones li {
+            margin-bottom: 8px;
+        }
+        
+        /* Beneficios Energía Solar */
+        .beneficios-solar {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+        }
+        
+        .beneficios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        
+        .beneficio-card {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .beneficio-card:hover {
+            border-color: #ffc107;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 193, 7, 0.1);
+        }
+        
+        .beneficio-icon {
+            width: 70px;
+            height: 70px;
+            background-color: #ffc107;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 1.8rem;
+        }
+        
+        .beneficio-card h3 {
+            color: #111;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        
+        .beneficio-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        /* Casos de Éxito */
+        .casos-exito {
+            padding: 100px 0;
+            background-color: #FFFFFF;
+        }
+        
+        .casos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        
+        .caso-card {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+        
+        .caso-content {
+            padding: 30px;
+        }
+        
+        .caso-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .caso-icon {
+            width: 60px;
+            height: 60px;
+            background-color: #fff8e1;
+            color: #ff9800;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .caso-header h3 {
+            color: #111;
+            font-size: 1.4rem;
+        }
+        
+        .caso-descripcion {
+            color: #666;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        
+        .caso-resultados {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00a553;
+        }
+        
+        .caso-resultados h4 {
+            color: #00a553;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .caso-resultados p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        /* Financiamiento */
+        .financiamiento {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+        }
+        
+        .financiamiento-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .financiamiento-text {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+        
+        .opciones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .opcion-card {
+            background-color: #FFFFFF;
+            padding: 30px 20px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .opcion-card:hover {
+            border-color: #ffc107;
+            transform: translateY(-5px);
+        }
+        
+        .opcion-card h3 {
+            color: #111;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+        }
+        
+        .opcion-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .opcion-destacada {
+            border-color: #ffc107;
+            background-color: #fff8e1;
+        }
+        
+        /* Contacto */
+        .contacto {
+            padding: 100px 0;
+            background-color: #FFFFFF;
+        }
+        
+        .contacto-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 50px;
+        }
+        
+        .contact-info-card {
+            background-color: #FFFFFF;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+        
+        .contact-info-card h3 {
+            margin-bottom: 30px;
+            color: #111;
+            font-size: 1.8rem;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .contact-item:hover {
+            background-color: #e8f4fd;
+            transform: translateX(5px);
+        }
+        
+        .contact-icon {
+            background-color: #1772af;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 1.2rem;
+        }
+        
+        .contact-text h4 {
+            margin-bottom: 5px;
+            color: #111;
+            font-size: 1.1rem;
+        }
+        
+        .contact-text a {
+            color: #1772af;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
+        
+        .contact-text a:hover {
+            color: #00a553;
+        }
+        
+        .contact-text p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: #FFFFFF;
+            color: #333;
+            padding: 60px 0 30px;
+            text-align: center;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .footer-logo {
+            margin-bottom: 10px;
+        }
+        
+        .footer-logo img {
+            height: 100px;
+            width: auto;
+        }
+        
+        .footer-text {
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+        
+        .copyright {
+            padding-top: 30px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #888;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .page-hero h1 {
+                font-size: 2.8rem;
+            }
+            
+            .section-title {
+                font-size: 2.2rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            nav {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 280px;
+                height: 100vh;
+                background-color: #FFFFFF;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+                transition: right 0.3s;
+                z-index: 1001;
+                padding: 90px 30px 30px;
+            }
+            
+            nav.active {
+                right: 0;
+            }
+            
+            nav ul {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            nav ul li a {
+                font-weight: 600;
+                color: #111;
+                font-size: 1.1rem;
+                display: block;
+                padding: 10px 0;
+            }
+            
+            .page-hero {
+                padding: 140px 0 60px;
+                margin-top: 80px;
+            }
+            
+            .page-hero h1 {
+                font-size: 2.4rem;
+            }
+            
+            .page-hero p {
+                font-size: 1.1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+                margin-bottom: 40px;
+            }
+            
+            .soluciones-solares, .beneficios-solar, .casos-exito, .financiamiento, .contacto {
+                padding: 70px 0;
+            }
+            
+            .contact-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .contact-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-hero h1 {
+                font-size: 2rem;
+            }
+            
+            .page-hero p {
+                font-size: 1rem;
+            }
+            
+            .soluciones-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .casos-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .opciones-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Estilos de navegación */
+        nav ul {
+            display: flex;
+            gap: 35px;
+        }
+        
+        nav ul li a {
+            font-weight: 600;
+            color: #111;
+            padding: 8px 0;
+            position: relative;
+            font-size: 1rem;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            color: #00a553;
+        }
+        
+        nav ul li a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #00a553;
+            transition: width 0.3s;
+        }
+        
+        nav ul li a:hover:after {
+            width: 100%;
+        }
+        
+        .current-page {
+            color: #00a553 !important;
+        }
+        
+        .current-page:after {
+            width: 100% !important;
+        }
+        
+        /* Scroll suave */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Animaciones */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .fade-in.delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .fade-in.delay-2 {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header id="mainHeader">
+        <div class="main-header">
+            <div class="container">
+                <div class="logo">
+                    <img src="logo.png" alt="Agrosistemas Logo">
+                </div>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav id="mainNav">
+                    <ul>
+                        <li><a href="index.html">Inicio</a></li>
+                        <li><a href="asesoriaTecnica.html">Asesoría Técnica</a></li>
+                        <li><a href="sistemaDeRiego.html">Sistemas de Riego</a></li>
+                        <li><a href="energiaSolar.html" class="current-page">Energía Solar</a></li>
+                        <li><a href="equipamientoAgricola.html">Equipamiento</a></li>
+                        <li><a href="#contacto">Contacto</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="page-hero">
+        <div class="container">
+            <h1 class="fade-in">Energía Solar para el Agro</h1>
+            <p class="fade-in delay-1">Soluciones renovables que reducen costos operativos y minimizan el impacto ambiental en tu producción agrícola.</p>
+            <a href="#contacto" class="btn fade-in delay-2">Calcular Ahorro</a>
+        </div>
+    </section>
+
+    <!-- Soluciones Solares -->
+    <section class="soluciones-solares" id="soluciones">
+        <div class="container">
+            <h2 class="section-title">Soluciones de Energía Solar</h2>
+            <div class="soluciones-grid">
+                <div class="solucion-card fade-in">
+                    <div class="solucion-header">
+                        <div class="solucion-icon">
+                            <i class="fas fa-solar-panel"></i>
+                        </div>
+                        <h3>Sistemas Fotovoltaicos</h3>
+                    </div>
+                    <div class="solucion-content">
+                        <p>Paneles solares para generación de electricidad, ideal para bombas de riego, iluminación y equipos eléctricos.</p>
+                        <div class="solucion-aplicaciones">
+                            <h4>Aplicaciones:</h4>
+                            <ul>
+                                <li>Bombeo solar para riego</li>
+                                <li>Electrificación de naves</li>
+                                <li>Alumbrado de instalaciones</li>
+                                <li>Equipos de procesamiento</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="solucion-card fade-in delay-1">
+                    <div class="solucion-header">
+                        <div class="solucion-icon">
+                            <i class="fas fa-water"></i>
+                        </div>
+                        <h3>Bombeo Solar Directo</h3>
+                    </div>
+                    <div class="solucion-content">
+                        <p>Sistemas de bombeo que funcionan directamente con energía solar, sin necesidad de baterías.</p>
+                        <div class="solucion-aplicaciones">
+                            <h4>Aplicaciones:</h4>
+                            <ul>
+                                <li>Riego por goteo y aspersión</li>
+                                <li>Abastecimiento de agua potable</li>
+                                <li>Estanques y reservorios</li>
+                                <li>Sistemas de drenaje</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="solucion-card fade-in delay-2">
+                    <div class="solucion-header">
+                        <div class="solucion-icon">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <h3>Instalaciones Híbridas</h3>
+                    </div>
+                    <div class="solucion-content">
+                        <p>Combinación de energía solar con red eléctrica o generadores para máxima confiabilidad.</p>
+                        <div class="solucion-aplicaciones">
+                            <h4>Aplicaciones:</h4>
+                            <ul>
+                                <li>Granjas con alto consumo</li>
+                                <li>Procesamiento agrícola</li>
+                                <li>Frigoríficos y cámaras</li>
+                                <li>Instalaciones críticas</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Beneficios -->
+    <section class="beneficios-solar" id="beneficios">
+        <div class="container">
+            <h2 class="section-title">Beneficios de la Energía Solar</h2>
+            <div class="beneficios-grid">
+                <div class="beneficio-card fade-in">
+                    <div class="beneficio-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h3>Ahorro en Costos</h3>
+                    <p>Reduce hasta el 100% de tu factura eléctrica con amortización en 3-5 años.</p>
+                </div>
+                
+                <div class="beneficio-card fade-in delay-1">
+                    <div class="beneficio-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Independencia Energética</h3>
+                    <p>Produce tu propia energía y reduce dependencia de la red eléctrica.</p>
+                </div>
+                
+                <div class="beneficio-card fade-in delay-2">
+                    <div class="beneficio-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h3>Sostenibilidad</h3>
+                    <p>Energía 100% limpia que reduce tu huella de carbono.</p>
+                </div>
+                
+                <div class="beneficio-card fade-in">
+                    <div class="beneficio-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Bajo Mantenimiento</h3>
+                    <p>Sistemas confiables con garantías de 25 años y mínimo mantenimiento.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Casos de Éxito -->
+    <section class="casos-exito" id="casos">
+        <div class="container">
+            <h2 class="section-title">Casos de Éxito</h2>
+            <div class="casos-grid">
+                <div class="caso-card fade-in">
+                    <div class="caso-content">
+                        <div class="caso-header">
+                            <div class="caso-icon">
+                                <i class="fas fa-tractor"></i>
+                            </div>
+                            <h3>Granja Avícola</h3>
+                        </div>
+                        <div class="caso-descripcion">
+                            <p>Instalación de 50kW para ventilación, iluminación y procesamiento de alimentos.</p>
+                        </div>
+                        <div class="caso-resultados">
+                            <h4>Resultados:</h4>
+                            <p>Ahorro mensual: $45,000 MXN | Retorno de inversión: 4 años</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="caso-card fade-in delay-1">
+                    <div class="caso-content">
+                        <div class="caso-header">
+                            <div class="caso-icon">
+                                <i class="fas fa-seedling"></i>
+                            </div>
+                            <h3>Invernadero Hortícola</h3>
+                        </div>
+                        <div class="caso-descripcion">
+                            <p>Sistema de 30kW para climatización, riego y control automatizado.</p>
+                        </div>
+                        <div class="caso-resultados">
+                            <h4>Resultados:</h4>
+                            <p>Ahorro mensual: $28,000 MXN | Producción aumentada 35%</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="caso-card fade-in delay-2">
+                    <div class="caso-content">
+                        <div class="caso-header">
+                            <div class="caso-icon">
+                                <i class="fas fa-tint"></i>
+                            </div>
+                            <h3>Bombeo para Riego</h3>
+                        </div>
+                        <div class="caso-descripcion">
+                            <p>Sistema de bombeo solar directo para 50 hectáreas de cultivo.</p>
+                        </div>
+                        <div class="caso-resultados">
+                            <h4>Resultados:</h4>
+                            <p>Eliminación costo diésel | Riego continuo sin interrupciones</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Financiamiento -->
+    <section class="financiamiento" id="financiamiento">
+        <div class="container">
+            <h2 class="section-title">Opciones de Financiamiento</h2>
+            <div class="financiamiento-content">
+                <p class="financiamiento-text fade-in">Ofrecemos diversas opciones para que puedas implementar tu sistema solar sin afectar tu flujo de efectivo.</p>
+                
+                <div class="opciones-grid">
+                    <div class="opcion-card fade-in">
+                        <h3>Compra Directa</h3>
+                        <p>Inversión inicial con descuento por pago de contado. Garantía extendida incluida.</p>
+                        <div class="btn btn-secondary">Más información</div>
+                    </div>
+                    
+                    <div class="opcion-card opcion-destacada fade-in delay-1">
+                        <h3>Financiamiento a 5 años</h3>
+                        <p>Pagos mensuales fijos que se pagan con el ahorro generado. Sin enganche.</p>
+                        <div class="btn">Solicitar Crédito</div>
+                    </div>
+                    
+                    <div class="opcion-card fade-in delay-2">
+                        <h3>PPA (Power Purchase Agreement)</h3>
+                        <p>Nosotros instalamos y mantenemos, tú pagas solo por la energía consumida.</p>
+                        <div class="btn btn-secondary">Conocer PPA</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contacto -->
+    <section class="contacto" id="contacto">
+        <div class="container">
+            <h2 class="section-title">Calcula tu Ahorro con Energía Solar</h2>
+            <div class="contacto-grid">
+                <div class="contact-info-card fade-in">
+                    <h3>Estudio Gratuito de Ahorro</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Simulador de Ahorro</h4>
+                            <p>Calculamos tu ahorro potencial basado en consumo actual</p>
+                            <p>Estudio sin costo ni compromiso</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Ingenieros Solares</h4>
+                            <a href="https://wa.me/521234567890?text=Hola,%20quiero%20calcular%20mi%20ahorro%20con%20energía%20solar" target="_blank">
+                                +52 123 456 7890
+                            </a>
+                            <p>Asesoría técnica especializada</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Email Especializado</h4>
+                            <a href="mailto:solar@agrosistemas.net?subject=Estudio%20de%20Ahorro%20con%20Energía%20Solar&body=Hola,%20me%20gustaría%20saber%20cuánto%20podría%20ahorrar%20con%20energía%20solar...">
+                                solar@agrosistemas.net
+                            </a>
+                            <p>Envíanos tu última factura eléctrica</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Visitas Técnicas</h4>
+                            <p>Evaluación in situ de tu instalación</p>
+                            <p>Diseño personalizado sin costo</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="map-container fade-in delay-1">
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15050.383979960279!2d-99.1458383!3d19.4326077!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b75aa014d%3A0x17e617c6c8c7c1a7!2sCentro%20Hist%C3%B3rico%20de%20la%20Ciudad%20de%20M%C3%A9xico%2C%20Centro%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX%2C%20M%C3%A9xico!5e0!3m2!1ses!2sus!4v1618940657559!5m2!1ses!2sus" 
+                        allowfullscreen="" 
+                        loading="lazy">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="logo.png" alt="Agrosistemas Logo">
+                </div>
+                <p class="footer-text">Líderes en soluciones de energía solar para el sector agrícola. Instalaciones certificadas y garantizadas.</p>
+                <div class="copyright">
+                    <p>&copy; 2023 Agrosistemas. Todos los derechos reservados. | <a href="index.html" style="color: #00a553;">Volver al Inicio</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mainNav = document.getElementById('mainNav');
+            const mainHeader = document.getElementById('mainHeader');
+            
+            // Menú móvil
+            mobileMenuBtn.addEventListener('click', function() {
+                mainNav.classList.toggle('active');
+                
+                const icon = mobileMenuBtn.querySelector('i');
+                if (mainNav.classList.contains('active')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            // Cerrar menú al hacer clic en un enlace
+            const navLinks = document.querySelectorAll('#mainNav a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    mainNav.classList.remove('active');
+                    mobileMenuBtn.querySelector('i').classList.remove('fa-times');
+                    mobileMenuBtn.querySelector('i').classList.add('fa-bars');
+                    document.body.style.overflow = '';
+                });
+            });
+            
+            // Header scroll effect
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    mainHeader.classList.add('scrolled');
+                } else {
+                    mainHeader.classList.remove('scrolled');
+                }
+            });
+            
+            // Animaciones al hacer scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+            
+            // Observar elementos con clase fade-in
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+            
+            // Smooth scroll para enlaces internos
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    if (href !== '#' && !href.includes('.html')) {
+                        e.preventDefault();
+                        const targetElement = document.querySelector(href);
+                        if (targetElement) {
+                            window.scrollTo({
+                                top: targetElement.offsetTop - 100,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

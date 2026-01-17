@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipamiento Agrícola - Agrosistemas</title>
+    <link rel="icon" type="image/webp" href="favicon.webp">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Reset y estilos base - Mismos que en index.html */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            color: #333;
+            line-height: 1.6;
+            background-color: #FFFFFF;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        ul {
+            list-style: none;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #00a553;
+            color: white;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn:hover {
+            background-color: #008a45;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 165, 83, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: #1772af;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #145c92;
+            box-shadow: 0 8px 20px rgba(23, 114, 175, 0.3);
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+            color: #111;
+            font-size: 2.4rem;
+            font-weight: 700;
+        }
+        
+        /* Header */
+        header {
+            background-color: #FFFFFF;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        header.scrolled {
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .main-header {
+            padding: 20px 0;
+        }
+        
+        .main-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            height: 100px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo img {
+            height: 100%;
+            width: auto;
+            max-width: 200px;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #111;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+        
+        /* Hero Section - Específico para Equipamiento */
+        .page-hero {
+            background: linear-gradient(135deg, rgba(108, 117, 125, 0.9) 0%, rgba(52, 58, 64, 0.9) 100%);
+            color: white;
+            padding: 160px 0 80px;
+            text-align: center;
+            margin-top: 80px;
+        }
+        
+        .page-hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+        
+        .page-hero p {
+            font-size: 1.3rem;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            opacity: 0.9;
+        }
+        
+        /* Categorías de Equipos */
+        .categorias-equipos {
+            padding: 100px 0;
+            background-color: #FFFFFF;
+        }
+        
+        .categorias-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        
+        .categoria-card {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .categoria-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-color: #6c757d;
+        }
+        
+        .categoria-header {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .categoria-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+        }
+        
+        .categoria-header h3 {
+            color: #111;
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+        }
+        
+        .categoria-content {
+            padding: 30px;
+        }
+        
+        .categoria-equipos {
+            margin-bottom: 25px;
+        }
+        
+        .equipo-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .equipo-item:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .equipo-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #00a553;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+        
+        .equipo-info h4 {
+            color: #111;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .equipo-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* Marcas Representadas */
+        .marcas {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+        }
+        
+        .marcas-intro {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 60px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .marcas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .marca-card {
+            background-color: #FFFFFF;
+            padding: 30px 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .marca-card:hover {
+            border-color: #00a553;
+            transform: translateY(-5px);
+        }
+        
+        .marca-logo {
+            max-width: 150px;
+            max-height: 80px;
+            margin: 0 auto;
+        }
+        
+        .marca-card h3 {
+            color: #111;
+            font-size: 1.2rem;
+            margin-top: 15px;
+        }
+        
+        /* Servicios Post-Venta */
+        .servicios-postventa {
+            padding: 100px 0;
+            background-color: #FFFFFF;
+        }
+        
+        .servicios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        
+        .servicio-card {
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .servicio-card:hover {
+            background-color: #e9ecef;
+            border-color: #6c757d;
+            transform: translateY(-5px);
+        }
+        
+        .servicio-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+        }
+        
+        .servicio-card h3 {
+            color: #111;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+        }
+        
+        .servicio-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        
+        .servicio-destacado {
+            background-color: #e8f4fd;
+            border-color: #1772af;
+        }
+        
+        .servicio-destacado .servicio-icon {
+            background-color: #1772af;
+        }
+        
+        /* Alquiler de Equipos */
+        .alquiler {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+        }
+        
+        .alquiler-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .alquiler-text {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+        
+        .beneficios-alquiler {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .beneficio-alquiler {
+            background-color: #FFFFFF;
+            padding: 30px 20px;
+            border-radius: 12px;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .beneficio-alquiler h3 {
+            color: #111;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        
+        .beneficio-alquiler p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        /* Contacto */
+        .contacto {
+            padding: 100px 0;
+            background-color: #FFFFFF;
+        }
+        
+        .contacto-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 50px;
+        }
+        
+        .contact-info-card {
+            background-color: #FFFFFF;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+        
+        .contact-info-card h3 {
+            margin-bottom: 30px;
+            color: #111;
+            font-size: 1.8rem;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .contact-item:hover {
+            background-color: #e8f4fd;
+            transform: translateX(5px);
+        }
+        
+        .contact-icon {
+            background-color: #1772af;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 1.2rem;
+        }
+        
+        .contact-text h4 {
+            margin-bottom: 5px;
+            color: #111;
+            font-size: 1.1rem;
+        }
+        
+        .contact-text a {
+            color: #1772af;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
+        
+        .contact-text a:hover {
+            color: #00a553;
+        }
+        
+        .contact-text p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: #FFFFFF;
+            color: #333;
+            padding: 60px 0 30px;
+            text-align: center;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .footer-logo {
+            margin-bottom: 10px;
+        }
+        
+        .footer-logo img {
+            height: 100px;
+            width: auto;
+        }
+        
+        .footer-text {
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+        
+        .copyright {
+            padding-top: 30px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            color: #888;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .page-hero h1 {
+                font-size: 2.8rem;
+            }
+            
+            .section-title {
+                font-size: 2.2rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            nav {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 280px;
+                height: 100vh;
+                background-color: #FFFFFF;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+                transition: right 0.3s;
+                z-index: 1001;
+                padding: 90px 30px 30px;
+            }
+            
+            nav.active {
+                right: 0;
+            }
+            
+            nav ul {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            nav ul li a {
+                font-weight: 600;
+                color: #111;
+                font-size: 1.1rem;
+                display: block;
+                padding: 10px 0;
+            }
+            
+            .page-hero {
+                padding: 140px 0 60px;
+                margin-top: 80px;
+            }
+            
+            .page-hero h1 {
+                font-size: 2.4rem;
+            }
+            
+            .page-hero p {
+                font-size: 1.1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+                margin-bottom: 40px;
+            }
+            
+            .categorias-equipos, .marcas, .servicios-postventa, .alquiler, .contacto {
+                padding: 70px 0;
+            }
+            
+            .contact-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .contact-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .marcas-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-hero h1 {
+                font-size: 2rem;
+            }
+            
+            .page-hero p {
+                font-size: 1rem;
+            }
+            
+            .categorias-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .servicios-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .marcas-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .beneficios-alquiler {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Estilos de navegación */
+        nav ul {
+            display: flex;
+            gap: 35px;
+        }
+        
+        nav ul li a {
+            font-weight: 600;
+            color: #111;
+            padding: 8px 0;
+            position: relative;
+            font-size: 1rem;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            color: #00a553;
+        }
+        
+        nav ul li a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #00a553;
+            transition: width 0.3s;
+        }
+        
+        nav ul li a:hover:after {
+            width: 100%;
+        }
+        
+        .current-page {
+            color: #00a553 !important;
+        }
+        
+        .current-page:after {
+            width: 100% !important;
+        }
+        
+        /* Scroll suave */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Animaciones */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+        
+        .fade-in.delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .fade-in.delay-2 {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header id="mainHeader">
+        <div class="main-header">
+            <div class="container">
+                <div class="logo">
+                    <img src="logo.png" alt="Agrosistemas Logo">
+                </div>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav id="mainNav">
+                    <ul>
+                        <li><a href="index.html">Inicio</a></li>
+                        <li><a href="asesoriaTecnica.html">Asesoría Técnica</a></li>
+                        <li><a href="sistemaDeRiego.html">Sistemas de Riego</a></li>
+                        <li><a href="energiaSolar.html">Energía Solar</a></li>
+                        <li><a href="equipamientoAgricola.html" class="current-page">Equipamiento</a></li>
+                        <li><a href="#contacto">Contacto</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="page-hero">
+        <div class="container">
+            <h1 class="fade-in">Equipamiento Agrícola Especializado</h1>
+            <p class="fade-in delay-1">Distribuidores autorizados de maquinaria y equipo de alta calidad para optimizar cada etapa de tu producción agrícola.</p>
+            <a href="#contacto" class="btn fade-in delay-2">Solicitar Catálogo</a>
+        </div>
+    </section>
+
+    <!-- Categorías de Equipos -->
+    <section class="categorias-equipos" id="categorias">
+        <div class="container">
+            <h2 class="section-title">Nuestras Categorías de Equipos</h2>
+            <div class="categorias-grid">
+                <div class="categoria-card fade-in">
+                    <div class="categoria-header">
+                        <div class="categoria-icon">
+                            <i class="fas fa-tractor"></i>
+                        </div>
+                        <h3>Maquinaria Pesada</h3>
+                    </div>
+                    <div class="categoria-content">
+                        <div class="categoria-equipos">
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-tractor"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Tractores</h4>
+                                    <p>Desde 50 hasta 300 HP</p>
+                                </div>
+                            </div>
+                            
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-seedling"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Sembradoras</h4>
+                                    <p>Precisión y siembra directa</p>
+                                </div>
+                            </div>
+                            
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-wind"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Pulverizadoras</h4>
+                                    <p>Autopropulsadas y arrastradas</p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="btn btn-secondary" style="width: 100%;">Solicitar Información</a>
+                    </div>
+                </div>
+                
+                <div class="categoria-card fade-in delay-1">
+                    <div class="categoria-header">
+                        <div class="categoria-icon">
+                            <i class="fas fa-tint"></i>
+                        </div>
+                        <h3>Sistemas de Riego</h3>
+                    </div>
+                    <div class="categoria-content">
+                        <div class="categoria-equipos">
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-water"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Bombas de Agua</h4>
+                                    <p>Solares, eléctricas y diésel</p>
+                                </div>
+                            </div>
+                            
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-filter"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Sistemas de Filtrado</h4>
+                                    <p>Arenas, mallas y discos</p>
+                                </div>
+                            </div>
+                            
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Controladores</h4>
+                                    <p>Automatización de riego</p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="btn btn-secondary" style="width: 100%;">Solicitar Información</a>
+                    </div>
+                </div>
+                
+                <div class="categoria-card fade-in delay-2">
+                    <div class="categoria-header">
+                        <div class="categoria-icon">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <h3>Equipos Especializados</h3>
+                    </div>
+                    <div class="categoria-content">
+                        <div class="categoria-equipos">
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-temperature-low"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Invernaderos</h4>
+                                    <p>Estructuras y climatización</p>
+                                </div>
+                            </div>
+                            
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-weight-hanging"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Básculas</h4>
+                                    <p>Pesaje agrícola industrial</p>
+                                </div>
+                            </div>
+                            
+                            <div class="equipo-item">
+                                <div class="equipo-icon">
+                                    <i class="fas fa-vial"></i>
+                                </div>
+                                <div class="equipo-info">
+                                    <h4>Laboratorio</h4>
+                                    <p>Equipo para análisis de suelos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="btn btn-secondary" style="width: 100%;">Solicitar Información</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Marcas Representadas -->
+    <section class="marcas" id="marcas">
+        <div class="container">
+            <h2 class="section-title">Marcas Representadas</h2>
+            <p class="marcas-intro fade-in">Trabajamos con los fabricantes líderes a nivel mundial para ofrecerte equipos de máxima calidad y durabilidad.</p>
+            
+            <div class="marcas-grid">
+                <div class="marca-card fade-in">
+                    <div class="marca-logo">
+                        <!-- En producción real, aquí iría el logo de la marca -->
+                        <h3>JOHN DEERE</h3>
+                    </div>
+                </div>
+                
+                <div class="marca-card fade-in delay-1">
+                    <div class="marca-logo">
+                        <h3>KUBOTA</h3>
+                    </div>
+                </div>
+                
+                <div class="marca-card fade-in delay-2">
+                    <div class="marca-logo">
+                        <h3>NEW HOLLAND</h3>
+                    </div>
+                </div>
+                
+                <div class="marca-card fade-in">
+                    <div class="marca-logo">
+                        <h3>NETAFIM</h3>
+                    </div>
+                </div>
+                
+                <div class="marca-card fade-in delay-1">
+                    <div class="marca-logo">
+                        <h3>RAIN BIRD</h3>
+                    </div>
+                </div>
+                
+                <div class="marca-card fade-in delay-2">
+                    <div class="marca-logo">
+                        <h3>GRUNDFOS</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Servicios Post-Venta -->
+    <section class="servicios-postventa" id="servicios">
+        <div class="container">
+            <h2 class="section-title">Servicios Post-Venta</h2>
+            <div class="servicios-grid">
+                <div class="servicio-card fade-in">
+                    <div class="servicio-icon">
+                        <i class="fas fa-wrench"></i>
+                    </div>
+                    <h3>Mantenimiento</h3>
+                    <p>Programas de mantenimiento preventivo y correctivo para todos nuestros equipos.</p>
+                    <div class="btn btn-secondary">Conocer Planes</div>
+                </div>
+                
+                <div class="servicio-card servicio-destacado fade-in delay-1">
+                    <div class="servicio-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3>Reparaciones</h3>
+                    <p>Taller especializado con técnicos certificados por fábrica y refacciones originales.</p>
+                    <div class="btn">Solicitar Servicio</div>
+                </div>
+                
+                <div class="servicio-card fade-in delay-2">
+                    <div class="servicio-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h3>Capacitación</h3>
+                    <p>Entrenamiento para operadores y técnicos en el uso y mantenimiento de equipos.</p>
+                    <div class="btn btn-secondary">Ver Cursos</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Alquiler de Equipos -->
+    <section class="alquiler" id="alquiler">
+        <div class="container">
+            <h2 class="section-title">Servicio de Alquiler</h2>
+            <div class="alquiler-content">
+                <p class="alquiler-text fade-in">¿Necesitas equipo para un proyecto específico o temporada? Ofrecemos alquiler de maquinaria con todas las garantías de funcionamiento y mantenimiento incluido.</p>
+                
+                <div class="beneficios-alquiler">
+                    <div class="beneficio-alquiler fade-in">
+                        <h3>Sin Inversión Inicial</h3>
+                        <p>Accede a equipo de última generación sin desembolso de capital.</p>
+                    </div>
+                    
+                    <div class="beneficio-alquiler fade-in delay-1">
+                        <h3>Mantenimiento Incluido</h3>
+                        <p>Todo el equipo incluye mantenimiento y reparaciones durante el período de alquiler.</p>
+                    </div>
+                    
+                    <div class="beneficio-alquiler fade-in delay-2">
+                        <h3>Flexibilidad</h3>
+                        <p>Contratos desde 1 mes hasta 1 año, con opción de compra al finalizar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contacto -->
+    <section class="contacto" id="contacto">
+        <div class="container">
+            <h2 class="section-title">Cotiza tu Equipo</h2>
+            <div class="contacto-grid">
+                <div class="contact-info-card fade-in">
+                    <h3>Contacto de Ventas</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Ventas Especializadas</h4>
+                            <a href="https://wa.me/521234567890?text=Hola,%20me%20interesa%20cotizar%20equipo%20agrícola" target="_blank">
+                                +52 123 456 7890
+                            </a>
+                            <p>Asesoría técnica de ventas</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Email de Cotizaciones</h4>
+                            <a href="mailto:ventas@agrosistemas.net?subject=Cotización%20Equipo%20Agrícola&body=Hola,%20me%20interesa%20cotizar%20el%20siguiente%20equipo...">
+                                ventas@agrosistemas.net
+                            </a>
+                            <p>Envíanos tus especificaciones</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Catálogo Digital</h4>
+                            <p>Solicita nuestro catálogo completo</p>
+                            <p>Especificaciones técnicas detalladas</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Demostraciones</h4>
+                            <p>Agenda una demostración en campo</p>
+                            <p>Pruebas de funcionamiento sin costo</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="map-container fade-in delay-1">
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15050.383979960279!2d-99.1458383!3d19.4326077!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b75aa014d%3A0x17e617c6c8c7c1a7!2sCentro%20Hist%C3%B3rico%20de%20la%20Ciudad%20de%20M%C3%A9xico%2C%20Centro%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX%2C%20M%C3%A9xico!5e0!3m2!1ses!2sus!4v1618940657559!5m2!1ses!2sus" 
+                        allowfullscreen="" 
+                        loading="lazy">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="logo.png" alt="Agrosistemas Logo">
+                </div>
+                <p class="footer-text">Distribuidores autorizados de maquinaria agrícola de alta calidad. Venta, alquiler y servicio post-venta con garantía.</p>
+                <div class="copyright">
+                    <p>&copy; 2023 Agrosistemas. Todos los derechos reservados. | <a href="index.html" style="color: #00a553;">Volver al Inicio</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mainNav = document.getElementById('mainNav');
+            const mainHeader = document.getElementById('mainHeader');
+            
+            // Menú móvil
+            mobileMenuBtn.addEventListener('click', function() {
+                mainNav.classList.toggle('active');
+                
+                const icon = mobileMenuBtn.querySelector('i');
+                if (mainNav.classList.contains('active')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            // Cerrar menú al hacer clic en un enlace
+            const navLinks = document.querySelectorAll('#mainNav a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    mainNav.classList.remove('active');
+                    mobileMenuBtn.querySelector('i').classList.remove('fa-times');
+                    mobileMenuBtn.querySelector('i').classList.add('fa-bars');
+                    document.body.style.overflow = '';
+                });
+            });
+            
+            // Header scroll effect
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    mainHeader.classList.add('scrolled');
+                } else {
+                    mainHeader.classList.remove('scrolled');
+                }
+            });
+            
+            // Animaciones al hacer scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+            
+            // Observar elementos con clase fade-in
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+            
+            // Smooth scroll para enlaces internos
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    if (href !== '#' && !href.includes('.html')) {
+                        e.preventDefault();
+                        const targetElement = document.querySelector(href);
+                        if (targetElement) {
+                            window.scrollTo({
+                                top: targetElement.offsetTop - 100,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
