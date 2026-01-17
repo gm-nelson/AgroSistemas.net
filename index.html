@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agrosistemas - Soluciones Agrícolas Integrales</title>
+    <meta name="description" content="Tecnología, equipos y asesoría especializada para optimizar la producción agrícola">
+    <meta name="keywords" content="agricultura, riego, energía solar, equipos agrícolas, asesoría técnica">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Reset y estilos base */
@@ -18,6 +20,7 @@
             color: #333;
             line-height: 1.6;
             background-color: #f8f9fa;
+            overflow-x: hidden;
         }
         
         .container {
@@ -105,14 +108,52 @@
             max-width: 250px;
         }
         
+        nav ul {
+            display: flex;
+        }
+        
+        nav ul li {
+            margin-left: 25px;
+        }
+        
+        nav ul li a {
+            font-weight: 600;
+            color: #333;
+            padding: 5px 0;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #4CAF50;
+            transition: width 0.3s;
+        }
+        
+        nav ul li a:hover:after {
+            width: 100%;
+        }
+        
+        nav ul li a:hover {
+            color: #4CAF50;
+        }
+        
         .mobile-menu-btn {
             display: none;
             font-size: 1.5rem;
             cursor: pointer;
             color: #2c5e1a;
+            background: none;
+            border: none;
+            z-index: 1002;
         }
         
-        /* Hero Section con video */
+        /* Hero Section - Versión mejorada */
         .hero {
             position: relative;
             height: 70vh;
@@ -125,14 +166,30 @@
             color: white;
         }
         
-        .hero-video {
+        .hero-video-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            overflow: hidden;
             z-index: -1;
+        }
+        
+        .hero-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translateX(-50%) translateY(-50%);
+            object-fit: cover;
+            -webkit-transform: translateX(-50%) translateY(-50%);
+            -moz-transform: translateX(-50%) translateY(-50%);
+            -ms-transform: translateX(-50%) translateY(-50%);
+            -o-transform: translateX(-50%) translateY(-50%);
         }
         
         .hero-overlay {
@@ -156,12 +213,81 @@
             font-size: 3rem;
             margin-bottom: 20px;
             text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            animation: fadeInDown 1s ease;
         }
         
         .hero p {
             font-size: 1.2rem;
             margin-bottom: 30px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            animation: fadeInUp 1s ease 0.3s both;
+        }
+        
+        .hero .btn {
+            animation: fadeIn 1s ease 0.6s both;
+        }
+        
+        /* Video fallback */
+        .video-fallback {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(44, 94, 26, 0.8), rgba(44, 94, 26, 0.9)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            display: none; /* Oculto por defecto */
+        }
+        
+        .fallback-content {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            max-width: 800px;
+        }
+        
+        .fallback-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        .fallback-content p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        
+        /* Video controls */
+        .video-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+        
+        .video-toggle {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+        
+        .video-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+            transform: scale(1.1);
         }
         
         /* Servicios */
@@ -182,6 +308,13 @@
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             transition: transform 0.3s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .servicio-card.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         
         .servicio-card:hover {
@@ -250,6 +383,13 @@
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        
+        .contact-item.visible {
+            opacity: 1;
+            transform: translateX(0);
         }
         
         .contact-item:hover {
@@ -296,6 +436,13 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .map-container.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         
         .map-container iframe {
@@ -323,9 +470,43 @@
         
         .copyright {
             padding-top: 20px;
+            margin-top: 30px;
             border-top: 1px solid rgba(255,255,255,0.1);
             font-size: 0.9rem;
             color: rgba(255,255,255,0.7);
+        }
+        
+        /* Animaciones */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Transiciones para elementos observados */
+        .servicio-card, .contact-item, .map-container {
+            transition: opacity 0.6s ease, transform 0.6s ease;
         }
         
         /* Responsive */
@@ -342,7 +523,7 @@
                 height: 100vh;
                 background-color: white;
                 box-shadow: -5px 0 15px rgba(0,0,0,0.1);
-                transition: right 0.3s;
+                transition: right 0.3s ease;
                 z-index: 1001;
                 padding: 80px 20px 20px;
             }
@@ -357,6 +538,15 @@
             
             nav ul li {
                 margin: 0 0 20px 0;
+            }
+            
+            nav ul li a {
+                font-size: 1.1rem;
+            }
+            
+            .hero {
+                height: 60vh;
+                min-height: 400px;
             }
             
             .hero h1 {
@@ -380,12 +570,17 @@
                 margin-right: 0;
                 margin-bottom: 10px;
             }
+            
+            .video-controls {
+                bottom: 10px;
+                right: 10px;
+            }
         }
         
         @media (max-width: 480px) {
             .hero {
-                height: 60vh;
-                min-height: 400px;
+                height: 50vh;
+                min-height: 300px;
             }
             
             .hero h1 {
@@ -399,6 +594,17 @@
             .contacto {
                 padding: 50px 0;
             }
+            
+            .contact-info-card {
+                padding: 20px;
+            }
+        }
+        
+        /* Estilos para navegadores WebKit (Safari, Chrome) */
+        @media screen and (-webkit-min-device-pixel-ratio:0) {
+            .hero-video {
+                /* Ajustes específicos para WebKit */
+            }
         }
     </style>
 </head>
@@ -408,11 +614,12 @@
         <div class="main-header">
             <div class="container">
                 <div class="logo">
-                    <img src="logo.png" alt="Agrosistemas Logo">
+                    <!-- Reemplaza con tu logo -->
+                    <img src="https://via.placeholder.com/250x60/2c5e1a/FFFFFF?text=AGROSISTEMAS" alt="Agrosistemas Logo">
                 </div>
-                <div class="mobile-menu-btn" id="mobileMenuBtn">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menú de navegación">
                     <i class="fas fa-bars"></i>
-                </div>
+                </button>
                 <nav id="mainNav">
                     <ul>
                         <li><a href="#inicio">Inicio</a></li>
@@ -424,12 +631,25 @@
         </div>
     </header>
 
-    <!-- Hero Section con Video -->
+    <!-- Hero Section con Video Mejorado -->
     <section class="hero" id="inicio">
-        <video autoplay muted loop playsinline class="hero-video">
-            <source src="promotional.mp4" type="video/mp4">
-            Tu navegador no soporta videos HTML5.
-        </video>
+        <div class="hero-video-container">
+            <video autoplay muted loop playsinline class="hero-video" id="heroVideo" 
+                   poster="https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80">
+                <!-- Formato MP4 (principal) -->
+                <source src="promotional.mp4" type="video/mp4">
+                <!-- Formato WebM (alternativa) -->
+                <source src="promotional.webm" type="video/webm">
+                <!-- Imagen de respaldo si el video no carga -->
+                <div class="video-fallback" id="videoFallback">
+                    <div class="fallback-content">
+                        <h2>Soluciones Agrícolas Integrales</h2>
+                        <p>Tecnología, equipos y asesoría especializada para optimizar la producción agrícola.</p>
+                        <a href="#contacto" class="btn">Contáctanos</a>
+                    </div>
+                </div>
+            </video>
+        </div>
         <div class="hero-overlay"></div>
         <div class="hero-content">
             <h1>Soluciones Agrícolas Integrales</h1>
@@ -497,7 +717,7 @@
                         </div>
                         <div class="contact-text">
                             <h4>Ubicación</h4>
-                            <a href="https://maps.google.com/?q=Av.+Agricultura+123,+Zona+Industrial,+Ciudad,+Estado,+México" target="_blank">
+                            <a href="https://maps.google.com/?q=Av.+Agricultura+123,+Zona+Industrial,+Ciudad,+Estado,+México" target="_blank" rel="noopener noreferrer">
                                 Av. Agricultura 123, Zona Industrial, Ciudad, Estado, México
                             </a>
                             <p>Visítanos en nuestras instalaciones</p>
@@ -510,7 +730,7 @@
                         </div>
                         <div class="contact-text">
                             <h4>Teléfono / WhatsApp</h4>
-                            <a href="https://wa.me/521234567890?text=Hola,%20me%20interesan%20sus%20servicios%20agrícolas" target="_blank">
+                            <a href="https://wa.me/521234567890?text=Hola,%20me%20interesan%20sus%20servicios%20agrícolas" target="_blank" rel="noopener noreferrer">
                                 +52 123 456 7890
                             </a>
                             <p>Atendemos por WhatsApp</p>
@@ -546,7 +766,8 @@
                     <iframe 
                         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15050.383979960279!2d-99.1458383!3d19.4326077!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b75aa014d%3A0x17e617c6c8c7c1a7!2sCentro%20Hist%C3%B3rico%20de%20la%20Ciudad%20de%20M%C3%A9xico%2C%20Centro%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX%2C%20M%C3%A9xico!5e0!3m2!1ses!2sus!4v1618940657559!5m2!1ses!2sus" 
                         allowfullscreen="" 
-                        loading="lazy">
+                        loading="lazy"
+                        title="Ubicación de Agrosistemas en el mapa">
                     </iframe>
                 </div>
             </div>
@@ -557,46 +778,52 @@
     <footer>
         <div class="container">
             <div class="footer-logo">
-                <img src="logo.png" alt="Agrosistemas Logo">
+                <img src="https://via.placeholder.com/200x60/FFFFFF/2c5e1a?text=AGROSISTEMAS" alt="Agrosistemas Logo">
             </div>
             <p>Proveedores líderes de soluciones integrales para el sector agrícola</p>
             <div class="copyright">
-                <p>&copy; 2023 Agrosistemas. Todos los derechos reservados. | Hosteado en GitHub Pages</p>
+                <p>&copy; <span id="currentYear"></span> Agrosistemas. Todos los derechos reservados. | Hosteado en GitHub Pages</p>
             </div>
         </div>
     </footer>
 
     <script>
-        // Menú móvil
         document.addEventListener('DOMContentLoaded', function() {
+            // ====================
+            // 1. MENÚ MÓVIL
+            // ====================
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const mainNav = document.getElementById('mainNav');
             
-            mobileMenuBtn.addEventListener('click', function() {
-                mainNav.classList.toggle('active');
-                
-                // Cambiar icono del botón
-                const icon = mobileMenuBtn.querySelector('i');
-                if (mainNav.classList.contains('active')) {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-times');
-                } else {
-                    icon.classList.remove('fa-times');
-                    icon.classList.add('fa-bars');
-                }
-            });
-            
-            // Cerrar menú al hacer clic en un enlace
-            const navLinks = document.querySelectorAll('#mainNav a');
-            navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    mainNav.classList.remove('active');
-                    mobileMenuBtn.querySelector('i').classList.remove('fa-times');
-                    mobileMenuBtn.querySelector('i').classList.add('fa-bars');
+            if (mobileMenuBtn && mainNav) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    mainNav.classList.toggle('active');
+                    
+                    // Cambiar icono del botón
+                    const icon = mobileMenuBtn.querySelector('i');
+                    if (mainNav.classList.contains('active')) {
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-times');
+                    } else {
+                        icon.classList.remove('fa-times');
+                        icon.classList.add('fa-bars');
+                    }
                 });
-            });
+                
+                // Cerrar menú al hacer clic en un enlace
+                const navLinks = document.querySelectorAll('#mainNav a');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        mainNav.classList.remove('active');
+                        mobileMenuBtn.querySelector('i').classList.remove('fa-times');
+                        mobileMenuBtn.querySelector('i').classList.add('fa-bars');
+                    });
+                });
+            }
             
-            // Smooth scroll para enlaces internos
+            // ====================
+            // 2. SMOOTH SCROLL
+            // ====================
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -606,30 +833,103 @@
                     
                     const targetElement = document.querySelector(targetId);
                     if (targetElement) {
+                        const headerHeight = document.querySelector('header').offsetHeight;
+                        const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+                        
                         window.scrollTo({
-                            top: targetElement.offsetTop - 80,
+                            top: targetPosition,
                             behavior: 'smooth'
                         });
                     }
                 });
             });
             
-            // Control del video en móviles
-            const heroVideo = document.querySelector('.hero-video');
+            // ====================
+            // 3. CONTROL DE VIDEO
+            // ====================
+            const heroVideo = document.getElementById('heroVideo');
+            const videoFallback = document.getElementById('videoFallback');
             
-            // Pausar video en móviles para ahorrar datos
-            if (window.innerWidth <= 768) {
-                heroVideo.setAttribute('playsinline', '');
-                heroVideo.setAttribute('muted', '');
-                heroVideo.setAttribute('loop', '');
+            // Función para verificar compatibilidad con video
+            function checkVideoSupport() {
+                const videoElement = document.createElement('video');
+                
+                // Verificar formatos compatibles
+                const canPlayMP4 = !!videoElement.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+                const canPlayWebM = !!videoElement.canPlayType('video/webm; codecs="vp8, vorbis"');
+                
+                console.log('Compatibilidad video - MP4:', canPlayMP4, 'WebM:', canPlayWebM);
+                return canPlayMP4 || canPlayWebM;
             }
             
-            // Reproducir video si está pausado
-            heroVideo.play().catch(function(error) {
-                console.log("Autoplay no permitido:", error);
-            });
+            // Función para manejar la reproducción del video
+            function initializeVideo() {
+                if (!heroVideo) {
+                    console.log('Elemento de video no encontrado');
+                    if (videoFallback) videoFallback.style.display = 'flex';
+                    return;
+                }
+                
+                // Verificar compatibilidad
+                const videoSupported = checkVideoSupport();
+                
+                if (!videoSupported) {
+                    console.log('Navegador no soporta video HTML5');
+                    if (videoFallback) videoFallback.style.display = 'flex';
+                    return;
+                }
+                
+                // Configurar para dispositivos móviles
+                if (window.innerWidth <= 768) {
+                    // Para móviles: precargar solo metadatos, sin autoplay forzado
+                    heroVideo.setAttribute('preload', 'metadata');
+                    heroVideo.removeAttribute('autoplay');
+                    
+                    // Intentar reproducir cuando el usuario interactúe
+                    const playVideoOnInteraction = function() {
+                        heroVideo.play().catch(e => {
+                            console.log('Autoplay bloqueado en móvil:', e);
+                            if (videoFallback) videoFallback.style.display = 'flex';
+                        });
+                        
+                        // Remover event listeners después del primer intento
+                        document.removeEventListener('click', playVideoOnInteraction);
+                        document.removeEventListener('touchstart', playVideoOnInteraction);
+                    };
+                    
+                    document.addEventListener('click', playVideoOnInteraction, { once: true });
+                    document.addEventListener('touchstart', playVideoOnInteraction, { once: true });
+                    
+                } else {
+                    // Para desktop: precargar y reproducir automáticamente
+                    heroVideo.setAttribute('preload', 'auto');
+                    
+                    heroVideo.play().then(() => {
+                        console.log('Video reproduciéndose correctamente');
+                    }).catch(error => {
+                        console.log('Error al reproducir video:', error);
+                        if (videoFallback) videoFallback.style.display = 'flex';
+                    });
+                }
+                
+                // Manejar eventos de error del video
+                heroVideo.addEventListener('error', function(e) {
+                    console.error('Error en el elemento de video:', e);
+                    if (videoFallback) videoFallback.style.display = 'flex';
+                });
+                
+                // Verificar si el video está cargado
+                heroVideo.addEventListener('loadeddata', function() {
+                    console.log('Video cargado correctamente');
+                });
+            }
             
-            // Efecto de aparición al hacer scroll
+            // Inicializar video cuando la página esté lista
+            setTimeout(initializeVideo, 100);
+            
+            // ====================
+            // 4. ANIMACIONES AL SCROLL
+            // ====================
             const observerOptions = {
                 threshold: 0.1,
                 rootMargin: '0px 0px -50px 0px'
@@ -644,57 +944,121 @@
             }, observerOptions);
             
             // Observar elementos para animaciones
-            document.querySelectorAll('.servicio-card, .contact-item').forEach(el => {
-                el.classList.add('fade-in');
+            document.querySelectorAll('.servicio-card, .contact-item, .map-container').forEach(el => {
                 observer.observe(el);
+            });
+            
+            // ====================
+            // 5. BOTÓN PARA CONTROL DE VIDEO (OPCIONAL)
+            // ====================
+            if (heroVideo) {
+                const videoToggleBtn = document.createElement('button');
+                videoToggleBtn.className = 'video-toggle';
+                videoToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                videoToggleBtn.title = 'Silenciar/Activar sonido';
+                videoToggleBtn.setAttribute('aria-label', 'Control de volumen del video');
+                
+                // Solo mostrar en desktop
+                if (window.innerWidth > 768) {
+                    document.querySelector('.hero').appendChild(videoToggleBtn);
+                    
+                    videoToggleBtn.addEventListener('click', function() {
+                        heroVideo.muted = !heroVideo.muted;
+                        this.innerHTML = heroVideo.muted ? 
+                            '<i class="fas fa-volume-mute"></i>' : 
+                            '<i class="fas fa-volume-up"></i>';
+                        this.title = heroVideo.muted ? 'Activar sonido' : 'Silenciar';
+                    });
+                }
+            }
+            
+            // ====================
+            // 6. AÑO ACTUAL EN FOOTER
+            // ====================
+            const currentYearSpan = document.getElementById('currentYear');
+            if (currentYearSpan) {
+                currentYearSpan.textContent = new Date().getFullYear();
+            }
+            
+            // ====================
+            // 7. REINTENTAR VIDEO AL VOLVER A LA VISTA
+            // ====================
+            if (heroVideo) {
+                const videoVisibilityObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && heroVideo.paused) {
+                            // Reintentar reproducir si está en vista
+                            heroVideo.play().catch(e => {
+                                console.log('No se pudo reanudar el video:', e);
+                            });
+                        }
+                    });
+                }, { threshold: 0.5 });
+                
+                videoVisibilityObserver.observe(heroVideo);
+            }
+            
+            // ====================
+            // 8. DETECTAR CAMBIOS DE CONEXIÓN
+            // ====================
+            window.addEventListener('online', function() {
+                console.log('Conexión restablecida');
+                // Reintentar video si estaba fallando
+                if (videoFallback && videoFallback.style.display === 'flex' && heroVideo) {
+                    heroVideo.load();
+                    setTimeout(() => {
+                        heroVideo.play().then(() => {
+                            videoFallback.style.display = 'none';
+                        }).catch(e => {
+                            console.log('Sigue sin poder reproducirse:', e);
+                        });
+                    }, 500);
+                }
+            });
+            
+            // ====================
+            // 9. MANEJAR REDIMENSIONAMIENTO
+            // ====================
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    // Reajustar controles en móvil/desktop
+                    if (window.innerWidth <= 768) {
+                        const existingToggle = document.querySelector('.video-toggle');
+                        if (existingToggle) existingToggle.remove();
+                    } else if (heroVideo && !document.querySelector('.video-toggle')) {
+                        // Crear botón de control si en desktop no existe
+                        const videoToggleBtn = document.createElement('button');
+                        videoToggleBtn.className = 'video-toggle';
+                        videoToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                        videoToggleBtn.title = 'Silenciar/Activar sonido';
+                        document.querySelector('.hero').appendChild(videoToggleBtn);
+                        
+                        videoToggleBtn.addEventListener('click', function() {
+                            heroVideo.muted = !heroVideo.muted;
+                            this.innerHTML = heroVideo.muted ? 
+                                '<i class="fas fa-volume-mute"></i>' : 
+                                '<i class="fas fa-volume-up"></i>';
+                        });
+                    }
+                }, 250);
             });
         });
         
-        // Estilos adicionales para animaciones
-        const style = document.createElement('style');
-        style.textContent = `
-            .fade-in {
-                opacity: 0;
-                transform: translateY(20px);
-                transition: opacity 0.5s ease, transform 0.5s ease;
-            }
-            
-            .fade-in.visible {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            nav ul {
-                display: flex;
-            }
-            
-            nav ul li {
-                margin-left: 25px;
-            }
-            
-            nav ul li a {
-                font-weight: 600;
-                color: #333;
-                padding: 5px 0;
-                position: relative;
-            }
-            
-            nav ul li a:after {
-                content: '';
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 0;
-                height: 2px;
-                background-color: #4CAF50;
-                transition: width 0.3s;
-            }
-            
-            nav ul li a:hover:after {
-                width: 100%;
-            }
-        `;
-        document.head.appendChild(style);
+        // ====================
+        // 10. POLYFILL PARA IntersectionObserver (solo si es necesario)
+        // ====================
+        if (!window.IntersectionObserver) {
+            console.warn('IntersectionObserver no soportado, cargando polyfill');
+            // En un caso real, podrías cargar un polyfill aquí
+            // Por simplicidad, solo activamos las animaciones
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.servicio-card, .contact-item, .map-container').forEach(el => {
+                    el.classList.add('visible');
+                });
+            });
+        }
     </script>
 </body>
 </html>
