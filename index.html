@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agrosistemas - Soluciones Agrícolas Integrales</title>
+    <link rel="icon" type="image/webp" href="favicon.webp">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Reset y estilos base */
@@ -112,7 +113,7 @@
             color: #2c5e1a;
         }
         
-        /* Hero Section con video - ACTUALIZADO */
+        /* Hero Section con YouTube - NUEVO */
         .hero {
             position: relative;
             height: 70vh;
@@ -125,20 +126,39 @@
             color: white;
         }
         
-        .hero-video {
+        /* Contenedor del video de YouTube */
+        .youtube-video-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
             z-index: -1;
-            /* Compatibilidad para todos los navegadores */
-            -webkit-object-fit: cover;
-            -moz-object-fit: cover;
-            -ms-object-fit: cover;
+            overflow: hidden;
         }
         
+        .youtube-video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding-bottom: 56.25%; /* Relación 16:9 */
+            height: 0;
+        }
+        
+        .youtube-video-wrapper iframe {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            min-width: 100%;
+            min-height: 100%;
+            object-fit: cover;
+            pointer-events: none; /* Para evitar interferencias */
+        }
+        
+        /* Overlay para mejorar legibilidad */
         .hero-overlay {
             position: absolute;
             top: 0;
@@ -149,7 +169,7 @@
             z-index: 0;
         }
         
-        /* Fondo de respaldo si el video falla */
+        /* Fondo de respaldo por si falla YouTube */
         .hero-fallback {
             position: absolute;
             top: 0;
@@ -158,16 +178,7 @@
             height: 100%;
             background: linear-gradient(135deg, #2c5e1a 0%, #4CAF50 100%);
             z-index: -2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .hero-fallback img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            opacity: 0.3;
+            display: none; /* Oculto por defecto */
         }
         
         .hero-content {
@@ -405,6 +416,13 @@
                 margin-right: 0;
                 margin-bottom: 10px;
             }
+            
+            /* Ajustes para YouTube en móviles */
+            .youtube-video-wrapper iframe {
+                width: 300%;
+                height: 100%;
+                left: -100%;
+            }
         }
         
         @media (max-width: 480px) {
@@ -424,21 +442,38 @@
             .contacto {
                 padding: 50px 0;
             }
+            
+            .youtube-video-wrapper iframe {
+                width: 400%;
+                height: 100%;
+                left: -150%;
+            }
         }
         
-        /* Mensaje para navegadores sin soporte de video */
-        .no-video-message {
-            display: none;
+        @media (max-height: 600px) {
+            .hero {
+                height: 80vh;
+            }
+        }
+        
+        /* Cargando YouTube */
+        .youtube-loading {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            z-index: 10;
-            max-width: 80%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #2c5e1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: -1;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .youtube-loading.hidden {
+            display: none;
         }
     </style>
 </head>
@@ -464,21 +499,22 @@
         </div>
     </header>
 
-    <!-- Hero Section con Video - ACTUALIZADO -->
+    <!-- Hero Section con YouTube -->
     <section class="hero" id="inicio">
         <!-- Fondo de respaldo -->
-        <div class="hero-fallback">
-            <!-- Puedes agregar una imagen de respaldo aquí -->
-            <!-- <img src="fallback-bg.jpg" alt="Fondo agrícola"> -->
+        <div class="hero-fallback" id="heroFallback"></div>
+        
+        <!-- Pantalla de carga -->
+        <div class="youtube-loading" id="youtubeLoading">
+            <div>Cargando video...</div>
         </div>
         
-        <!-- Video optimizado para todos los navegadores -->
-        <video autoplay muted loop playsinline preload="metadata" class="hero-video" id="heroVideo">
-            <source src="promotional.mp4" type="video/mp4">
-            <source src="promotional.webm" type="video/webm">
-            <source src="promotional.ogg" type="video/ogg">
-            Tu navegador no soporta videos HTML5. Te recomendamos actualizar tu navegador.
-        </video>
+        <!-- Contenedor del video de YouTube -->
+        <div class="youtube-video-container">
+            <div class="youtube-video-wrapper">
+                <!-- El iframe se insertará dinámicamente con JavaScript -->
+            </div>
+        </div>
         
         <div class="hero-overlay"></div>
         <div class="hero-content">
@@ -620,7 +656,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const mainNav = document.getElementById('mainNav');
-            const heroVideo = document.getElementById('heroVideo');
+            const heroFallback = document.getElementById('heroFallback');
+            const youtubeLoading = document.getElementById('youtubeLoading');
             
             // Menú móvil
             mobileMenuBtn.addEventListener('click', function() {
@@ -664,102 +701,116 @@
                 });
             });
             
-            // ========== SOLUCIÓN PARA EL PROBLEMA DEL VIDEO ==========
+            // ========== REPRODUCTOR DE YOUTUBE ==========
             
-            // 1. Detectar si el navegador soporta video HTML5
-            function supportsVideo() {
-                const video = document.createElement('video');
-                return !!video.canPlayType;
-            }
+            // ID del video de YouTube (extraído de la URL: https://www.youtube.com/watch?v=vM0KY4ys2yM)
+            const youtubeVideoId = 'vM0KY4ys2yM';
             
-            // 2. Intentar reproducir el video
-            function playVideo() {
-                if (heroVideo) {
-                    const playPromise = heroVideo.play();
-                    
-                    if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                            console.log('Video reproduciéndose correctamente');
-                        }).catch(error => {
-                            console.log('Error reproduciendo video:', error);
-                            // Si falla, mostrar mensaje o usar fallback
-                            handleVideoError();
-                        });
-                    }
-                }
-            }
-            
-            // 3. Manejar errores del video
-            function handleVideoError() {
-                // Agregar clase para mostrar fondo de respaldo
-                document.querySelector('.hero-fallback').style.zIndex = '-1';
+            // Función para crear el iframe de YouTube
+            function loadYouTubeVideo() {
+                const videoWrapper = document.querySelector('.youtube-video-wrapper');
                 
-                // Opcional: Mostrar mensaje al usuario
-                console.log('Usando fondo de respaldo debido a problemas con el video');
-            }
-            
-            // 4. Configurar eventos para el video
-            heroVideo.addEventListener('error', function() {
-                handleVideoError();
-            });
-            
-            heroVideo.addEventListener('loadeddata', function() {
-                console.log('Video cargado, intentando reproducir...');
-                playVideo();
-            });
-            
-            heroVideo.addEventListener('canplay', function() {
-                console.log('Video listo para reproducir');
-            });
-            
-            // 5. Configuraciones específicas para iOS
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
-                // iOS necesita estos atributos específicos
-                heroVideo.setAttribute('playsinline', 'true');
-                heroVideo.setAttribute('webkit-playsinline', 'true');
-                heroVideo.setAttribute('muted', 'true');
+                // Parámetros para autoplay, silenciado, controles, etc.
+                const youtubeParams = {
+                    autoplay: 1,           // Autoplay activado
+                    mute: 1,              // Silenciado (requerido para autoplay)
+                    controls: 0,          // Sin controles
+                    showinfo: 0,          // Sin información del video
+                    rel: 0,               // Sin videos relacionados al final
+                    loop: 1,              // Loop activado
+                    playlist: youtubeVideoId, // Necesario para loop
+                    enablejsapi: 1,       // Habilitar API de JavaScript
+                    iv_load_policy: 3,    // Sin anotaciones
+                    modestbranding: 1,    // Branding mínimo
+                    fs: 0,                // Sin pantalla completa
+                    disablekb: 1,         // Deshabilitar teclado
+                    playsinline: 1        // Reproducir en línea (iOS)
+                };
                 
-                // Intentar reproducir después de la interacción del usuario
-                document.addEventListener('touchstart', function initVideo() {
-                    playVideo();
-                    document.removeEventListener('touchstart', initVideo);
-                }, { once: true });
-            }
-            
-            // 6. Configuraciones para Android
-            if (/Android/.test(navigator.userAgent)) {
-                heroVideo.setAttribute('playsinline', 'true');
-                heroVideo.setAttribute('muted', 'true');
-            }
-            
-            // 7. Verificar compatibilidad al cargar
-            if (!supportsVideo()) {
-                console.log('Navegador no soporta video HTML5');
-                handleVideoError();
-            } else {
-                console.log('Navegador soporta video HTML5');
-                // Intentar reproducir después de cargar
-                window.addEventListener('load', function() {
-                    setTimeout(playVideo, 100);
+                // Construir URL de parámetros
+                const paramString = Object.keys(youtubeParams)
+                    .map(key => `${key}=${youtubeParams[key]}`)
+                    .join('&');
+                
+                // Crear iframe
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube.com/embed/${youtubeVideoId}?${paramString}`;
+                iframe.title = "Video promocional de Agrosistemas";
+                iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+                iframe.allowFullscreen = false;
+                iframe.frameBorder = "0";
+                iframe.loading = "eager";
+                
+                // Agregar iframe al contenedor
+                videoWrapper.appendChild(iframe);
+                
+                // Cuando el iframe se carga, ocultar pantalla de carga
+                iframe.addEventListener('load', function() {
+                    setTimeout(() => {
+                        youtubeLoading.classList.add('hidden');
+                        console.log('Video de YouTube cargado correctamente');
+                    }, 500);
+                });
+                
+                // Manejar errores
+                iframe.addEventListener('error', function() {
+                    console.error('Error al cargar el video de YouTube');
+                    youtubeLoading.classList.add('hidden');
+                    heroFallback.style.display = 'flex';
+                    heroFallback.style.zIndex = '-1';
                 });
             }
             
-            // 8. Pausar video cuando no está visible (para móviles)
-            const observer = new IntersectionObserver((entries) => {
+            // Función para verificar si YouTube está disponible
+            function checkYouTubeAvailability() {
+                // Intentar cargar el video de YouTube
+                loadYouTubeVideo();
+                
+                // Plan B: Si después de 5 segundos no se carga, usar fallback
+                setTimeout(function() {
+                    const iframe = document.querySelector('.youtube-video-wrapper iframe');
+                    if (!iframe || !iframe.src) {
+                        console.log('YouTube no está disponible, usando fondo de respaldo');
+                        youtubeLoading.classList.add('hidden');
+                        heroFallback.style.display = 'flex';
+                        heroFallback.style.zIndex = '-1';
+                    }
+                }, 5000);
+            }
+            
+            // Cargar YouTube cuando la página esté lista
+            window.addEventListener('load', function() {
+                // Pequeño retraso para asegurar que todo esté listo
+                setTimeout(checkYouTubeAvailability, 100);
+            });
+            
+            // Manejar la visibilidad del video para ahorrar recursos
+            const videoObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        // Video visible, intentar reproducir
-                        playVideo();
-                    } else {
-                        // Video no visible, pausar para ahorrar recursos
-                        if (heroVideo && !heroVideo.paused) {
-                            heroVideo.pause();
+                    const iframe = document.querySelector('.youtube-video-wrapper iframe');
+                    if (iframe) {
+                        if (entry.isIntersecting) {
+                            // Video visible, enviar comando de play (si la API está disponible)
+                            try {
+                                iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                            } catch (e) {
+                                // Silenciar error si no se puede acceder
+                            }
+                        } else {
+                            // Video no visible, enviar comando de pausa
+                            try {
+                                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+                            } catch (e) {
+                                // Silenciar error si no se puede acceder
+                            }
                         }
                     }
                 });
             }, { threshold: 0.5 });
             
-            observer.observe(heroVideo);
+            // Observar la sección hero
+            const heroSection = document.querySelector('.hero');
+            videoObserver.observe(heroSection);
             
             // Efecto de aparición al hacer scroll
             const scrollObserverOptions = {
@@ -779,6 +830,23 @@
                 el.classList.add('fade-in');
                 scrollObserver.observe(el);
             });
+            
+            // Detectar si estamos en un dispositivo móvil y ajustar el video
+            function adjustVideoForMobile() {
+                const iframe = document.querySelector('.youtube-video-wrapper iframe');
+                if (iframe && window.innerWidth <= 768) {
+                    // Para móviles, aumentar el tamaño del iframe para cubrir más área
+                    iframe.style.width = '300%';
+                    iframe.style.height = '100%';
+                    iframe.style.left = '-100%';
+                }
+            }
+            
+            // Ajustar cuando la ventana cambie de tamaño
+            window.addEventListener('resize', adjustVideoForMobile);
+            
+            // Ajustar inicialmente
+            setTimeout(adjustVideoForMobile, 1000);
         });
         
         // Estilos adicionales para animaciones
@@ -825,18 +893,52 @@
                 width: 100%;
             }
             
-            /* Estilos para navegadores antiguos */
-            .video-container {
-                position: relative;
+            /* Animación de carga */
+            .youtube-loading div {
+                animation: pulse 1.5s infinite;
             }
             
-            @media (max-width: 768px) {
-                .hero-video {
-                    height: 100%;
-                }
+            @keyframes pulse {
+                0% { opacity: 0.6; }
+                50% { opacity: 1; }
+                100% { opacity: 0.6; }
             }
         `;
         document.head.appendChild(style);
+        
+        // Script adicional para manejar mejor YouTube
+        const youtubeScript = document.createElement('script');
+        youtubeScript.textContent = `
+            // Manejar mensajes de YouTube API
+            window.addEventListener('message', function(event) {
+                // Manejar mensajes del iframe de YouTube
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data && data.event === 'onStateChange') {
+                        console.log('Estado del video de YouTube:', data.info);
+                    }
+                } catch (e) {
+                    // No es un mensaje JSON, ignorar
+                }
+            });
+            
+            // Detectar si hay problemas con YouTube
+            window.onYouTubeIframeAPIReady = function() {
+                console.log('YouTube API está lista');
+            };
+            
+            // Fallback para navegadores muy antiguos
+            if (!window.addEventListener) {
+                document.querySelector('.youtube-loading').innerHTML = 
+                    '<div>Video no disponible en este navegador</div>';
+                setTimeout(function() {
+                    document.querySelector('.youtube-loading').classList.add('hidden');
+                    document.getElementById('heroFallback').style.display = 'flex';
+                    document.getElementById('heroFallback').style.zIndex = '-1';
+                }, 2000);
+            }
+        `;
+        document.head.appendChild(youtubeScript);
     </script>
 </body>
 </html>
