@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agrosistemas - Soluciones Agrícolas Integrales</title>
+    <title>Asesoría Técnica - Agrosistemas</title>
     <link rel="icon" type="image/webp" href="favicon.webp">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -24,7 +24,6 @@
         .container {
             width: 100%;
             max-width: 1200px;
-            margin: 0 auto;
             padding: 0 20px;
         }
         
@@ -106,8 +105,9 @@
         }
         
         .logo img {
-            height: 100px;
+            height: 100%;
             width: auto;
+            max-width: 200px;
         }
         
         .mobile-menu-btn {
@@ -120,121 +120,58 @@
             padding: 5px;
         }
         
-        /* Hero Section con YouTube - Minimalista */
-        .hero {
-            position: relative;
-            height: 100vh;
-            min-height: 700px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        /* Hero Section - Específico para Asesoría Técnica */
+        .page-hero {
+            background: linear-gradient(135deg, rgba(0, 165, 83, 0.9) 0%, rgba(23, 114, 175, 0.9) 100%);
             color: white;
-        }
-        
-        /* Contenedor del video de YouTube */
-        .youtube-video-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            overflow: hidden;
-        }
-        
-        .youtube-video-wrapper {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            padding-bottom: 56.25%;
-            height: 0;
-        }
-        
-        .youtube-video-wrapper iframe {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100vw;
-            height: 100vh;
-            min-width: 100%;
-            min-height: 100%;
-            object-fit: cover;
-            pointer-events: none;
-            filter: brightness(0.8);
-        }
-        
-        /* Overlay minimalista */
-        .hero-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
-            z-index: 1;
-        }
-        
-        /* Contenido Hero - Minimalista */
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            max-width: 600px;
-            padding: 0 30px;
+            padding: 160px 0 80px;
             text-align: center;
+            margin-top: 80px;
         }
         
-        .hero h1 {
+        .page-hero h1 {
             font-size: 3.5rem;
             margin-bottom: 20px;
             font-weight: 700;
             line-height: 1.1;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
         
-        .hero-subtitle {
+        .page-hero p {
             font-size: 1.3rem;
-            margin-bottom: 40px;
+            max-width: 800px;
+            margin: 0 auto 40px;
             opacity: 0.9;
-            text-shadow: 0 1px 5px rgba(0,0,0,0.3);
         }
         
-        .hero-cta {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        /* Servicios */
-        .servicios {
+        /* Servicios Detallados */
+        .servicios-detalle {
             padding: 100px 0;
             background-color: #FFFFFF;
         }
         
-        .servicios-grid {
+        .servicios-grid-detalle {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 40px;
         }
         
-        .servicio-card {
+        .servicio-detalle-card {
             background-color: #FFFFFF;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 5px 25px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
             border: 1px solid #f0f0f0;
+            height: 100%;
         }
         
-        .servicio-card:hover {
+        .servicio-detalle-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.1);
             border-color: #00a553;
         }
         
-        .servicio-icon {
+        .servicio-detalle-icon {
             background-color: #f8f9fa;
             height: 120px;
             display: flex;
@@ -244,25 +181,118 @@
             color: #00a553;
         }
         
-        .servicio-content {
+        .servicio-detalle-content {
             padding: 30px;
         }
         
-        .servicio-content h3 {
+        .servicio-detalle-content h3 {
+            margin-bottom: 15px;
+            color: #111;
+            font-size: 1.6rem;
+        }
+        
+        .servicio-detalle-content p {
+            color: #666;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        
+        .servicio-beneficios {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .servicio-beneficios h4 {
+            color: #1772af;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .servicio-beneficios ul {
+            list-style: disc;
+            padding-left: 20px;
+            color: #666;
+        }
+        
+        .servicio-beneficios li {
+            margin-bottom: 8px;
+        }
+        
+        /* Calculadoras Agronómicas */
+        .calculadoras {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+        }
+        
+        .calculadora-intro {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 60px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .calculadoras-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .calculadora-card {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .calculadora-card:hover {
+            border-color: #00a553;
+            transform: translateY(-5px);
+        }
+        
+        .calculadora-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #f0f9f4;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+            color: #00a553;
+        }
+        
+        .calculadora-card h3 {
             margin-bottom: 15px;
             color: #111;
             font-size: 1.4rem;
         }
         
-        .servicio-content p {
+        .calculadora-card p {
             color: #666;
-            line-height: 1.7;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .calculadora-disponible {
+            background-color: #e8f4fd;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #1772af;
+            margin-bottom: 20px;
         }
         
         /* Contacto */
         .contacto {
             padding: 100px 0;
-            background-color: #f8f9fa;
+            background-color: #FFFFFF;
         }
         
         .contacto-grid {
@@ -276,6 +306,7 @@
             padding: 40px;
             border-radius: 12px;
             box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
         }
         
         .contact-info-card h3 {
@@ -289,14 +320,13 @@
             align-items: center;
             margin-bottom: 25px;
             padding: 20px;
-            background-color: #FFFFFF;
+            background-color: #f8f9fa;
             border-radius: 8px;
             transition: all 0.3s ease;
-            border: 1px solid #f0f0f0;
         }
         
         .contact-item:hover {
-            border-color: #1772af;
+            background-color: #e8f4fd;
             transform: translateX(5px);
         }
         
@@ -391,7 +421,7 @@
         
         /* Responsive */
         @media (max-width: 992px) {
-            .hero h1 {
+            .page-hero h1 {
                 font-size: 2.8rem;
             }
             
@@ -435,26 +465,26 @@
                 padding: 10px 0;
             }
             
-            .hero {
-                min-height: 600px;
+            .page-hero {
+                padding: 140px 0 60px;
+                margin-top: 80px;
             }
             
-            .hero h1 {
+            .page-hero h1 {
                 font-size: 2.4rem;
             }
             
-            .hero-subtitle {
+            .page-hero p {
                 font-size: 1.1rem;
-            }
-            
-            .hero-cta {
-                flex-direction: column;
-                align-items: center;
             }
             
             .section-title {
                 font-size: 2rem;
                 margin-bottom: 40px;
+            }
+            
+            .servicios-detalle, .calculadoras, .contacto {
+                padding: 70px 0;
             }
             
             .contact-item {
@@ -466,67 +496,24 @@
                 margin-right: 0;
                 margin-bottom: 15px;
             }
-            
-            .youtube-video-wrapper iframe {
-                width: 300%;
-                height: 100%;
-                left: -100%;
-            }
         }
         
         @media (max-width: 480px) {
-            .hero {
-                min-height: 500px;
-            }
-            
-            .hero h1 {
+            .page-hero h1 {
                 font-size: 2rem;
             }
             
-            .hero-subtitle {
+            .page-hero p {
                 font-size: 1rem;
-                margin-bottom: 30px;
             }
             
-            .servicios, .contacto {
-                padding: 70px 0;
+            .servicios-grid-detalle {
+                grid-template-columns: 1fr;
             }
             
-            .contact-info-card {
-                padding: 30px 20px;
+            .calculadoras-grid {
+                grid-template-columns: 1fr;
             }
-            
-            .youtube-video-wrapper iframe {
-                width: 400%;
-                height: 100%;
-                left: -150%;
-            }
-        }
-        
-        @media (max-height: 700px) {
-            .hero {
-                min-height: 600px;
-            }
-        }
-        
-        /* Cargando YouTube */
-        .youtube-loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #FFFFFF;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 3;
-            color: #111;
-            font-size: 1.2rem;
-        }
-        
-        .youtube-loading.hidden {
-            display: none;
         }
         
         /* Estilos de navegación */
@@ -563,6 +550,14 @@
             width: 100%;
         }
         
+        .current-page {
+            color: #00a553 !important;
+        }
+        
+        .current-page:after {
+            width: 100% !important;
+        }
+        
         /* Scroll suave */
         html {
             scroll-behavior: smooth;
@@ -592,23 +587,6 @@
         .fade-in.delay-2 {
             animation-delay: 0.4s;
         }
-        
-        /* Pulse animation for CTA */
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(0, 165, 83, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(0, 165, 83, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 165, 83, 0);
-            }
-        }
-        
-        .btn-pulse {
-            animation: pulse 2s infinite;
-        }
     </style>
 </head>
 <body>
@@ -624,8 +602,11 @@
                 </button>
                 <nav id="mainNav">
                     <ul>
-                        <li><a href="#inicio">Inicio</a></li>
-                        <li><a href="#servicios">Servicios</a></li>
+                        <li><a href="index.html">Inicio</a></li>
+                        <li><a href="asesoriaTecnica.html" class="current-page">Asesoría Técnica</a></li>
+                        <li><a href="sistemaDeRiego.html">Sistemas de Riego</a></li>
+                        <li><a href="energiaSolar.html">Energía Solar</a></li>
+                        <li><a href="equipamientoAgricola.html">Equipamiento</a></li>
                         <li><a href="#contacto">Contacto</a></li>
                     </ul>
                 </nav>
@@ -633,71 +614,134 @@
         </div>
     </header>
 
-    <!-- Hero Section con YouTube -->
-    <section class="hero" id="inicio">
-        <!-- Pantalla de carga -->
-        <div class="youtube-loading" id="youtubeLoading">
-            <div>Cargando video...</div>
+    <!-- Hero Section -->
+    <section class="page-hero">
+        <div class="container">
+            <h1 class="fade-in">Asesoría Técnica Agrícola</h1>
+            <p class="fade-in delay-1">Soluciones técnicas especializadas para optimizar cada etapa de tu producción agrícola. Implementamos tecnología de punta para maximizar rendimientos y rentabilidad.</p>
+            <a href="#contacto" class="btn fade-in delay-2">Solicitar Asesoría</a>
         </div>
-        
-        <!-- Contenedor del video de YouTube -->
-        <div class="youtube-video-container">
-            <div class="youtube-video-wrapper">
-                <!-- El iframe se insertará dinámicamente con JavaScript -->
-            </div>
-        </div>
-        
-        <div class="hero-overlay"></div>
-        <div class="hero-content">
-            <h1 class="fade-in">Soluciones Agrícolas Integrales</h1>
-            <p class="hero-subtitle fade-in delay-1">Tecnología y asesoría especializada para optimizar tu producción</p>
-            <div class="hero-cta fade-in delay-2">
-                <a href="#contacto" class="btn btn-pulse">Contáctanos</a>
-                <a href="#servicios" class="btn btn-secondary">Nuestros Servicios</a>
+    </section>
+
+    <!-- Servicios Detallados -->
+    <section class="servicios-detalle" id="servicios">
+        <div class="container">
+            <h2 class="section-title">Nuestros Servicios de Asesoría</h2>
+            <div class="servicios-grid-detalle">
+                <div class="servicio-detalle-card fade-in">
+                    <div class="servicio-detalle-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="servicio-detalle-content">
+                        <h3>Planificación de Cultivos</h3>
+                        <p>Diseño integral de sistemas de producción considerando factores climáticos, de suelo y mercado para maximizar la rentabilidad.</p>
+                        <div class="servicio-beneficios">
+                            <h4>Beneficios:</h4>
+                            <ul>
+                                <li>Optimización de calendarios de siembra</li>
+                                <li>Selección de variedades adecuadas</li>
+                                <li>Planificación de rotaciones</li>
+                                <li>Análisis de viabilidad económica</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="servicio-detalle-card fade-in delay-1">
+                    <div class="servicio-detalle-icon">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <div class="servicio-detalle-content">
+                        <h3>Análisis de Suelo y Agua</h3>
+                        <p>Evaluación técnica completa de parámetros físicos, químicos y biológicos para diagnóstico preciso de necesidades.</p>
+                        <div class="servicio-beneficios">
+                            <h4>Beneficios:</h4>
+                            <ul>
+                                <li>Recomendaciones de fertilización precisa</li>
+                                <li>Corrección de problemas de salinidad</li>
+                                <li>Optimización de pH y nutrientes</li>
+                                <li>Mejora de estructura del suelo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="servicio-detalle-card fade-in delay-2">
+                    <div class="servicio-detalle-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="servicio-detalle-content">
+                        <h3>Manejo Integrado de Cultivos</h3>
+                        <p>Estrategias holísticas para el control de plagas, enfermedades y malezas con énfasis en sostenibilidad.</p>
+                        <div class="servicio-beneficios">
+                            <h4>Beneficios:</h4>
+                            <ul>
+                                <li>Reducción de costos en insumos</li>
+                                <li>Minimización de impacto ambiental</li>
+                                <li>Prevención de resistencia</li>
+                                <li>Aumento de calidad del producto</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="servicio-detalle-card fade-in">
+                    <div class="servicio-detalle-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <div class="servicio-detalle-content">
+                        <h3>Nutrición Vegetal</h3>
+                        <p>Programas personalizados de fertilización basados en análisis foliares y requerimientos específicos de cada cultivo.</p>
+                        <div class="servicio-beneficios">
+                            <h4>Beneficios:</h4>
+                            <ul>
+                                <li>Maximización de rendimientos</li>
+                                <li>Mejora de calidad y tamaño</li>
+                                <li>Optimización de costos</li>
+                                <li>Prevención de deficiencias</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Servicios -->
-    <section class="servicios" id="servicios">
+    <!-- Calculadoras Agronómicas -->
+    <section class="calculadoras" id="calculadoras">
         <div class="container">
-            <h2 class="section-title">Servicios Especializados</h2>
-            <div class="servicios-grid">
-                <div class="servicio-card fade-in">
-                    <div class="servicio-icon">
-                        <i class="fas fa-seedling"></i>
+            <h2 class="section-title">Calculadoras Agronómicas</h2>
+            <p class="calculadora-intro fade-in">Herramientas técnicas para optimizar la gestión de tu producción agrícola. Calcula dosis, requerimientos y costos de manera precisa.</p>
+            
+            <div class="calculadoras-grid">
+                <div class="calculadora-card fade-in">
+                    <div class="calculadora-icon">
+                        <i class="fas fa-calculator"></i>
                     </div>
-                    <div class="servicio-content">
-                        <h3>Asesoría Técnica</h3>
-                        <p>Planificación y optimización de sistemas de producción agrícola con tecnología de punta.</p>
-                    </div>
+                    <h3>Calculadora de Fertilización</h3>
+                    <p>Determina las dosis exactas de fertilizantes según análisis de suelo y requerimientos del cultivo.</p>
+                    <div class="calculadora-disponible">Disponible próximamente</div>
+                    <a href="#" class="btn btn-secondary">Próximamente</a>
                 </div>
-                <div class="servicio-card fade-in delay-1">
-                    <div class="servicio-icon">
+                
+                <div class="calculadora-card fade-in delay-1">
+                    <div class="calculadora-icon">
                         <i class="fas fa-tint"></i>
                     </div>
-                    <div class="servicio-content">
-                        <h3>Sistemas de Riego</h3>
-                        <p>Diseño e implementación de sistemas eficientes que optimizan el uso del agua.</p>
-                    </div>
+                    <h3>Calculadora de Riego</h3>
+                    <p>Calcula volúmenes y tiempos de riego según tipo de suelo, cultivo y condiciones climáticas.</p>
+                    <div class="calculadora-disponible">Disponible próximamente</div>
+                    <a href="#" class="btn btn-secondary">Próximamente</a>
                 </div>
-                <div class="servicio-card fade-in delay-2">
-                    <div class="servicio-icon">
-                        <i class="fas fa-solar-panel"></i>
+                
+                <div class="calculadora-card fade-in delay-2">
+                    <div class="calculadora-icon">
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
-                    <div class="servicio-content">
-                        <h3>Energía Solar</h3>
-                        <p>Soluciones renovables que reducen costos y el impacto ambiental.</p>
-                    </div>
-                </div>
-                <div class="servicio-card fade-in">
-                    <div class="servicio-icon">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <div class="servicio-content">
-                        <h3>Equipamiento</h3>
-                        <p>Venta y mantenimiento de maquinaria especializada para todo tipo de cultivos.</p>
-                    </div>
+                    <h3>Calculadora de Costos</h3>
+                    <p>Estima costos de producción, rentabilidad y punto de equilibrio para diferentes cultivos.</p>
+                    <div class="calculadora-disponible">Disponible próximamente</div>
+                    <a href="#" class="btn btn-secondary">Próximamente</a>
                 </div>
             </div>
         </div>
@@ -706,23 +750,10 @@
     <!-- Contacto -->
     <section class="contacto" id="contacto">
         <div class="container">
-            <h2 class="section-title">Contáctanos</h2>
+            <h2 class="section-title">Solicita tu Asesoría</h2>
             <div class="contacto-grid">
                 <div class="contact-info-card fade-in">
-                    <h3>Información de Contacto</h3>
-                    
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="contact-text">
-                            <h4>Ubicación</h4>
-                            <a href="https://maps.google.com/?q=Av.+Agricultura+123,+Zona+Industrial,+Ciudad,+Estado,+México" target="_blank">
-                                Av. Agricultura 123, Zona Industrial
-                            </a>
-                            <p>Ciudad, Estado, México</p>
-                        </div>
-                    </div>
+                    <h3>Agenda una Consulta Técnica</h3>
                     
                     <div class="contact-item">
                         <div class="contact-icon">
@@ -730,10 +761,10 @@
                         </div>
                         <div class="contact-text">
                             <h4>Teléfono / WhatsApp</h4>
-                            <a href="https://wa.me/521234567890?text=Hola,%20me%20interesan%20sus%20servicios%20agrícolas" target="_blank">
+                            <a href="https://wa.me/521234567890?text=Hola,%20me%20interesa%20una%20asesoría%20técnica%20agrícola" target="_blank">
                                 +52 123 456 7890
                             </a>
-                            <p>Atendemos por WhatsApp</p>
+                            <p>Asesoría inmediata vía WhatsApp</p>
                         </div>
                     </div>
                     
@@ -742,22 +773,33 @@
                             <i class="fas fa-envelope"></i>
                         </div>
                         <div class="contact-text">
-                            <h4>Email</h4>
-                            <a href="mailto:info@agrosistemas.net?subject=Consulta%20de%20servicios&body=Hola,%20me%20gustaría%20obtener%20más%20información%20sobre...">
-                                info@agrosistemas.net
+                            <h4>Email Técnico</h4>
+                            <a href="mailto:tecnico@agrosistemas.net?subject=Solicitud%20de%20Asesoría%20Técnica&body=Hola,%20me%20gustaría%20agendar%20una%20asesoría%20técnica%20para...">
+                                tecnico@agrosistemas.net
                             </a>
-                            <p>Respondemos en menos de 24 horas</p>
+                            <p>Especialistas en agronomía</p>
                         </div>
                     </div>
                     
                     <div class="contact-item">
                         <div class="contact-icon">
-                            <i class="fas fa-clock"></i>
+                            <i class="fas fa-calendar-alt"></i>
                         </div>
                         <div class="contact-text">
-                            <h4>Horario de Atención</h4>
-                            <p>Lunes a Viernes: 8:00 am - 6:00 pm</p>
-                            <p>Sábados: 9:00 am - 1:00 pm</p>
+                            <h4>Visitas a Campo</h4>
+                            <p>Realizamos visitas técnicas para evaluación in situ</p>
+                            <p>Diagnóstico completo sin costo inicial</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Informes Técnicos</h4>
+                            <p>Entrega de reportes detallados</p>
+                            <p>Recomendaciones específicas por escrito</p>
                         </div>
                     </div>
                 </div>
@@ -780,9 +822,9 @@
                 <div class="footer-logo">
                     <img src="logo.png" alt="Agrosistemas Logo">
                 </div>
-                <p class="footer-text">Proveedores líderes de soluciones integrales para el sector agrícola. Tecnología, equipos y asesoría especializada para optimizar la producción agrícola.</p>
+                <p class="footer-text">Especialistas en asesoría técnica agrícola con más de 15 años de experiencia. Soluciones personalizadas para optimizar tu producción.</p>
                 <div class="copyright">
-                    <p>&copy; 2023 Agrosistemas. Todos los derechos reservados.</p>
+                    <p>&copy; 2023 Agrosistemas. Todos los derechos reservados. | <a href="index.html" style="color: #00a553;">Volver al Inicio</a></p>
                 </div>
             </div>
         </div>
@@ -793,7 +835,6 @@
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const mainNav = document.getElementById('mainNav');
             const mainHeader = document.getElementById('mainHeader');
-            const youtubeLoading = document.getElementById('youtubeLoading');
             
             // Menú móvil
             mobileMenuBtn.addEventListener('click', function() {
@@ -831,78 +872,6 @@
                 }
             });
             
-            // ========== REPRODUCTOR DE YOUTUBE ==========
-            
-            // ID del video de YouTube
-            const youtubeVideoId = 'vM0KY4ys2yM';
-            
-            // Función para crear el iframe de YouTube
-            function loadYouTubeVideo() {
-                const videoWrapper = document.querySelector('.youtube-video-wrapper');
-                
-                // Parámetros para autoplay, silenciado, controles, etc.
-                const youtubeParams = {
-                    autoplay: 1,
-                    mute: 1,
-                    controls: 0,
-                    showinfo: 0,
-                    rel: 0,
-                    loop: 1,
-                    playlist: youtubeVideoId,
-                    enablejsapi: 1,
-                    iv_load_policy: 3,
-                    modestbranding: 1,
-                    fs: 0,
-                    disablekb: 1,
-                    playsinline: 1
-                };
-                
-                // Construir URL de parámetros
-                const paramString = Object.keys(youtubeParams)
-                    .map(key => `${key}=${youtubeParams[key]}`)
-                    .join('&');
-                
-                // Crear iframe
-                const iframe = document.createElement('iframe');
-                iframe.src = `https://www.youtube.com/embed/${youtubeVideoId}?${paramString}`;
-                iframe.title = "Video promocional de Agrosistemas";
-                iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-                iframe.allowFullscreen = false;
-                iframe.frameBorder = "0";
-                iframe.loading = "eager";
-                
-                // Agregar iframe al contenedor
-                videoWrapper.appendChild(iframe);
-                
-                // Cuando el iframe se carga, ocultar pantalla de carga
-                iframe.addEventListener('load', function() {
-                    setTimeout(() => {
-                        youtubeLoading.classList.add('hidden');
-                    }, 500);
-                });
-                
-                // Manejar errores
-                iframe.addEventListener('error', function() {
-                    youtubeLoading.classList.add('hidden');
-                    // Si falla YouTube, mostrar overlay más oscuro
-                    document.querySelector('.hero-overlay').style.background = 'rgba(0, 0, 0, 0.8)';
-                });
-            }
-            
-            // Cargar YouTube cuando la página esté lista
-            window.addEventListener('load', function() {
-                setTimeout(loadYouTubeVideo, 100);
-                
-                // Plan B: Si después de 5 segundos no se carga
-                setTimeout(function() {
-                    const iframe = document.querySelector('.youtube-video-wrapper iframe');
-                    if (!iframe || !iframe.src) {
-                        youtubeLoading.classList.add('hidden');
-                        document.querySelector('.hero-overlay').style.background = 'rgba(0, 0, 0, 0.8)';
-                    }
-                }, 5000);
-            });
-            
             // Animaciones al hacer scroll
             const observerOptions = {
                 threshold: 0.1,
@@ -922,27 +891,11 @@
                 observer.observe(el);
             });
             
-            // Detectar dispositivo móvil y ajustar video
-            function adjustVideoForMobile() {
-                const iframe = document.querySelector('.youtube-video-wrapper iframe');
-                if (iframe && window.innerWidth <= 768) {
-                    iframe.style.width = '300%';
-                    iframe.style.height = '100%';
-                    iframe.style.left = '-100%';
-                }
-            }
-            
-            // Ajustar cuando la ventana cambie de tamaño
-            window.addEventListener('resize', adjustVideoForMobile);
-            
-            // Ajustar inicialmente
-            setTimeout(adjustVideoForMobile, 1000);
-            
-            // Smooth scroll para botones CTA
-            document.querySelectorAll('.btn[href^="#"]').forEach(btn => {
-                btn.addEventListener('click', function(e) {
+            // Smooth scroll para enlaces internos
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
                     const href = this.getAttribute('href');
-                    if (href !== '#') {
+                    if (href !== '#' && !href.includes('.html')) {
                         e.preventDefault();
                         const targetElement = document.querySelector(href);
                         if (targetElement) {
@@ -954,82 +907,7 @@
                     }
                 });
             });
-            
-            // Inicializar animaciones para elementos ya visibles
-            setTimeout(() => {
-                const heroContent = document.querySelector('.hero-content');
-                if (heroContent) {
-                    heroContent.style.visibility = 'visible';
-                }
-            }, 500);
         });
-        
-        // Estilo adicional para mejorar la legibilidad
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Mejorar legibilidad del hero */
-            .hero-content {
-                visibility: hidden;
-                animation: none;
-            }
-            
-            .hero h1 {
-                margin-bottom: 15px;
-            }
-            
-            .hero-subtitle {
-                margin-bottom: 40px;
-                font-weight: 400;
-            }
-            
-            /* Asegurar que el overlay oscurezca suficiente el video */
-            .hero-overlay {
-                background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
-            }
-            
-            /* Estilo para navegación en móvil */
-            @media (max-width: 768px) {
-                nav ul li a {
-                    font-size: 1.2rem;
-                    padding: 12px 0;
-                    border-bottom: 1px solid #f0f0f0;
-                }
-                
-                nav ul li:last-child a {
-                    border-bottom: none;
-                }
-            }
-            
-            /* Animación de carga para YouTube */
-            .youtube-loading div {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                font-weight: 600;
-            }
-            
-            .youtube-loading div:before {
-                content: '';
-                width: 30px;
-                height: 30px;
-                border: 3px solid #f0f0f0;
-                border-top-color: #00a553;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-            
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            
-            /* Mejorar contraste en dispositivos móviles */
-            @media (max-width: 768px) {
-                .hero-overlay {
-                    background: rgba(0, 0, 0, 0.8);
-                }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
