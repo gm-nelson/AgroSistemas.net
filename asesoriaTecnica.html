@@ -21,6 +21,7 @@
     
     <!-- Para captura de pantalla -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-image@0.4.1/leaflet-image.min.js"></script>
     <style>
         /* Reset y estilos base */
         * {
@@ -2321,161 +2322,133 @@ function optimizarImagenParaPDF(dataUrl) {
         return new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    async function capturarMapaSimple() {
+async function capturarMapaSimple() {
     return new Promise((resolve, reject) => {
         try {
-            // Obtener el contenedor del mapa
-            const mapContainer = document.getElementById('map');
-            if (!mapContainer) {
-                reject(new Error('No se encontró el contenedor del mapa'));
-                return;
-            }
-            
-            // Guardar estilos originales
-            const originalStyles = {
-                width: mapContainer.style.width,
-                height: mapContainer.style.height,
-                position: mapContainer.style.position,
-                zIndex: mapContainer.style.zIndex,
-                overflow: mapContainer.style.overflow
-            };
-            
-            // Aplicar estilos fijos para la captura
-            mapContainer.style.width = '800px';
-            mapContainer.style.height = '600px';
-            mapContainer.style.position = 'relative';
-            mapContainer.style.zIndex = '9999';
-            mapContainer.style.overflow = 'visible';
-            
-            // Ocultar controles temporales
-            const controles = document.getElementById('mapaControls');
-            const controlesVisibles = controles && controles.style.display !== 'none';
-            if (controles) {
-                controles.style.display = 'none';
-            }
-            
-            // Ocultar controles de Leaflet
-            const leafletControls = document.querySelectorAll('.leaflet-control-container');
-            leafletControls.forEach(control => {
-                control.style.display = 'none';
+            // Usar leaflet-image para capturar el mapa
+            leafletImage(map, function(err, canvas) {
+                if (err) {
+                    console.error('Error capturando con leaflet-image:', err);
+                    // Fallback a html2canvas
+                    capturarConHtml2Canvas().then(resolve).catch(reject);
+                    return;
+                }
+                
+                // Optimizar la imagen
+                optimizarCanvasParaPDF(canvas).then(optimizedCanvas => {
+                    const dataUrl = optimizedCanvas.toDataURL('image/jpeg', 0.9);
+                    capturaCanvas = optimizedCanvas;
+                    resolve(dataUrl);
+                }).catch(error => {
+                    // Usar canvas original si falla la optimización
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    capturaCanvas = canvas;
+                    resolve(dataUrl);
+                });
             });
             
-            // Esperar un momento para que se renderice
-            setTimeout(() => {
-                // Configuración optimizada para html2canvas
-                const config = {
-                    scale: 2, // Doble resolución para mejor calidad
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    removeContainer: false,
-                    width: 800,
-                    height: 600,
-                    x: mapContainer.offsetLeft,
-                    y: mapContainer.offsetTop,
-                    scrollX: -window.scrollX,
-                    scrollY: -window.scrollY,
-                    windowWidth: document.documentElement.scrollWidth,
-                    windowHeight: document.documentElement.scrollHeight,
-                    onclone: function(clonedDoc) {
-                        // En el documento clonado
-                        const clonedMap = clonedDoc.getElementById('map');
-                        if (clonedMap) {
-                            clonedMap.style.width = '800px';
-                            clonedMap.style.height = '600px';
-                            clonedMap.style.position = 'relative';
-                            clonedMap.style.zIndex = '9999';
-                            clonedMap.style.overflow = 'visible';
-                            
-                            // Ocultar controles en el clon
-                            const clonedControls = clonedDoc.getElementById('mapaControls');
-                            if (clonedControls) {
-                                clonedControls.style.display = 'none';
-                            }
-                            
-                            const clonedLeafletControls = clonedDoc.querySelectorAll('.leaflet-control-container');
-                            clonedLeafletControls.forEach(control => {
-                                control.style.display = 'none';
-                            });
-                            
-                            // Forzar carga de tiles
-                            const tiles = clonedMap.querySelectorAll('.leaflet-tile');
-                            tiles.forEach(tile => {
-                                tile.style.opacity = '1';
-                                tile.style.visibility = 'visible';
-                            });
-                        }
-                    }
-                };
-                
-                console.log('Iniciando captura con html2canvas...');
-                
-                // Usar html2canvas con timeout para evitar bloqueos
-                html2canvas(mapContainer, config).then(canvas => {
-                    console.log('Captura completada:', canvas.width, 'x', canvas.height);
-                    
-                    // Restaurar estilos originales
-                    mapContainer.style.width = originalStyles.width;
-                    mapContainer.style.height = originalStyles.height;
-                    mapContainer.style.position = originalStyles.position;
-                    mapContainer.style.zIndex = originalStyles.zIndex;
-                    mapContainer.style.overflow = originalStyles.overflow;
-                    
-                    // Restaurar controles
-                    if (controles && controlesVisibles) {
-                        controles.style.display = 'block';
-                    }
-                    
-                    leafletControls.forEach(control => {
-                        control.style.display = 'block';
-                    });
-                    
-                    // Verificar que el canvas tenga contenido
-                    if (canvas.width === 0 || canvas.height === 0) {
-                        throw new Error('Canvas vacío');
-                    }
-                    
-                    // Convertir a data URL con calidad alta
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                    
-                    // Guardar canvas para uso posterior
-                    capturaCanvas = canvas;
-                    
-                    resolve(dataUrl);
-                    
-                }).catch(canvasError => {
-                    console.error('Error en html2canvas:', canvasError);
-                    
-                    // Restaurar estilos en caso de error
-                    mapContainer.style.width = originalStyles.width;
-                    mapContainer.style.height = originalStyles.height;
-                    mapContainer.style.position = originalStyles.position;
-                    mapContainer.style.zIndex = originalStyles.zIndex;
-                    mapContainer.style.overflow = originalStyles.overflow;
-                    
-                    if (controles && controlesVisibles) {
-                        controles.style.display = 'block';
-                    }
-                    
-                    leafletControls.forEach(control => {
-                        control.style.display = 'block';
-                    });
-                    
-                    // Fallback: crear imagen alternativa
-                    console.log('Usando fallback para captura...');
-                    const fallbackUrl = crearCapturaFallback();
-                    resolve(fallbackUrl);
-                });
-                
-            }, 1000); // Esperar 1 segundo para renderizado
-            
         } catch (error) {
-            console.error('Error general en captura:', error);
-            // Fallback definitivo
-            const fallbackUrl = crearCapturaFallback();
-            resolve(fallbackUrl);
+            console.error('Error en capturarMapaSimple:', error);
+            reject(error);
         }
     });
+}
+
+async function capturarConHtml2Canvas() {
+    return new Promise((resolve, reject) => {
+        // Obtener el contenedor del mapa
+        const mapContainer = document.getElementById('map');
+        
+        // Ajustar temporalmente el tamaño para captura
+        const originalWidth = mapContainer.style.width;
+        const originalHeight = mapContainer.style.height;
+        
+        mapContainer.style.width = '800px';
+        mapContainer.style.height = '600px';
+        
+        // Esperar a que se renderice
+        setTimeout(() => {
+            html2canvas(mapContainer, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                scale: 2,
+                logging: false,
+                onclone: function(clonedDoc) {
+                    // Asegurar que los elementos SVG/Canvas sean visibles
+                    const clonedMap = clonedDoc.getElementById('map');
+                    if (clonedMap) {
+                        // Forzar visibilidad de todos los elementos
+                        const canvasElements = clonedMap.querySelectorAll('canvas');
+                        canvasElements.forEach(canvas => {
+                            canvas.style.opacity = '1';
+                            canvas.style.visibility = 'visible';
+                        });
+                        
+                        const svgElements = clonedMap.querySelectorAll('svg');
+                        svgElements.forEach(svg => {
+                            svg.style.opacity = '1';
+                            svg.style.visibility = 'visible';
+                        });
+                    }
+                }
+            }).then(canvas => {
+                // Restaurar tamaño original
+                mapContainer.style.width = originalWidth;
+                mapContainer.style.height = originalHeight;
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                capturaCanvas = canvas;
+                resolve(dataUrl);
+            }).catch(error => {
+                // Restaurar tamaño original
+                mapContainer.style.width = originalWidth;
+                mapContainer.style.height = originalHeight;
+                reject(error);
+            });
+        }, 1000);
+    });
+}
+
+function optimizarCanvasParaPDF(canvas) {
+    return new Promise((resolve, reject) => {
+        try {
+            const optimizedCanvas = document.createElement('canvas');
+            optimizedCanvas.width = Math.min(canvas.width, 1200);
+            optimizedCanvas.height = Math.min(canvas.height, 800);
+            
+            const ctx = optimizedCanvas.getContext('2d');
+            
+            // Fondo blanco
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, optimizedCanvas.width, optimizedCanvas.height);
+            
+            // Dibujar el mapa escalado
+            ctx.drawImage(canvas, 0, 0, optimizedCanvas.width, optimizedCanvas.height);
+            
+            // Agregar leyenda/etiquetas para elementos
+            agregarEtiquetasAImagen(ctx, optimizedCanvas);
+            
+            resolve(optimizedCanvas);
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+function agregarEtiquetasAImagen(ctx, canvas) {
+    // Agregar información adicional como texto sobre la imagen
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillRect(10, 10, 300, 80);
+    
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('DISEÑO DE SISTEMA DE RIEGO', 20, 30);
+    
+    ctx.font = '12px Arial';
+    ctx.fillText(`Fecha: ${new Date().toLocaleDateString()}`, 20, 50);
+    ctx.fillText(`Área: ${areaTotal > 0 ? areaTotal.toFixed(2) + ' m²' : 'No definida'}`, 20, 70);
+    ctx.fillText(`Tuberías: ${tuberias.length} | Válvulas: ${valvulas.length}`, 20, 90);
 }
 
 // Función de fallback si html2canvas falla
