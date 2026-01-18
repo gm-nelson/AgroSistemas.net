@@ -15,6 +15,9 @@
     <!-- jsPDF para exportación a PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF para exportación a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         /* Reset y estilos base */
         * {
@@ -1501,6 +1504,219 @@
         } else {
             return base + (diametroNum * 0.2);
         }
+    }
+
+    function exportarPDF() {
+        const { jsPDF } = window.jspdf;
+        
+        if (typeof jsPDF === 'undefined') {
+            alert('Error: La biblioteca jsPDF no está cargada correctamente.');
+            return;
+        }
+        
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        // Título
+        doc.setFontSize(20);
+        doc.setTextColor(0, 165, 83);
+        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Agrosistemas - Asesoría Técnica', 105, 30, { align: 'center' });
+        doc.text('Fecha: ' + new Date().toLocaleDateString(), 105, 37, { align: 'center' });
+        
+        let yPos = 50;
+        
+        // 1. Información General
+        doc.setFontSize(14);
+        doc.setTextColor(23, 114, 175);
+        doc.text('1. INFORMACIÓN GENERAL', 20, yPos);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        yPos += 10;
+        doc.text('Área Total: ' + (areaTotal > 0 ? areaTotal.toFixed(2) + ' m² (' + (areaTotal / 10000).toFixed(2) + ' ha)' : 'No definida'), 25, yPos);
+        yPos += 7;
+        doc.text('Fecha de Diseño: ' + new Date().toLocaleDateString(), 25, yPos);
+        yPos += 7;
+        doc.text('Número de Válvulas: ' + valvulas.length, 25, yPos);
+        yPos += 7;
+        doc.text('Longitud Total de Tuberías: ' + tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0).toFixed(2) + ' m', 25, yPos);
+        
+        yPos += 15;
+        
+        // 2. Tuberías por Diámetro
+        if (tuberias.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('2. TUBERÍAS POR DIÁMETRO', 20, yPos);
+            yPos += 10;
+            
+            const resumen = {};
+            tuberias.forEach(t => {
+                const key = `${t.tipo}_${t.diametro}_${t.tipoMaterial}`;
+                if (!resumen[key]) {
+                    resumen[key] = {
+                        tipo: t.tipo,
+                        diametro: t.diametro,
+                        tipoMaterial: t.tipoMaterial,
+                        longitudTotal: 0,
+                        conexiones: 0
+                    };
+                }
+                resumen[key].longitudTotal += t.longitud || 0;
+                resumen[key].conexiones += t.conexiones ? t.conexiones.length : 0;
+            });
+            
+            // Crear tabla
+            const headers = [['Tipo', 'Diámetro', 'Material', 'Longitud (m)', 'Conexiones']];
+            const data = Object.values(resumen).map(item => [
+                item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1),
+                item.diametro + '"',
+                item.tipoMaterial,
+                item.longitudTotal.toFixed(2),
+                item.conexiones.toString()
+            ]);
+            
+            // Agregar total
+            const totalGeneral = tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0);
+            data.push(['TOTAL GENERAL', '', '', totalGeneral.toFixed(2), '']);
+            
+            // Usar autoTable para crear la tabla
+            doc.autoTable({
+                startY: yPos,
+                head: headers,
+                body: data,
+                margin: { left: 20 },
+                theme: 'grid',
+                headStyles: { fillColor: [23, 114, 175] },
+                styles: { fontSize: 9 }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+        
+        // 3. Válvulas de Control
+        if (valvulas.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('3. VÁLVULAS DE CONTROL', 20, yPos);
+            yPos += 10;
+            
+            const headers = [['Nombre', 'Tipo', 'Diámetro', 'Presión (bar)', 'Emisores', 'Caudal Emisor (L/h)', 'Caudal Total (L/h)']];
+            const data = valvulas.map(valvula => [
+                valvula.nombre,
+                valvula.tipo,
+                valvula.diametro,
+                valvula.presion.toString(),
+                valvula.numeroEmisores.toString(),
+                valvula.caudalEmisor.toString(),
+                valvula.caudalTotal.toString()
+            ]);
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            data.push(['CAUDAL TOTAL', '', '', '', '', '', caudalTotalSistema.toFixed(2)]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: headers,
+                body: data,
+                margin: { left: 20 },
+                theme: 'grid',
+                headStyles: { fillColor: [23, 114, 175] },
+                styles: { fontSize: 8 },
+                columnStyles: {
+                    0: { cellWidth: 20 },
+                    6: { cellWidth: 25 }
+                }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+        
+        // 4. Cabezal de Bombeo
+        if (cabezales.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('4. CABEZAL DE BOMBEO Y FILTRACIÓN', 20, yPos);
+            yPos += 10;
+            
+            cabezales.forEach(cabezal => {
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Caudal de Bomba: ' + cabezal.caudalBomba + ' L/s', 25, yPos);
+                yPos += 6;
+                doc.text('Diámetro Succión: ' + cabezal.diametroSuccion, 25, yPos);
+                yPos += 6;
+                doc.text('Diámetro Descarga: ' + cabezal.diametroDescarga, 25, yPos);
+                yPos += 6;
+                doc.text('Número de Filtros: ' + cabezal.numeroFiltros, 25, yPos);
+                yPos += 6;
+                doc.text('Tipo de Filtros: ' + cabezal.tipoFiltros, 25, yPos);
+                yPos += 6;
+                if (cabezal.notas) {
+                    doc.text('Notas: ' + cabezal.notas, 25, yPos);
+                    yPos += 6;
+                }
+                yPos += 5;
+            });
+        }
+        
+        // 5. Resumen Hidráulico
+        if (valvulas.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('5. RESUMEN HIDRÁULICO', 20, yPos);
+            yPos += 10;
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            const caudalLps = caudalTotalSistema / 3600;
+            
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Caudal Total Requerido: ' + caudalTotalSistema.toFixed(2) + ' L/h (' + caudalLps.toFixed(2) + ' L/s)', 25, yPos);
+            yPos += 6;
+            
+            if (cabezales.length > 0) {
+                const cabezalPrincipal = cabezales[0];
+                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
+                const diferencia = caudalCabezal - caudalTotalSistema;
+                const porcentaje = (diferencia / caudalCabezal) * 100;
+                
+                doc.text('Caudal Disponible (Cabezal): ' + caudalCabezal.toFixed(2) + ' L/h (' + cabezalPrincipal.caudalBomba + ' L/s)', 25, yPos);
+                yPos += 6;
+                doc.text('Diferencia: ' + diferencia.toFixed(2) + ' L/h (' + (diferencia / 3600).toFixed(2) + ' L/s)', 25, yPos);
+                yPos += 6;
+                doc.text('Estado: ' + (diferencia >= 0 ? 'Sobrecapacidad (' + porcentaje.toFixed(1) + '%)' : 'Deficit (' + Math.abs(porcentaje).toFixed(1) + '%)'), 25, yPos);
+                yPos += 6;
+            }
+            
+            if (areaTotal > 0) {
+                const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
+                const horasPara10mm = 10 / laminaPorHora;
+                
+                doc.text('Lámina de Riego por Hora: ' + laminaPorHora.toFixed(3) + ' mm/h', 25, yPos);
+                yPos += 6;
+                doc.text('Tiempo para 10 mm de riego: ' + horasPara10mm.toFixed(1) + ' horas', 25, yPos);
+            }
+        }
+        
+        // Pie de página
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Página ' + i + ' de ' + pageCount, 105, 285, { align: 'center' });
+            doc.text('Agrosistemas - www.agrosistemas.com', 105, 290, { align: 'center' });
+        }
+        
+        // Guardar PDF
+        const fecha = new Date().toISOString().slice(0, 10);
+        doc.save('Memoria_Calculo_Riego_' + fecha + '.pdf');
+        
+        mostrarMensaje('PDF generado correctamente');
     }
     
     // Función para obtener color de tubería
@@ -3644,6 +3860,8 @@
         actualizarResultados();
         actualizarGaleriaDiseños();
     });
+
+    
 </script>
 </body>
 </html>
