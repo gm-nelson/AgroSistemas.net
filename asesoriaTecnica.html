@@ -1713,6 +1713,450 @@
     // FUNCIONES DE CAPTURA DE PANTALLA (MEJORADAS)
     // ============================================
     
+async function exportarPDF() {
+    try {
+        // Verificar librerías
+        if (typeof window.jspdf === 'undefined') {
+            alert('Error: jsPDF no está cargado. Recarga la página.');
+            return;
+        }
+        
+        mostrarMensaje('Generando PDF... Esto puede tomar unos segundos.', 3000);
+        
+        // Crear PDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        let currentY = 20;
+        
+        // Título principal
+        doc.setFontSize(20);
+        doc.setTextColor(0, 165, 83);
+        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, currentY, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, currentY + 8, { align: 'center' });
+        doc.text('Fecha: ' + new Date().toLocaleDateString('es-MX'), 105, currentY + 15, { align: 'center' });
+        
+        currentY += 25;
+        
+        // SECCIÓN 1: IMAGEN DEL DISEÑO
+        if (capturaTomada && capturaMapaDataUrl) {
+            try {
+                doc.setFontSize(14);
+                doc.setTextColor(23, 114, 175);
+                doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
+                currentY += 8;
+                
+                // Método 1: Intentar con addImage directo
+                try {
+                    // Reducir calidad para evitar problemas
+                    const imgWidth = 170; // mm
+                    const imgHeight = 100; // mm
+                    
+                    // Optimizar la data URL si es muy grande
+                    let optimizedDataUrl = capturaMapaDataUrl;
+                    
+                    // Si es PNG, convertir a JPEG con menor calidad
+                    if (capturaMapaDataUrl.startsWith('data:image/png')) {
+                        // Crear un canvas temporal para convertir a JPEG
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d');
+                        const img = new Image();
+                        
+                        await new Promise((resolve, reject) => {
+                            img.onload = function() {
+                                tempCanvas.width = img.width;
+                                tempCanvas.height = img.height;
+                                tempCtx.drawImage(img, 0, 0);
+                                // Convertir a JPEG con 85% de calidad
+                                optimizedDataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
+                                resolve();
+                            };
+                            img.onerror = reject;
+                            img.src = capturaMapaDataUrl;
+                        });
+                    }
+                    
+                    // Intentar añadir la imagen optimizada
+                    doc.addImage(optimizedDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
+                    currentY += imgHeight + 10;
+                    
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('Representación gráfica del diseño', 20, currentY);
+                    currentY += 5;
+                    
+                } catch (addImageError) {
+                    console.log('Método 1 falló, intentando método 2...', addImageError);
+                    
+                    // Método 2: Crear imagen simplificada
+                    currentY = crearImagenSimplificadaParaPDF(doc, currentY);
+                }
+                
+            } catch (imgError) {
+                console.error('Error con imagen:', imgError);
+                currentY = crearImagenSimplificadaParaPDF(doc, currentY);
+            }
+        } else {
+            // Sin captura
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
+            currentY += 8;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text('No se incluye imagen del diseño.', 25, currentY);
+            currentY += 6;
+            doc.text('Para incluirla, captura el diseño desde la pestaña "Galería".', 25, currentY);
+            currentY += 10;
+        }
+        
+        // Verificar nueva página
+        if (currentY > 250) {
+            doc.addPage();
+            currentY = 20;
+        }
+        
+        // SECCIÓN 2: INFORMACIÓN GENERAL
+        doc.setFontSize(14);
+        doc.setTextColor(23, 114, 175);
+        doc.text('2. INFORMACIÓN GENERAL DEL PROYECTO', 20, currentY);
+        currentY += 8;
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        
+        const infoItems = [
+            ['Área Total:', areaTotal > 0 ? `${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(3)} ha)` : 'No definida'],
+            ['Fecha de Diseño:', new Date().toLocaleDateString('es-MX')],
+            ['Número de Válvulas:', valvulas.length.toString()],
+            ['Longitud Total Tuberías:', `${tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0).toFixed(2)} m`],
+            ['Número de Elementos:', elementosGraficos.length.toString()]
+        ];
+        
+        infoItems.forEach((item, index) => {
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text(item[0], 25, currentY);
+            doc.setFont(undefined, 'normal');
+            doc.text(item[1], 70, currentY);
+            currentY += 7;
+        });
+        
+        currentY += 5;
+        
+        // SECCIÓN 3: TUBERÍAS POR DIÁMETRO
+        if (tuberias.length > 0) {
+            if (currentY > 200) {
+                doc.addPage();
+                currentY = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('3. RESUMEN DE TUBERÍAS POR DIÁMETRO', 20, currentY);
+            currentY += 10;
+            
+            // Agrupar tuberías
+            const resumenTuberias = {};
+            tuberias.forEach(tuberia => {
+                const key = `${tuberia.tipo}-${tuberia.diametro}-${tuberia.tipoMaterial}`;
+                if (!resumenTuberias[key]) {
+                    resumenTuberias[key] = {
+                        tipo: tuberia.tipo,
+                        diametro: tuberia.diametro,
+                        material: tuberia.tipoMaterial,
+                        longitudTotal: 0,
+                        cantidad: 0
+                    };
+                }
+                resumenTuberias[key].longitudTotal += tuberia.longitud || 0;
+                resumenTuberias[key].cantidad += 1;
+            });
+            
+            // Crear tabla simplificada (sin autoTable para mayor compatibilidad)
+            const tablaTuberias = Object.values(resumenTuberias).map(item => [
+                item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1),
+                `${item.diametro}"`,
+                item.material,
+                item.cantidad.toString(),
+                `${item.longitudTotal.toFixed(2)} m`
+            ]);
+            
+            const totalGeneral = tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0);
+            
+            // Dibujar tabla manualmente
+            const startX = 25;
+            const colWidths = [30, 20, 30, 20, 30];
+            
+            // Encabezados
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text('Tipo', startX, currentY);
+            doc.text('Diám.', startX + colWidths[0], currentY);
+            doc.text('Material', startX + colWidths[0] + colWidths[1], currentY);
+            doc.text('Cant.', startX + colWidths[0] + colWidths[1] + colWidths[2], currentY);
+            doc.text('Longitud', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
+            
+            currentY += 7;
+            
+            // Línea
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.2);
+            doc.line(startX, currentY, startX + 120, currentY);
+            currentY += 5;
+            
+            // Datos
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'normal');
+            
+            tablaTuberias.forEach((fila, index) => {
+                doc.text(fila[0], startX, currentY);
+                doc.text(fila[1], startX + colWidths[0], currentY);
+                doc.text(fila[2], startX + colWidths[0] + colWidths[1], currentY);
+                doc.text(fila[3], startX + colWidths[0] + colWidths[1] + colWidths[2], currentY);
+                doc.text(fila[4], startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
+                currentY += 6;
+            });
+            
+            // Línea final
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.2);
+            doc.line(startX, currentY, startX + 120, currentY);
+            currentY += 5;
+            
+            // Total
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text('TOTAL GENERAL:', startX, currentY);
+            doc.text(`${totalGeneral.toFixed(2)} m`, startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
+            
+            currentY += 10;
+        }
+        
+        // SECCIÓN 4: VÁLVULAS DE CONTROL
+        if (valvulas.length > 0) {
+            if (currentY > 200) {
+                doc.addPage();
+                currentY = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('4. VÁLVULAS DE CONTROL DEL SISTEMA', 20, currentY);
+            currentY += 10;
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            
+            // Tabla simplificada
+            const startX = 25;
+            
+            // Encabezados
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text('Nombre', startX, currentY);
+            doc.text('Tipo', startX + 25, currentY);
+            doc.text('Diám.', startX + 50, currentY);
+            doc.text('Presión', startX + 70, currentY);
+            doc.text('Emisores', startX + 90, currentY);
+            doc.text('Caudal', startX + 110, currentY);
+            
+            currentY += 6;
+            
+            // Línea
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.2);
+            doc.line(startX, currentY, startX + 140, currentY);
+            currentY += 5;
+            
+            // Datos
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            
+            valvulas.forEach(valvula => {
+                doc.text(valvula.nombre, startX, currentY);
+                doc.text(valvula.tipo.substring(0, 8), startX + 25, currentY);
+                doc.text(valvula.diametro, startX + 50, currentY);
+                doc.text(`${valvula.presion} bar`, startX + 70, currentY);
+                doc.text(valvula.numeroEmisores.toString(), startX + 90, currentY);
+                doc.text(`${valvula.caudalTotal} L/h`, startX + 110, currentY);
+                currentY += 5;
+            });
+            
+            currentY += 3;
+            
+            // Total
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text('CAUDAL TOTAL DEL SISTEMA:', startX, currentY);
+            doc.text(`${caudalTotalSistema.toFixed(2)} L/h (${(caudalTotalSistema / 3600).toFixed(2)} L/s)`, startX + 80, currentY);
+            
+            currentY += 10;
+        }
+        
+        // SECCIÓN 5: CÁLCULOS HIDRÁULICOS
+        if (valvulas.length > 0) {
+            if (currentY > 180) {
+                doc.addPage();
+                currentY = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('5. CÁLCULOS HIDRÁULICOS', 20, currentY);
+            currentY += 10;
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            const caudalLps = caudalTotalSistema / 3600;
+            
+            doc.setFontSize(10);
+            
+            const calculos = [
+                ['Caudal total requerido:', `${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(3)} L/s)`],
+                ['Número total de emisores:', valvulas.reduce((sum, v) => sum + v.numeroEmisores, 0).toString()],
+                ['Presión promedio:', `${(valvulas.reduce((sum, v) => sum + v.presion, 0) / valvulas.length).toFixed(1)} bar`]
+            ];
+            
+            if (cabezales.length > 0) {
+                const cabezal = cabezales[0];
+                const caudalCabezal = cabezal.caudalBomba * 1000;
+                const diferencia = caudalCabezal - caudalTotalSistema;
+                const porcentaje = (diferencia / caudalCabezal) * 100;
+                
+                calculos.push(
+                    ['Caudal disponible (cabezal):', `${cabezal.caudalBomba} L/s (${caudalCabezal.toFixed(0)} L/h)`],
+                    ['Balance del sistema:', `${diferencia >= 0 ? 'Sobrecapacidad' : 'Deficit'}`],
+                    ['Margen:', `${Math.abs(porcentaje).toFixed(1)}%`]
+                );
+            }
+            
+            if (areaTotal > 0) {
+                const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
+                const horasPara10mm = 10 / laminaPorHora;
+                
+                calculos.push(
+                    ['Lámina de riego por hora:', `${laminaPorHora.toFixed(3)} mm/h`],
+                    ['Tiempo para 10 mm de riego:', `${horasPara10mm.toFixed(1)} horas`]
+                );
+            }
+            
+            calculos.forEach((item, index) => {
+                doc.setFont(undefined, 'bold');
+                doc.text(item[0], 25, currentY);
+                doc.setFont(undefined, 'normal');
+                doc.text(item[1], 90, currentY);
+                currentY += 7;
+            });
+        }
+        
+        // SECCIÓN 6: OBSERVACIONES
+        if (currentY > 200) {
+            doc.addPage();
+            currentY = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setTextColor(23, 114, 175);
+        doc.text('6. OBSERVACIONES Y APROBACIONES', 20, currentY);
+        currentY += 15;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Observaciones:', 25, currentY);
+        currentY += 15;
+        
+        doc.setLineWidth(0.5);
+        doc.line(25, currentY, 185, currentY);
+        currentY += 20;
+        doc.line(25, currentY, 185, currentY);
+        currentY += 10;
+        
+        // Firmas
+        doc.text('________________________________________', 105, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text('Ing. Diseñador', 105, currentY, { align: 'center' });
+        currentY += 20;
+        
+        doc.text('________________________________________', 105, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text('Cliente / Responsable', 105, currentY, { align: 'center' });
+        currentY += 20;
+        
+        doc.text('________________________________________', 105, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text('Fecha de Aprobación', 105, currentY, { align: 'center' });
+        
+        // Pie de página
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Página ${i} de ${totalPages}`, 20, 285);
+            doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 285, { align: 'center' });
+            doc.text('Los Mochis, Sinaloa, México | Tel: 668 123 4567', 105, 290, { align: 'center' });
+        }
+        
+        // Guardar PDF
+        const fechaHora = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const nombreArchivo = `Memoria_Calculo_Riego_${fechaHora}.pdf`;
+        
+        // Mostrar mensaje final
+        mostrarMensaje(`PDF generado exitosamente: ${nombreArchivo}`, 5000);
+        
+        // Descargar el PDF
+        doc.save(nombreArchivo);
+        
+    } catch (error) {
+        console.error('Error en exportarPDF:', error);
+        alert(`Error al generar el PDF: ${error.message}\n\nPor favor, intente nuevamente.`);
+    }
+}
+
+// Función auxiliar para crear imagen simplificada
+function crearImagenSimplificadaParaPDF(doc, currentY) {
+    doc.setFontSize(14);
+    doc.setTextColor(23, 114, 175);
+    doc.text('1. REPRESENTACIÓN DEL DISEÑO', 20, currentY);
+    currentY += 10;
+    
+    // Dibujar un recuadro representativo
+    doc.setDrawColor(23, 114, 175);
+    doc.setFillColor(240, 248, 255);
+    doc.roundedRect(25, currentY, 160, 80, 3, 3, 'FD');
+    
+    // Título dentro del recuadro
+    doc.setFontSize(12);
+    doc.setTextColor(23, 114, 175);
+    doc.text('REPRESENTACIÓN GRÁFICA DEL SISTEMA', 105, currentY + 15, { align: 'center' });
+    
+    // Información dentro del recuadro
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    
+    let infoY = currentY + 30;
+    doc.text(`• Área total: ${areaTotal > 0 ? areaTotal.toFixed(2) + ' m²' : 'No definida'}`, 40, infoY);
+    infoY += 7;
+    doc.text(`• Tuberías: ${tuberias.length}`, 40, infoY);
+    infoY += 7;
+    doc.text(`• Válvulas: ${valvulas.length}`, 40, infoY);
+    infoY += 7;
+    doc.text(`• Elementos: ${elementosGraficos.length}`, 40, infoY);
+    
+    // Leyenda simplificada
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Nota: Para ver el diseño completo interactivo, accede a la aplicación web.', 105, currentY + 70, { align: 'center' });
+    
+    currentY += 90;
+    
+    return currentY;
+}
+
     async function capturarDiseñoActual() {
         try {
             mostrarMensaje('Preparando captura del diseño...', 2000);
@@ -1794,6 +2238,57 @@
             control.style.display = 'block';
         });
     }
+    
+
+    // Función para optimizar imagen para PDF
+function optimizarImagenParaPDF(dataUrl) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Si ya es JPEG, devolver como está
+            if (dataUrl.startsWith('data:image/jpeg')) {
+                resolve(dataUrl);
+                return;
+            }
+            
+            // Si es PNG u otro formato, convertir a JPEG
+            const img = new Image();
+            img.onload = function() {
+                try {
+                    // Crear canvas temporal
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.min(img.width, 800); // Limitar ancho máximo
+                    canvas.height = Math.min(img.height, 600); // Limitar alto máximo
+                    
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Dibujar imagen redimensionada
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convertir a JPEG con 85% de calidad
+                    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    
+                    console.log(`Imagen optimizada: ${dataUrl.length} → ${jpegDataUrl.length} bytes`);
+                    resolve(jpegDataUrl);
+                    
+                } catch (canvasError) {
+                    console.error('Error en canvas:', canvasError);
+                    resolve(dataUrl); // Devolver original si falla
+                }
+            };
+            
+            img.onerror = function() {
+                console.error('Error cargando imagen para optimizar');
+                resolve(dataUrl); // Devolver original si falla
+            };
+            
+            img.src = dataUrl;
+            
+        } catch (error) {
+            console.error('Error en optimizarImagenParaPDF:', error);
+            resolve(dataUrl); // Devolver original si falla
+        }
+    });
+}
     
     async function ajustarVistaMapaParaCaptura() {
         // Crear grupo con todos los elementos
