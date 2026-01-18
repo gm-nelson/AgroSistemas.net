@@ -9,131 +9,126 @@
 
 <style>
 :root{
-    --bg:#0f2027;
-    --card:#16232e;
-    --accent:#00c6ff;
-    --ok:#4caf50;
-    --warn:#ffc107;
-    --bad:#f44336;
+  --bg:#0f2027;
+  --card:#16232e;
+  --accent:#00c6ff;
+  --ok:#4caf50;
+  --warn:#ffc107;
+  --bad:#f44336;
 }
 
-*{box-sizing:border-box;font-family:Segoe UI,system-ui}
+*{box-sizing:border-box;font-family:system-ui,Segoe UI}
 
 body{
-    margin:0;
-    background:linear-gradient(135deg,#0f2027,#203a43);
-    color:#eaf6ff;
-    padding:20px;
+  margin:0;
+  background:linear-gradient(135deg,#0f2027,#203a43);
+  color:#eaf6ff;
+  padding:20px;
 }
 
 .container{max-width:1200px;margin:auto}
 
-header{
-    text-align:center;
-    margin-bottom:25px;
-}
+header{text-align:center;margin-bottom:25px}
 
 header h1{
-    margin:0;
-    font-size:2.5rem;
-    background:linear-gradient(90deg,var(--accent),#0072ff);
-    -webkit-background-clip:text;
-    color:transparent;
+  margin:0;
+  font-size:2.4rem;
+  background:linear-gradient(90deg,var(--accent),#0072ff);
+  -webkit-background-clip:text;
+  color:transparent;
 }
 
-header p{color:#9bdcff}
-
 .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
-    gap:20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:20px;
 }
 
 .card{
-    background:var(--card);
-    border-radius:16px;
-    padding:20px;
-    box-shadow:0 10px 25px rgba(0,0,0,.3);
+  background:var(--card);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,.35);
 }
 
 .card h2{
-    margin:0 0 15px;
-    display:flex;
-    align-items:center;
-    gap:10px;
+  margin:0 0 15px;
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
+
+.row{display:flex;gap:10px;margin-bottom:10px}
 
 input,button{
-    border:none;
-    border-radius:10px;
-    padding:12px;
-    font-size:1rem;
+  border:none;
+  border-radius:10px;
+  padding:12px;
+  font-size:1rem;
 }
 
-input{
-    flex:1;
-    background:#1f3342;
-    color:white;
-}
+input{flex:1;background:#1f3342;color:white}
 
 button{
-    background:linear-gradient(90deg,#0072ff,var(--accent));
-    color:white;
-    cursor:pointer;
-    font-weight:600;
+  background:linear-gradient(90deg,#0072ff,var(--accent));
+  color:white;
+  font-weight:600;
+  cursor:pointer;
 }
 
 button:disabled{opacity:.5}
 
-.row{display:flex;gap:10px;margin-bottom:10px}
-
 .status{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    justify-content:center;
-    margin:15px 0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  margin:15px 0;
 }
 
 .dot{
-    width:12px;height:12px;border-radius:50%;
-    background:var(--bad);
+  width:12px;height:12px;border-radius:50%;
+  background:var(--bad);
 }
 
 .big{
-    text-align:center;
-    font-size:2.8rem;
-    font-weight:700;
-    color:var(--accent);
+  text-align:center;
+  font-size:2.8rem;
+  font-weight:700;
+  color:var(--accent);
 }
 
 .stats{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
 }
 
 .box{
-    background:#1c2f3d;
-    border-radius:10px;
-    padding:10px;
-    text-align:center;
+  background:#1c2f3d;
+  border-radius:10px;
+  padding:10px;
+  text-align:center;
 }
 
-.box strong{display:block;font-size:1.4rem;color:var(--accent)}
+.box strong{
+  display:block;
+  font-size:1.4rem;
+  color:var(--accent);
+}
 
 canvas{
-    width:100%;
-    background:#0e1a22;
-    border-radius:12px;
-    margin-top:15px;
+  width:100%;
+  background:#0e1a22;
+  border-radius:12px;
+  margin-top:15px;
 }
 
 footer{
-    text-align:center;
-    margin-top:30px;
-    color:#7fbcd9;
-    font-size:.9rem;
+  text-align:center;
+  margin-top:30px;
+  font-size:.9rem;
+  color:#7fbcd9;
 }
 </style>
 </head>
@@ -143,7 +138,7 @@ footer{
 
 <header>
 <h1><i class="fas fa-network-wired"></i> Network Monitor</h1>
-<p>Latencia, velocidad y estado real de tu conexión</p>
+<p>Latencia, velocidad y estado real de la red</p>
 </header>
 
 <div class="grid">
@@ -153,23 +148,23 @@ footer{
 <h2><i class="fas fa-satellite-dish"></i> Ping</h2>
 
 <div class="row">
-<input id="ip" value="8.8.8.8">
-<button id="start">Ping</button>
-<button id="loop">Continuo</button>
-<button id="stop" disabled>Stop</button>
+<input id="ipInput" value="8.8.8.8">
+<button id="btnPing">Ping</button>
+<button id="btnLoop">Continuo</button>
+<button id="btnStop" disabled>Stop</button>
 </div>
 
 <div class="status">
-<div class="dot" id="dot"></div>
-<span id="state">Desconectado</span>
+<div class="dot" id="statusDot"></div>
+<span id="statusText">Desconectado</span>
 </div>
 
-<div class="big" id="ping">-- ms</div>
+<div class="big" id="pingValue">-- ms</div>
 
 <div class="stats">
-<div class="box"><strong id="avg">--</strong>Promedio</div>
-<div class="box"><strong id="min">--</strong>Mínimo</div>
-<div class="box"><strong id="max">--</strong>Máximo</div>
+<div class="box"><strong id="avgPing">--</strong>Avg</div>
+<div class="box"><strong id="minPing">--</strong>Min</div>
+<div class="box"><strong id="maxPing">--</strong>Max</div>
 </div>
 </div>
 
@@ -178,112 +173,130 @@ footer{
 <h2><i class="fas fa-tachometer-alt"></i> Rendimiento</h2>
 
 <div class="stats">
-<div class="box"><strong id="down">--</strong>Mbps ↓</div>
-<div class="box"><strong id="up">--</strong>Mbps ↑</div>
-<div class="box"><strong id="net">--</strong>Red</div>
+<div class="box"><strong id="downSpeed">--</strong>Mbps ↓</div>
+<div class="box"><strong id="upSpeed">--</strong>Mbps ↑</div>
+<div class="box"><strong id="netType">--</strong>Red</div>
 </div>
 
-<button style="margin-top:15px;width:100%" id="speed">Speedtest</button>
+<button id="btnSpeed" style="margin-top:15px;width:100%">Speedtest</button>
 
-<canvas id="chart" height="160"></canvas>
+<canvas id="pingChart" height="160"></canvas>
 </div>
 
 </div>
 
 <footer>
-Monitor de red en navegador • Sin backend • HTML5
+Network Monitor • HTML5 • Sin backend
 </footer>
 
 </div>
 
 <script>
-/* ====== ESTADO ====== */
-let loop=null, times=[];
-const pingEl=ping, dot=dot, state=state;
-const avgEl=avg,minEl=min,maxEl=max;
+/* ========= ESTADO ========= */
+let pingHistory=[];
+let pingIntervalId=null;
 
-/* ====== PING ====== */
+/* ========= ELEMENTOS ========= */
+const pingValue=document.getElementById('pingValue');
+const statusDot=document.getElementById('statusDot');
+const statusText=document.getElementById('statusText');
+const avgPing=document.getElementById('avgPing');
+const minPing=document.getElementById('minPing');
+const maxPing=document.getElementById('maxPing');
+
+const btnPing=document.getElementById('btnPing');
+const btnLoop=document.getElementById('btnLoop');
+const btnStop=document.getElementById('btnStop');
+
+const downSpeed=document.getElementById('downSpeed');
+const upSpeed=document.getElementById('upSpeed');
+const netType=document.getElementById('netType');
+
+/* ========= PING ========= */
 function simulatePing(){
-    return new Promise(r=>{
-        const t=30+Math.random()*120;
-        setTimeout(()=>r(Math.round(t)),t);
-    });
+  return new Promise(r=>{
+    const t=30+Math.random()*150;
+    setTimeout(()=>r(Math.round(t)),t);
+  });
 }
 
-async function pingOnce(){
-    pingEl.textContent="...";
-    const t=await simulatePing();
-    times.push(t);
-    updateStats();
-    updateUI(t);
-    pushChart(t);
-}
+async function doPing(){
+  pingValue.textContent="...";
+  const t=await simulatePing();
 
-function updateUI(t){
-    pingEl.textContent=t+" ms";
-    dot.style.background=t<100?"#4caf50":t<250?"#ffc107":"#f44336";
-    state.textContent="Conectado";
+  pingHistory.push(t);
+  if(pingHistory.length>30) pingHistory.shift();
+
+  pingValue.textContent=t+" ms";
+  statusText.textContent="Conectado";
+  statusDot.style.background=t<100?"#4caf50":t<250?"#ffc107":"#f44336";
+
+  updateStats();
+  drawChart();
 }
 
 function updateStats(){
-    const s=times.reduce((a,b)=>a+b,0);
-    avgEl.textContent=Math.round(s/times.length);
-    minEl.textContent=Math.min(...times);
-    maxEl.textContent=Math.max(...times);
+  const sum=pingHistory.reduce((a,b)=>a+b,0);
+  avgPing.textContent=Math.round(sum/pingHistory.length);
+  minPing.textContent=Math.min(...pingHistory);
+  maxPing.textContent=Math.max(...pingHistory);
 }
 
-/* ====== CONTROLES ====== */
-start.onclick=()=>pingOnce();
-loop.onclick=()=>{
-    start.disabled=loop.disabled=true;
-    stop.disabled=false;
-    loop=setInterval(pingOnce,2000);
-}
-stop.onclick=()=>{
-    clearInterval(loop);
-    start.disabled=loop.disabled=false;
-    stop.disabled=true;
+/* ========= CONTROLES ========= */
+btnPing.onclick=doPing;
+
+btnLoop.onclick=()=>{
+  btnPing.disabled=btnLoop.disabled=true;
+  btnStop.disabled=false;
+  pingIntervalId=setInterval(doPing,2000);
+};
+
+btnStop.onclick=()=>{
+  clearInterval(pingIntervalId);
+  btnPing.disabled=btnLoop.disabled=false;
+  btnStop.disabled=true;
+};
+
+/* ========= SPEEDTEST ========= */
+btnSpeed.onclick=async()=>{
+  downSpeed.textContent="...";
+  upSpeed.textContent="...";
+  downSpeed.textContent=(await testSpeed(5)).toFixed(1);
+  upSpeed.textContent=(await testSpeed(3)).toFixed(1);
+};
+
+function testSpeed(mb){
+  const start=performance.now();
+  return new Promise(r=>setTimeout(()=>{
+    const t=(performance.now()-start)/1000;
+    r((mb*8)/t);
+  },400+Math.random()*400));
 }
 
-/* ====== SPEEDTEST ====== */
-speed.onclick=async()=>{
-    down.textContent="...";
-    up.textContent="...";
-    const d=await test(5);
-    const u=await test(3);
-    down.textContent=d.toFixed(1);
-    up.textContent=u.toFixed(1);
-}
-
-function test(mb){
-    const start=performance.now();
-    return new Promise(r=>setTimeout(()=>{
-        const t=(performance.now()-start)/1000;
-        r((mb*8)/t);
-    },400+Math.random()*400));
-}
-
-/* ====== INFO RED ====== */
+/* ========= INFO RED ========= */
 if(navigator.connection){
-    const c=navigator.connection;
-    net.textContent=`${c.effectiveType} (${c.downlink}Mb)`;
-}else net.textContent="N/A";
+  const c=navigator.connection;
+  netType.textContent=`${c.effectiveType} (${c.downlink}Mb)`;
+}else{
+  netType.textContent="N/A";
+}
 
-/* ====== GRAFICA ====== */
-const ctx=chart.getContext("2d");
-let data=[];
+/* ========= GRÁFICA ========= */
+const canvas=document.getElementById('pingChart');
+const ctx=canvas.getContext('2d');
 
-function pushChart(v){
-    data.push(v); if(data.length>25)data.shift();
-    ctx.clearRect(0,0,chart.width,chart.height);
-    ctx.beginPath();
-    ctx.strokeStyle="#00c6ff";
-    data.forEach((p,i)=>{
-        const x=i*(chart.width/25);
-        const y=chart.height-(p/400)*chart.height;
-        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
-    });
-    ctx.stroke();
+function drawChart(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.beginPath();
+  ctx.strokeStyle="#00c6ff";
+
+  pingHistory.forEach((v,i)=>{
+    const x=i*(canvas.width/30);
+    const y=canvas.height-(v/400)*canvas.height;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
+
+  ctx.stroke();
 }
 </script>
 </body>
