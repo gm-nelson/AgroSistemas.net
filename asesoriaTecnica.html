@@ -6,6 +6,10 @@
     <title>Asesoría Técnica - Agrosistemas</title>
     <link rel="icon" type="image/webp" href="favicon.webp">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS (OpenStreetMap) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
     <style>
         /* Reset y estilos base */
         * {
@@ -866,8 +870,6 @@
             animation-delay: 0.4s;
         }
     </style>
-    <!-- Cargar Google Maps API con Places -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmB0XRoE-cPl9OHnwHRe5w6KjXQcBzS3Q&libraries=places,drawing&callback=initMap" async defer></script>
 </head>
 <body>
     <!-- Header -->
@@ -1338,12 +1340,21 @@
         </div>
     </footer>
 
+    <!-- Leaflet JS (OpenStreetMap) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <!-- Leaflet Draw Plugin -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <!-- Leaflet Geocoder (para búsqueda) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    
     <script>
         // Variables globales
         let map;
-        let drawingManager;
-        let polygon;
-        let medidaPolilinea;
+        let drawnItems;
         let areaTotal = 0;
         let selectedElement = 'cabezal';
         let secciones = {};
@@ -1351,78 +1362,111 @@
         
         // Inicializar el mapa
         function initMap() {
-            const defaultLocation = { lat: 25.8133, lng: -108.9719 }; // Los Mochis, Sinaloa
+            // Coordenadas de Los Mochis, Sinaloa
+            const losMochis = [25.8133, -108.9719];
             
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: defaultLocation,
-                zoom: 15,
-                mapTypeId: 'satellite'
+            // Crear mapa
+            map = L.map('map').setView(losMochis, 15);
+            
+            // Añadir capa de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Añadir capa de satélite (opcional)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Capa para dibujar elementos
+            drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+            
+            // Inicializar herramientas de dibujo
+            const drawControl = new L.Control.Draw({
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        shapeOptions: {
+                            color: '#008a45',
+                            fillColor: '#00a553',
+                            fillOpacity: 0.3,
+                            weight: 2
+                        }
+                    },
+                    polyline: {
+                        shapeOptions: {
+                            color: '#ff0000',
+                            weight: 2
+                        }
+                    },
+                    rectangle: false,
+                    circle: false,
+                    marker: false,
+                    circlemarker: false
+                },
+                edit: {
+                    featureGroup: drawnItems
+                }
             });
             
-            // Configurar el buscador de ubicaciones
-            const input = document.getElementById('location-search');
-            const searchBox = new google.maps.places.SearchBox(input);
+            map.addControl(drawControl);
             
-            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+            // Geocoder para búsqueda de ubicaciones
+            L.Control.geocoder({
+                defaultMarkGeocode: false,
+                placeholder: 'Buscar ubicación...',
+                collapsed: false
+            })
+            .on('markgeocode', function(e) {
+                const bbox = e.geocode.bbox;
+                const poly = L.polygon([
+                    bbox.getSouthEast(),
+                    bbox.getNorthEast(),
+                    bbox.getNorthWest(),
+                    bbox.getSouthWest()
+                ]);
+                map.fitBounds(poly.getBounds());
+            })
+            .addTo(map);
             
-            searchBox.addListener('places_changed', function() {
-                const places = searchBox.getPlaces();
-                if (places.length === 0) return;
+            // Eventos de dibujo
+            map.on(L.Draw.Event.CREATED, function(event) {
+                const layer = event.layer;
+                drawnItems.addLayer(layer);
                 
-                const bounds = new google.maps.LatLngBounds();
-                places.forEach(place => {
-                    if (!place.geometry) return;
-                    
-                    if (place.geometry.viewport) {
-                        bounds.union(place.geometry.viewport);
-                    } else {
-                        bounds.extend(place.geometry.location);
+                if (event.layerType === 'polygon') {
+                    calcularAreaPoligono(layer);
+                } else if (event.layerType === 'polyline') {
+                    calcularLongitudPolilinea(layer);
+                }
+            });
+            
+            // Evento de edición
+            map.on(L.Draw.Event.EDITED, function(event) {
+                const layers = event.layers;
+                layers.eachLayer(function(layer) {
+                    if (layer instanceof L.Polygon) {
+                        calcularAreaPoligono(layer);
+                    } else if (layer instanceof L.Polyline) {
+                        calcularLongitudPolilinea(layer);
                     }
                 });
-                map.fitBounds(bounds);
             });
             
-            // Configurar herramientas de dibujo
-            drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: null,
-                drawingControl: false,
-                polygonOptions: {
-                    fillColor: '#00a553',
-                    fillOpacity: 0.3,
-                    strokeWeight: 2,
-                    strokeColor: '#008a45',
-                    editable: true,
-                    draggable: false
-                },
-                polylineOptions: {
-                    strokeColor: '#ff0000',
-                    strokeWeight: 2,
-                    editable: true
-                }
-            });
-            
-            drawingManager.setMap(map);
-            
-            // Eventos para el dibujo de polígonos
-            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(poly) {
-                polygon = poly;
-                calcularArea(poly);
-                
-                // Limpiar mediciones anteriores
-                if (medidaPolilinea) {
-                    medidaPolilinea.setMap(null);
-                }
-                
-                // Generar secciones automáticamente
-                generarSecciones();
-            });
-            
-            google.maps.event.addListener(drawingManager, 'polylinecomplete', function(line) {
-                if (medidaPolilinea) {
-                    medidaPolilinea.setMap(null);
-                }
-                medidaPolilinea = line;
-                calcularLongitud(line);
+            // Evento de eliminación
+            map.on(L.Draw.Event.DELETED, function(event) {
+                const layers = event.layers;
+                layers.eachLayer(function(layer) {
+                    if (layer instanceof L.Polygon) {
+                        areaTotal = 0;
+                        document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
+                        actualizarCalculos();
+                        inicializarSecciones();
+                    }
+                });
             });
             
             // Inicializar secciones
@@ -1433,27 +1477,27 @@
         }
         
         // Calcular área del polígono
-        function calcularArea(polygon) {
-            const area = google.maps.geometry.spherical.computeArea(polygon.getPath());
-            areaTotal = area;
+        function calcularAreaPoligono(polygon) {
+            areaTotal = L.GeometryUtil.geodesicArea(polygon.getLatLngs()[0]);
             
             // Actualizar display
             document.getElementById('areaDisplay').textContent = 
-                `Área: ${area.toFixed(2)} m² (${(area / 10000).toFixed(2)} ha)`;
+                `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha)`;
             
             // Actualizar cálculos basados en área
             actualizarCalculos();
+            
+            // Generar secciones automáticamente
+            generarSecciones();
         }
         
         // Calcular longitud de polilínea
-        function calcularLongitud(polyline) {
-            const path = polyline.getPath();
+        function calcularLongitudPolilinea(polyline) {
+            const latlngs = polyline.getLatLngs();
             let length = 0;
             
-            for (let i = 0; i < path.getLength() - 1; i++) {
-                const point1 = path.getAt(i);
-                const point2 = path.getAt(i + 1);
-                length += google.maps.geometry.spherical.computeDistanceBetween(point1, point2);
+            for (let i = 0; i < latlngs.length - 1; i++) {
+                length += latlngs[i].distanceTo(latlngs[i + 1]);
             }
             
             // Mostrar longitud
@@ -1745,33 +1789,28 @@
             // Controladores para el diseñador de riego
             // Botones del mapa
             document.getElementById('drawPolygonBtn').addEventListener('click', function() {
-                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
-                if (medidaPolilinea) {
-                    medidaPolilinea.setMap(null);
+                // Activar modo dibujo de polígono en Leaflet
+                if (map) {
+                    new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
                 }
             });
             
             document.getElementById('measureBtn').addEventListener('click', function() {
-                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
-                if (polygon) {
-                    // Mantener el polígono visible
+                // Activar modo dibujo de polilínea en Leaflet
+                if (map) {
+                    new L.Draw.Polyline(map, drawControl.options.draw.polyline).enable();
                 }
             });
             
             document.getElementById('clearBtn').addEventListener('click', function() {
-                if (polygon) {
-                    polygon.setMap(null);
-                    polygon = null;
+                // Limpiar todos los elementos dibujados
+                if (drawnItems) {
+                    drawnItems.clearLayers();
+                    areaTotal = 0;
+                    document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
+                    actualizarCalculos();
+                    inicializarSecciones();
                 }
-                if (medidaPolilinea) {
-                    medidaPolilinea.setMap(null);
-                    medidaPolilinea = null;
-                }
-                drawingManager.setDrawingMode(null);
-                document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
-                areaTotal = 0;
-                actualizarCalculos();
-                inicializarSecciones();
             });
             
             // Pestañas CAD
@@ -1879,17 +1918,17 @@
                             <h4>Configuración de Calles</h4>
                             <div class="control-row">
                                 <div class="control-label">Ancho:</div>
-                                <input type="number" min="2" max="6" value="3" step="0.5"> m
-                            </div>
-                            <div class="control-row">
-                                <div class="control-label">Material:</div>
-                                <select>
-                                    <option>Tierra</option>
-                                    <option>Grava</option>
-                                    <option>Concreto</option>
-                                </select>
-                            </div>
-                        `;
+                                    <input type="number" min="2" max="6" value="3" step="0.5"> m
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Material:</div>
+                                    <select>
+                                        <option>Tierra</option>
+                                        <option>Grava</option>
+                                        <option>Concreto</option>
+                                    </select>
+                                </div>
+                            `;
                         break;
                 }
                 
@@ -1929,6 +1968,9 @@
             
             // Calcular emisores iniciales
             calcularEmisores();
+            
+            // Inicializar el mapa después de cargar la página
+            setTimeout(initMap, 500);
         });
     </script>
 </body>
