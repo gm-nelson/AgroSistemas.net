@@ -220,73 +220,355 @@
             margin-bottom: 8px;
         }
         
-        /* Calculadoras Agronómicas */
-        .calculadoras {
+        /* Diseñador de Riego CAD */
+        .disenador-riego {
             padding: 100px 0;
             background-color: #f8f9fa;
         }
         
-        .calculadora-intro {
+        .disenador-intro {
             text-align: center;
             max-width: 800px;
-            margin: 0 auto 60px;
+            margin: 0 auto 40px;
             color: #666;
             font-size: 1.1rem;
         }
         
-        .calculadoras-grid {
+        .disenador-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: 1fr 350px;
             gap: 30px;
+            height: 700px;
         }
         
-        .calculadora-card {
-            background-color: #FFFFFF;
+        @media (max-width: 992px) {
+            .disenador-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+        
+        /* Panel del Mapa */
+        .mapa-panel {
+            background-color: white;
             border-radius: 12px;
-            padding: 40px 30px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mapa-header {
+            padding: 20px;
+            background-color: #1772af;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .mapa-header h3 {
+            font-size: 1.3rem;
+            margin: 0;
+        }
+        
+        .mapa-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .mapa-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            width: 300px;
+        }
+        
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        #location-search {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .mapa-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .mapa-btn {
+            background-color: #00a553;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .mapa-btn:hover {
+            background-color: #008a45;
+        }
+        
+        .mapa-btn.secondary {
+            background-color: #1772af;
+        }
+        
+        .mapa-btn.secondary:hover {
+            background-color: #145c92;
+        }
+        
+        .area-display {
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        /* Panel de Diseño CAD */
+        .cad-panel {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cad-header {
+            padding: 20px;
+            background-color: #00a553;
+            color: white;
+        }
+        
+        .cad-header h3 {
+            font-size: 1.3rem;
+            margin: 0 0 10px 0;
+        }
+        
+        .cad-header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .cad-tabs {
+            display: flex;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .cad-tab {
+            flex: 1;
+            padding: 15px;
             text-align: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
         }
         
-        .calculadora-card:hover {
-            border-color: #00a553;
-            transform: translateY(-5px);
+        .cad-tab.active {
+            background-color: white;
+            color: #00a553;
+            border-bottom: 3px solid #00a553;
         }
         
-        .calculadora-icon {
-            width: 80px;
-            height: 80px;
-            background-color: #f0f9f4;
-            border-radius: 50%;
+        .cad-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .cad-tab-content {
+            display: none;
+        }
+        
+        .cad-tab-content.active {
+            display: block;
+        }
+        
+        .cad-controls {
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .control-group h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .control-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 2rem;
-            color: #00a553;
+            margin-bottom: 10px;
         }
         
-        .calculadora-card h3 {
-            margin-bottom: 15px;
-            color: #111;
-            font-size: 1.4rem;
-        }
-        
-        .calculadora-card p {
-            color: #666;
-            margin-bottom: 25px;
-            line-height: 1.6;
-        }
-        
-        .calculadora-disponible {
-            background-color: #e8f4fd;
-            padding: 10px;
-            border-radius: 6px;
+        .control-label {
+            width: 120px;
             font-size: 0.9rem;
+            color: #666;
+        }
+        
+        select, input[type="number"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        /* Colores para tipos de tubería */
+        .color-principal {
+            background-color: #ff6b6b;
+        }
+        
+        .color-secundaria {
+            background-color: #4ecdc4;
+        }
+        
+        .color-regante {
+            background-color: #45b7d1;
+        }
+        
+        .elementos-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .elemento-btn {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        
+        .elemento-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .elemento-btn.active {
+            background-color: #00a553;
+            color: white;
+            border-color: #00a553;
+        }
+        
+        .cad-resumen {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .cad-resumen h4 {
+            margin-bottom: 10px;
             color: #1772af;
-            margin-bottom: 20px;
+        }
+        
+        .resumen-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .secciones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .seccion-item {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .seccion-item:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .seccion-item.active {
+            background-color: #00a553;
+            color: white;
+        }
+        
+        .seccion-config {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        /* Panel de Emisores */
+        .emisor-panel {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .emisor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .emisor-header h4 {
+            color: #333;
+            margin: 0;
+        }
+        
+        .emisor-info {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #eee;
         }
         
         /* Contacto */
@@ -483,7 +765,7 @@
                 margin-bottom: 40px;
             }
             
-            .servicios-detalle, .calculadoras, .contacto {
+            .servicios-detalle, .disenador-riego, .contacto {
                 padding: 70px 0;
             }
             
@@ -508,10 +790,6 @@
             }
             
             .servicios-grid-detalle {
-                grid-template-columns: 1fr;
-            }
-            
-            .calculadoras-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -588,6 +866,8 @@
             animation-delay: 0.4s;
         }
     </style>
+    <!-- Cargar Google Maps API con Places -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmB0XRoE-cPl9OHnwHRe5w6KjXQcBzS3Q&libraries=places,drawing&callback=initMap" async defer></script>
 </head>
 <body>
     <!-- Header -->
@@ -707,131 +987,341 @@
         </div>
     </section>
 
-    <!-- Calculadoras Agronómicas -->
-    <section class="calculadoras" id="calculadoras">
+    <!-- Diseñador de Riego CAD -->
+    <section class="disenador-riego" id="disenador-riego">
         <div class="container">
-            <h2 class="section-title">Calculadoras Agronómicas</h2>
-            <p class="calculadora-intro fade-in">Herramientas técnicas para optimizar la gestión de tu producción agrícola. Calcula dosis, requerimientos y costos de manera precisa.</p>
+            <h2 class="section-title">Diseñador de Sistemas de Riego</h2>
+            <p class="disenador-intro fade-in">Diseña tu sistema de riego de manera interactiva. Ubica tu predio en el mapa, delimita las secciones y configura tuberías, emisores y elementos del sistema.</p>
             
-            <div class="calculadoras-grid">
-                <div class="calculadora-card fade-in">
-                    <div class="calculadora-icon">
-                        <i class="fas fa-calculator"></i>
+            <div class="disenador-grid">
+                <!-- Panel del Mapa -->
+                <div class="mapa-panel fade-in">
+                    <div class="mapa-header">
+                        <h3>Ubicación del Predio</h3>
+                        <div class="area-display" id="areaDisplay">Área: 0 m²</div>
                     </div>
-                    <h3>Calculadora de Fertilización</h3>
-                    <p>Determina las dosis exactas de fertilizantes según análisis de suelo y requerimientos del cultivo.</p>
-                    <div class="calculadora-disponible">Disponible próximamente</div>
-                    <a href="#" class="btn btn-secondary">Próximamente</a>
+                    <div class="mapa-container">
+                        <div id="map"></div>
+                        <div class="mapa-controls">
+                            <div class="search-container">
+                                <input type="text" id="location-search" placeholder="Buscar ubicación...">
+                            </div>
+                            <div class="mapa-buttons">
+                                <button class="mapa-btn" id="drawPolygonBtn">
+                                    <i class="fas fa-draw-polygon"></i> Delimitar Terreno
+                                </button>
+                                <button class="mapa-btn secondary" id="measureBtn">
+                                    <i class="fas fa-ruler"></i> Medir
+                                </button>
+                                <button class="mapa-btn secondary" id="clearBtn">
+                                    <i class="fas fa-trash"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="calculadora-card fade-in delay-1">
-                    <div class="calculadora-icon">
-                        <i class="fas fa-tint"></i>
+                <!-- Panel de Diseño CAD -->
+                <div class="cad-panel fade-in delay-1">
+                    <div class="cad-header">
+                        <h3>Diseño del Sistema de Riego</h3>
+                        <p>Configura tuberías, emisores y secciones del sistema</p>
                     </div>
-                    <h3>Calculadora de Riego</h3>
-                    <p>Calcula volúmenes y tiempos de riego según tipo de suelo, cultivo y condiciones climáticas.</p>
-                    <div class="calculadora-disponible">Disponible próximamente</div>
-                    <a href="#" class="btn btn-secondary">Próximamente</a>
-                </div>
-                
-                <div class="calculadora-card fade-in delay-2">
-                    <div class="calculadora-icon">
-                        <i class="fas fa-dollar-sign"></i>
+                    
+                    <div class="cad-tabs">
+                        <div class="cad-tab active" data-tab="tuberias">Tuberías</div>
+                        <div class="cad-tab" data-tab="elementos">Elementos</div>
+                        <div class="cad-tab" data-tab="secciones">Secciones</div>
+                        <div class="cad-tab" data-tab="emisores">Emisores</div>
                     </div>
-                    <h3>Calculadora de Costos</h3>
-                    <p>Estima costos de producción, rentabilidad y punto de equilibrio para diferentes cultivos.</p>
-                    <div class="calculadora-disponible">Disponible próximamente</div>
-                    <a href="#" class="btn btn-secondary">Próximamente</a>
+                    
+                    <div class="cad-content">
+                        <!-- Pestaña de Tuberías -->
+                        <div class="cad-tab-content active" id="tuberias-tab">
+                            <div class="control-group">
+                                <h4>Tubería Principal</h4>
+                                <div class="control-row">
+                                    <div class="control-label">Color:</div>
+                                    <div class="color-indicator color-principal"></div>
+                                    <div>Rojo</div>
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Diámetro:</div>
+                                    <select id="diametroPrincipal">
+                                        <option value="2">2"</option>
+                                        <option value="3">3"</option>
+                                        <option value="4">4"</option>
+                                        <option value="6">6"</option>
+                                        <option value="8">8"</option>
+                                        <option value="10">10"</option>
+                                        <option value="12">12"</option>
+                                        <option value="14">14"</option>
+                                        <option value="16">16"</option>
+                                        <option value="18">18"</option>
+                                        <option value="20">20"</option>
+                                    </select>
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Tipo:</div>
+                                    <select id="tipoPrincipal">
+                                        <option value="pvc">PVC</option>
+                                        <option value="manguera">Manguera</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="control-group">
+                                <h4>Tubería Secundaria</h4>
+                                <div class="control-row">
+                                    <div class="control-label">Color:</div>
+                                    <div class="color-indicator color-secundaria"></div>
+                                    <div>Turquesa</div>
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Diámetro:</div>
+                                    <select id="diametroSecundaria">
+                                        <option value="1">1"</option>
+                                        <option value="1.5">1.5"</option>
+                                        <option value="2">2"</option>
+                                        <option value="3">3"</option>
+                                        <option value="4">4"</option>
+                                    </select>
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Tipo:</div>
+                                    <select id="tipoSecundaria">
+                                        <option value="pvc">PVC</option>
+                                        <option value="manguera">Manguera</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="control-group">
+                                <h4>Tubería Regante</h4>
+                                <div class="control-row">
+                                    <div class="control-label">Color:</div>
+                                    <div class="color-indicator color-regante"></div>
+                                    <div>Azul</div>
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Diámetro:</div>
+                                    <select id="diametroRegante">
+                                        <option value="0.5">1/2"</option>
+                                        <option value="0.75">3/4"</option>
+                                        <option value="1">1"</option>
+                                    </select>
+                                </div>
+                                <div class="control-row">
+                                    <div class="control-label">Tipo:</div>
+                                    <select id="tipoRegante">
+                                        <option value="pvc">PVC</option>
+                                        <option value="manguera">Manguera</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="cad-resumen">
+                                <h4>Resumen de Tuberías</h4>
+                                <div class="resumen-item">
+                                    <span>Principal:</span>
+                                    <span id="metrosPrincipal">0 m</span>
+                                </div>
+                                <div class="resumen-item">
+                                    <span>Secundaria:</span>
+                                    <span id="metrosSecundaria">0 m</span>
+                                </div>
+                                <div class="resumen-item">
+                                    <span>Regante:</span>
+                                    <span id="metrosRegante">0 m</span>
+                                </div>
+                                <div class="resumen-item" style="font-weight: bold; border-top: 1px solid #ddd; padding-top: 8px;">
+                                    <span>Total:</span>
+                                    <span id="metrosTotal">0 m</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pestaña de Elementos -->
+                        <div class="cad-tab-content" id="elementos-tab">
+                            <div class="control-group">
+                                <h4>Agregar Elementos al Diseño</h4>
+                                <div class="elementos-lista">
+                                    <div class="elemento-btn active" data-elemento="cabezal">
+                                        <i class="fas fa-water-pump"></i> Cabezal
+                                    </div>
+                                    <div class="elemento-btn" data-elemento="purgaterminal">
+                                        <i class="fas fa-faucet"></i> Purgas/Terminales
+                                    </div>
+                                    <div class="elemento-btn" data-elemento="tomagua">
+                                        <i class="fas fa-tint"></i> Toma de Agua
+                                    </div>
+                                    <div class="elemento-btn" data-elemento="calle">
+                                        <i class="fas fa-road"></i> Calles
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="control-group">
+                                <h4>Configuración del Elemento</h4>
+                                <div id="elementoConfig">
+                                    <p>Selecciona un elemento para configurarlo</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pestaña de Secciones -->
+                        <div class="cad-tab-content" id="secciones-tab">
+                            <div class="control-group">
+                                <h4>Secciones del Sistema (A1-Z10)</h4>
+                                <div class="secciones-grid" id="seccionesGrid">
+                                    <!-- Se generarán dinámicamente -->
+                                </div>
+                            </div>
+                            
+                            <div class="seccion-config" id="seccionConfig">
+                                <h4>Configuración de Sección</h4>
+                                <p>Selecciona una sección para configurarla</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Pestaña de Emisores -->
+                        <div class="cad-tab-content" id="emisores-tab">
+                            <div class="control-group">
+                                <h4>Tipo de Emisor</h4>
+                                <div class="control-row">
+                                    <div class="control-label">Tipo:</div>
+                                    <select id="tipoEmisor">
+                                        <option value="goteo">Goteo</option>
+                                        <option value="aspersion">Aspersión</option>
+                                        <option value="microaspersion">Microaspersión</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="emisor-panel">
+                                <div class="emisor-header">
+                                    <h4>Características del Emisor</h4>
+                                    <div id="caudalTotal">Caudal Total: 0 L/h</div>
+                                </div>
+                                
+                                <div class="control-row">
+                                    <div class="control-label">Caudal:</div>
+                                    <input type="number" id="caudalEmisor" min="1" max="100" value="4" step="0.5"> L/h
+                                </div>
+                                
+                                <div class="control-row">
+                                    <div class="control-label">Separación:</div>
+                                    <input type="number" id="separacionEmisor" min="0.1" max="5" value="0.5" step="0.1"> m
+                                </div>
+                                
+                                <div class="control-row">
+                                    <div class="control-label">Separación surco:</div>
+                                    <input type="number" id="separacionSurco" min="0.5" max="3" value="1.5" step="0.1"> m
+                                </div>
+                                
+                                <div class="emisor-info">
+                                    <div class="resumen-item">
+                                        <span>Emisores por m²:</span>
+                                        <span id="emisoresPorM2">0</span>
+                                    </div>
+                                    <div class="resumen-item">
+                                        <span>Caudal por m²:</span>
+                                        <span id="caudalPorM2">0 L/h</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-   <!-- Contacto -->
-<section class="contacto" id="contacto">
-    <div class="container">
-        <h2 class="section-title">Solicita tu Asesoría</h2>
-        <div class="contacto-grid">
-            <div class="contact-info-card fade-in">
-                <h3>Agenda una Consulta Técnica</h3>
-                
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-map-marker-alt"></i>
+    <!-- Contacto -->
+    <section class="contacto" id="contacto">
+        <div class="container">
+            <h2 class="section-title">Solicita tu Asesoría</h2>
+            <div class="contacto-grid">
+                <div class="contact-info-card fade-in">
+                    <h3>Agenda una Consulta Técnica</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Oficinas Técnicas</h4>
+                            <a href="https://www.google.com/maps/place/Violetas+19,+Bugambilias,+81215+Los+Mochis,+Sin./@25.8131774,-108.9719226,17z/data=!3m1!4b1!4m6!3m5!1s0x86ba28c844fbb9cd:0x2ae9233b645339f1!8m2!3d25.8131774!4d-108.9719226!16s%2Fg%2F11lcm_fmbg?entry=ttu" target="_blank">
+                                Violetas #19, Fracc. Bugambilias
+                            </a>
+                            <p>Los Mochis, Sinaloa, C.P. 81215</p>
+                        </div>
                     </div>
-                    <div class="contact-text">
-                        <h4>Oficinas Técnicas</h4>
-                        <a href="https://www.google.com/maps/place/Violetas+19,+Bugambilias,+81215+Los+Mochis,+Sin./@25.8131774,-108.9719226,17z/data=!3m1!4b1!4m6!3m5!1s0x86ba28c844fbb9cd:0x2ae9233b645339f1!8m2!3d25.8131774!4d-108.9719226!16s%2Fg%2F11lcm_fmbg?entry=ttu" target="_blank">
-                            Violetas #19, Fracc. Bugambilias
-                        </a>
-                        <p>Los Mochis, Sinaloa, C.P. 81215</p>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Teléfono / WhatsApp</h4>
+                            <a href="https://wa.me/526681715096?text=Hola,%20me%20interesa%20una%20asesoría%20técnica%20agrícola%20con%20AgroSistemas.net" target="_blank">
+                                +52 6681 715096
+                            </a>
+                            <p>Asesoría inmediata vía WhatsApp</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Email Técnico</h4>
+                            <a href="mailto:gm.nelson95@gmail.com?subject=Solicitud%20de%20Asesoría%20Técnica%20Agrícola&body=Hola,%20me%20gustaría%20agendar%20una%20asesoría%20técnica%20para..." target="_blank">
+                                gm.nelson95@gmail.com
+                            </a>
+                            <p>Especialistas en agronomía y riegos</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Visitas a Campo</h4>
+                            <p>Realizamos visitas técnicas para evaluación in situ</p>
+                            <p>Diagnóstico completo sin costo inicial*</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="contact-text">
+                            <h4>Horario de Atención</h4>
+                            <p>Lunes a Viernes: 8:00 am - 6:00 pm</p>
+                            <p>Sábados: 9:00 am - 1:00 pm</p>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-phone"></i>
-                    </div>
-                    <div class="contact-text">
-                        <h4>Teléfono / WhatsApp</h4>
-                        <a href="https://wa.me/526681715096?text=Hola,%20me%20interesa%20una%20asesoría%20técnica%20agrícola%20con%20AgroSistemas.net" target="_blank">
-                            +52 6681 715096
-                        </a>
-                        <p>Asesoría inmediata vía WhatsApp</p>
-                    </div>
+                <div class="map-container fade-in delay-1">
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3631.568208770042!2d-108.977246!3d25.8133058!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86ba297378560ea7%3A0xb49837519f951040!2sAgroSistemas.net%3A%20Eficiencia%20en%20Riegos!5e0!3m2!1ses-419!2smx!4v1747857314507!5m2!1ses-419!2smx" 
+                        width="100%" 
+                        height="100%" 
+                        style="border:0;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        referrerpolicy="no-referrer-when-downgrade"
+                        title="Ubicación de AgroSistemas.net en Los Mochis">
+                    </iframe>
                 </div>
-                
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-envelope"></i>
-                    </div>
-                    <div class="contact-text">
-                        <h4>Email Técnico</h4>
-                        <a href="mailto:gm.nelson95@gmail.com?subject=Solicitud%20de%20Asesoría%20Técnica%20Agrícola&body=Hola,%20me%20gustaría%20agendar%20una%20asesoría%20técnica%20para..." target="_blank">
-                            gm.nelson95@gmail.com
-                        </a>
-                        <p>Especialistas en agronomía y riegos</p>
-                    </div>
-                </div>
-                
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                    <div class="contact-text">
-                        <h4>Visitas a Campo</h4>
-                        <p>Realizamos visitas técnicas para evaluación in situ</p>
-                        <p>Diagnóstico completo sin costo inicial*</p>
-                    </div>
-                </div>
-                
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="contact-text">
-                        <h4>Horario de Atención</h4>
-                        <p>Lunes a Viernes: 8:00 am - 6:00 pm</p>
-                        <p>Sábados: 9:00 am - 1:00 pm</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="map-container fade-in delay-1">
-                <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3631.568208770042!2d-108.977246!3d25.8133058!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86ba297378560ea7%3A0xb49837519f951040!2sAgroSistemas.net%3A%20Eficiencia%20en%20Riegos!5e0!3m2!1ses-419!2smx!4v1747857314507!5m2!1ses-419!2smx" 
-                    width="100%" 
-                    height="100%" 
-                    style="border:0;" 
-                    allowfullscreen="" 
-                    loading="lazy" 
-                    referrerpolicy="no-referrer-when-downgrade"
-                    title="Ubicación de AgroSistemas.net en Los Mochis">
-                </iframe>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
     <!-- Footer -->
     <footer>
@@ -849,6 +1339,332 @@
     </footer>
 
     <script>
+        // Variables globales
+        let map;
+        let drawingManager;
+        let polygon;
+        let medidaPolilinea;
+        let areaTotal = 0;
+        let selectedElement = 'cabezal';
+        let secciones = {};
+        let seccionActual = null;
+        
+        // Inicializar el mapa
+        function initMap() {
+            const defaultLocation = { lat: 25.8133, lng: -108.9719 }; // Los Mochis, Sinaloa
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: defaultLocation,
+                zoom: 15,
+                mapTypeId: 'satellite'
+            });
+            
+            // Configurar el buscador de ubicaciones
+            const input = document.getElementById('location-search');
+            const searchBox = new google.maps.places.SearchBox(input);
+            
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+            
+            searchBox.addListener('places_changed', function() {
+                const places = searchBox.getPlaces();
+                if (places.length === 0) return;
+                
+                const bounds = new google.maps.LatLngBounds();
+                places.forEach(place => {
+                    if (!place.geometry) return;
+                    
+                    if (place.geometry.viewport) {
+                        bounds.union(place.geometry.viewport);
+                    } else {
+                        bounds.extend(place.geometry.location);
+                    }
+                });
+                map.fitBounds(bounds);
+            });
+            
+            // Configurar herramientas de dibujo
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: null,
+                drawingControl: false,
+                polygonOptions: {
+                    fillColor: '#00a553',
+                    fillOpacity: 0.3,
+                    strokeWeight: 2,
+                    strokeColor: '#008a45',
+                    editable: true,
+                    draggable: false
+                },
+                polylineOptions: {
+                    strokeColor: '#ff0000',
+                    strokeWeight: 2,
+                    editable: true
+                }
+            });
+            
+            drawingManager.setMap(map);
+            
+            // Eventos para el dibujo de polígonos
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(poly) {
+                polygon = poly;
+                calcularArea(poly);
+                
+                // Limpiar mediciones anteriores
+                if (medidaPolilinea) {
+                    medidaPolilinea.setMap(null);
+                }
+                
+                // Generar secciones automáticamente
+                generarSecciones();
+            });
+            
+            google.maps.event.addListener(drawingManager, 'polylinecomplete', function(line) {
+                if (medidaPolilinea) {
+                    medidaPolilinea.setMap(null);
+                }
+                medidaPolilinea = line;
+                calcularLongitud(line);
+            });
+            
+            // Inicializar secciones
+            inicializarSecciones();
+            
+            // Calcular emisores iniciales
+            calcularEmisores();
+        }
+        
+        // Calcular área del polígono
+        function calcularArea(polygon) {
+            const area = google.maps.geometry.spherical.computeArea(polygon.getPath());
+            areaTotal = area;
+            
+            // Actualizar display
+            document.getElementById('areaDisplay').textContent = 
+                `Área: ${area.toFixed(2)} m² (${(area / 10000).toFixed(2)} ha)`;
+            
+            // Actualizar cálculos basados en área
+            actualizarCalculos();
+        }
+        
+        // Calcular longitud de polilínea
+        function calcularLongitud(polyline) {
+            const path = polyline.getPath();
+            let length = 0;
+            
+            for (let i = 0; i < path.getLength() - 1; i++) {
+                const point1 = path.getAt(i);
+                const point2 = path.getAt(i + 1);
+                length += google.maps.geometry.spherical.computeDistanceBetween(point1, point2);
+            }
+            
+            // Mostrar longitud
+            const areaDisplay = document.getElementById('areaDisplay');
+            areaDisplay.textContent += ` | Longitud: ${length.toFixed(2)} m`;
+        }
+        
+        // Generar secciones automáticamente
+        function generarSecciones() {
+            const seccionesGrid = document.getElementById('seccionesGrid');
+            seccionesGrid.innerHTML = '';
+            
+            // Crear 4 secciones de ejemplo (A1, A2, B1, B2)
+            const letras = ['A', 'B', 'C', 'D'];
+            const numeros = ['1', '2', '3', '4'];
+            
+            let contador = 0;
+            for (let i = 0; i < letras.length && contador < 16; i++) {
+                for (let j = 0; j < numeros.length && contador < 16; j++) {
+                    const codigo = letras[i] + numeros[j];
+                    
+                    // Crear sección
+                    secciones[codigo] = {
+                        nombre: codigo,
+                        area: areaTotal / 16, // Dividir área total en 16 partes
+                        caudal: 0,
+                        configurado: false
+                    };
+                    
+                    // Crear elemento en la cuadrícula
+                    const seccionElement = document.createElement('div');
+                    seccionElement.className = 'seccion-item';
+                    seccionElement.textContent = codigo;
+                    seccionElement.dataset.seccion = codigo;
+                    
+                    seccionElement.addEventListener('click', function() {
+                        seleccionarSeccion(codigo);
+                    });
+                    
+                    seccionesGrid.appendChild(seccionElement);
+                    contador++;
+                }
+            }
+            
+            // Seleccionar primera sección por defecto
+            if (Object.keys(secciones).length > 0) {
+                seleccionarSeccion(Object.keys(secciones)[0]);
+            }
+        }
+        
+        // Inicializar secciones vacías
+        function inicializarSecciones() {
+            const seccionesGrid = document.getElementById('seccionesGrid');
+            seccionesGrid.innerHTML = '<p>Primero delimita el terreno en el mapa</p>';
+        }
+        
+        // Seleccionar una sección
+        function seleccionarSeccion(codigo) {
+            // Quitar clase active de todas las secciones
+            document.querySelectorAll('.seccion-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Agregar clase active a la sección seleccionada
+            const seccionElement = document.querySelector(`.seccion-item[data-seccion="${codigo}"]`);
+            if (seccionElement) {
+                seccionElement.classList.add('active');
+            }
+            
+            seccionActual = codigo;
+            actualizarConfiguracionSeccion();
+        }
+        
+        // Actualizar configuración de sección
+        function actualizarConfiguracionSeccion() {
+            const configDiv = document.getElementById('seccionConfig');
+            
+            if (!seccionActual || !secciones[seccionActual]) {
+                configDiv.innerHTML = '<h4>Configuración de Sección</h4><p>Selecciona una sección para configurarla</p>';
+                return;
+            }
+            
+            const seccion = secciones[seccionActual];
+            
+            configDiv.innerHTML = `
+                <h4>Configuración de Sección ${seccionActual}</h4>
+                <div class="control-row">
+                    <div class="control-label">Área:</div>
+                    <div>${seccion.area.toFixed(2)} m²</div>
+                </div>
+                <div class="control-row">
+                    <div class="control-label">Caudal calculado:</div>
+                    <div>${seccion.caudal.toFixed(2)} L/h</div>
+                </div>
+                <div class="control-row">
+                    <div class="control-label">Separación surco:</div>
+                    <input type="number" id="separacionSurcoSeccion" min="0.5" max="3" value="1.5" step="0.1" onchange="actualizarCaudalSeccion()"> m
+                </div>
+                <div class="control-row">
+                    <div class="control-label">Separación emisor:</div>
+                    <input type="number" id="separacionEmisorSeccion" min="0.1" max="5" value="0.5" step="0.1" onchange="actualizarCaudalSeccion()"> m
+                </div>
+                <div class="control-row">
+                    <div class="control-label">Caudal emisor:</div>
+                    <input type="number" id="caudalEmisorSeccion" min="1" max="100" value="4" step="0.5" onchange="actualizarCaudalSeccion()"> L/h
+                </div>
+            `;
+            
+            // Actualizar valores si ya estaban configurados
+            if (seccion.configurado) {
+                document.getElementById('separacionSurcoSeccion').value = seccion.separacionSurco || 1.5;
+                document.getElementById('separacionEmisorSeccion').value = seccion.separacionEmisor || 0.5;
+                document.getElementById('caudalEmisorSeccion').value = seccion.caudalEmisor || 4;
+            }
+            
+            // Calcular caudal inicial
+            actualizarCaudalSeccion();
+        }
+        
+        // Actualizar caudal de sección
+        function actualizarCaudalSeccion() {
+            if (!seccionActual) return;
+            
+            const separacionSurco = parseFloat(document.getElementById('separacionSurcoSeccion').value) || 1.5;
+            const separacionEmisor = parseFloat(document.getElementById('separacionEmisorSeccion').value) || 0.5;
+            const caudalEmisor = parseFloat(document.getElementById('caudalEmisorSeccion').value) || 4;
+            
+            // Calcular emisores por metro lineal
+            const emisoresPorMetro = 1 / separacionEmisor;
+            
+            // Calcular líneas de riego por metro
+            const lineasPorMetro = 1 / separacionSurco;
+            
+            // Calcular caudal por m²
+            const caudalPorM2 = emisoresPorMetro * lineasPorMetro * caudalEmisor;
+            
+            // Calcular caudal total para la sección
+            const caudalTotal = caudalPorM2 * secciones[seccionActual].area;
+            
+            // Actualizar objeto sección
+            secciones[seccionActual].caudal = caudalTotal;
+            secciones[seccionActual].separacionSurco = separacionSurco;
+            secciones[seccionActual].separacionEmisor = separacionEmisor;
+            secciones[seccionActual].caudalEmisor = caudalEmisor;
+            secciones[seccionActual].configurado = true;
+            
+            // Actualizar display
+            const configDiv = document.getElementById('seccionConfig');
+            const caudalElement = configDiv.querySelector('.control-row:nth-child(2) div');
+            if (caudalElement) {
+                caudalElement.textContent = caudalTotal.toFixed(2) + ' L/h';
+            }
+            
+            // Actualizar caudal total
+            actualizarCaudalTotal();
+        }
+        
+        // Calcular emisores y caudal
+        function calcularEmisores() {
+            const caudalEmisor = parseFloat(document.getElementById('caudalEmisor').value) || 4;
+            const separacionEmisor = parseFloat(document.getElementById('separacionEmisor').value) || 0.5;
+            const separacionSurco = parseFloat(document.getElementById('separacionSurco').value) || 1.5;
+            
+            // Calcular emisores por m²
+            const emisoresPorM2 = (1 / separacionEmisor) * (1 / separacionSurco);
+            
+            // Calcular caudal por m²
+            const caudalPorM2 = emisoresPorM2 * caudalEmisor;
+            
+            // Actualizar displays
+            document.getElementById('emisoresPorM2').textContent = emisoresPorM2.toFixed(2);
+            document.getElementById('caudalPorM2').textContent = caudalPorM2.toFixed(2) + ' L/h';
+            
+            // Actualizar caudal total si hay área definida
+            if (areaTotal > 0) {
+                const caudalTotal = caudalPorM2 * areaTotal;
+                document.getElementById('caudalTotal').textContent = `Caudal Total: ${caudalTotal.toFixed(2)} L/h`;
+            }
+        }
+        
+        // Actualizar caudal total sumando todas las secciones
+        function actualizarCaudalTotal() {
+            let caudalTotal = 0;
+            
+            for (const codigo in secciones) {
+                if (secciones[codigo].configurado) {
+                    caudalTotal += secciones[codigo].caudal;
+                }
+            }
+            
+            document.getElementById('caudalTotal').textContent = `Caudal Total: ${caudalTotal.toFixed(2)} L/h`;
+        }
+        
+        // Actualizar cálculos basados en área
+        function actualizarCalculos() {
+            // Actualizar metros lineales (estimación basada en área)
+            const metrosPrincipal = Math.sqrt(areaTotal) * 2;
+            const metrosSecundaria = Math.sqrt(areaTotal) * 4;
+            const metrosRegante = Math.sqrt(areaTotal) * 8;
+            const metrosTotal = metrosPrincipal + metrosSecundaria + metrosRegante;
+            
+            document.getElementById('metrosPrincipal').textContent = metrosPrincipal.toFixed(2) + ' m';
+            document.getElementById('metrosSecundaria').textContent = metrosSecundaria.toFixed(2) + ' m';
+            document.getElementById('metrosRegante').textContent = metrosRegante.toFixed(2) + ' m';
+            document.getElementById('metrosTotal').textContent = metrosTotal.toFixed(2) + ' m';
+            
+            // Recalcular emisores
+            calcularEmisores();
+        }
+        
+        // DOMContentLoaded
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const mainNav = document.getElementById('mainNav');
@@ -925,6 +1741,194 @@
                     }
                 });
             });
+            
+            // Controladores para el diseñador de riego
+            // Botones del mapa
+            document.getElementById('drawPolygonBtn').addEventListener('click', function() {
+                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+                if (medidaPolilinea) {
+                    medidaPolilinea.setMap(null);
+                }
+            });
+            
+            document.getElementById('measureBtn').addEventListener('click', function() {
+                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYLINE);
+                if (polygon) {
+                    // Mantener el polígono visible
+                }
+            });
+            
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                if (polygon) {
+                    polygon.setMap(null);
+                    polygon = null;
+                }
+                if (medidaPolilinea) {
+                    medidaPolilinea.setMap(null);
+                    medidaPolilinea = null;
+                }
+                drawingManager.setDrawingMode(null);
+                document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
+                areaTotal = 0;
+                actualizarCalculos();
+                inicializarSecciones();
+            });
+            
+            // Pestañas CAD
+            document.querySelectorAll('.cad-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.dataset.tab;
+                    
+                    // Remover clase active de todas las pestañas
+                    document.querySelectorAll('.cad-tab').forEach(t => {
+                        t.classList.remove('active');
+                    });
+                    
+                    // Agregar clase active a la pestaña clickeada
+                    this.classList.add('active');
+                    
+                    // Ocultar todos los contenidos
+                    document.querySelectorAll('.cad-tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Mostrar el contenido correspondiente
+                    document.getElementById(tabId + '-tab').classList.add('active');
+                });
+            });
+            
+            // Elementos del diseño
+            document.querySelectorAll('.elemento-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Remover clase active de todos los botones
+                    document.querySelectorAll('.elemento-btn').forEach(b => {
+                        b.classList.remove('active');
+                    });
+                    
+                    // Agregar clase active al botón clickeado
+                    this.classList.add('active');
+                    
+                    selectedElement = this.dataset.elemento;
+                    actualizarConfiguracionElemento();
+                });
+            });
+            
+            // Actualizar configuración de elemento seleccionado
+            function actualizarConfiguracionElemento() {
+                const configDiv = document.getElementById('elementoConfig');
+                let contenido = '';
+                
+                switch(selectedElement) {
+                    case 'cabezal':
+                        contenido = `
+                            <h4>Configuración del Cabezal</h4>
+                            <div class="control-row">
+                                <div class="control-label">Tipo:</div>
+                                <select>
+                                    <option>Básico</option>
+                                    <option>Filtración</option>
+                                    <option>Fertirriego</option>
+                                    <option>Automático</option>
+                                </select>
+                            </div>
+                            <div class="control-row">
+                                <div class="control-label">Bombas:</div>
+                                <input type="number" min="1" max="3" value="1">
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'purgaterminal':
+                        contenido = `
+                            <h4>Configuración de Purgas/Terminales</h4>
+                            <div class="control-row">
+                                <div class="control-label">Cantidad:</div>
+                                <input type="number" min="1" max="20" value="4">
+                            </div>
+                            <div class="control-row">
+                                <div class="control-label">Tipo:</div>
+                                <select>
+                                    <option>Automática</option>
+                                    <option>Manual</option>
+                                </select>
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'tomagua':
+                        contenido = `
+                            <h4>Configuración de Toma de Agua</h4>
+                            <div class="control-row">
+                                <div class="control-label">Diámetro:</div>
+                                <select>
+                                    <option>2"</option>
+                                    <option>3"</option>
+                                    <option>4"</option>
+                                    <option>6"</option>
+                                </select>
+                            </div>
+                            <div class="control-row">
+                                <div class="control-label">Profundidad:</div>
+                                <input type="number" min="0.5" max="5" value="1.2" step="0.1"> m
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'calle':
+                        contenido = `
+                            <h4>Configuración de Calles</h4>
+                            <div class="control-row">
+                                <div class="control-label">Ancho:</div>
+                                <input type="number" min="2" max="6" value="3" step="0.5"> m
+                            </div>
+                            <div class="control-row">
+                                <div class="control-label">Material:</div>
+                                <select>
+                                    <option>Tierra</option>
+                                    <option>Grava</option>
+                                    <option>Concreto</option>
+                                </select>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                configDiv.innerHTML = contenido;
+            }
+            
+            // Inicializar configuración de elemento
+            actualizarConfiguracionElemento();
+            
+            // Eventos para cálculos de emisores
+            document.getElementById('caudalEmisor').addEventListener('input', calcularEmisores);
+            document.getElementById('separacionEmisor').addEventListener('input', calcularEmisores);
+            document.getElementById('separacionSurco').addEventListener('input', calcularEmisores);
+            document.getElementById('tipoEmisor').addEventListener('change', function() {
+                // Cambiar valores por defecto según tipo de emisor
+                const tipo = this.value;
+                const caudalInput = document.getElementById('caudalEmisor');
+                const separacionInput = document.getElementById('separacionEmisor');
+                
+                switch(tipo) {
+                    case 'goteo':
+                        caudalInput.value = 4;
+                        separacionInput.value = 0.5;
+                        break;
+                    case 'aspersion':
+                        caudalInput.value = 30;
+                        separacionInput.value = 12;
+                        break;
+                    case 'microaspersion':
+                        caudalInput.value = 15;
+                        separacionInput.value = 4;
+                        break;
+                }
+                
+                calcularEmisores();
+            });
+            
+            // Calcular emisores iniciales
+            calcularEmisores();
         });
     </script>
 </body>
