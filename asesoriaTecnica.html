@@ -12,6 +12,9 @@
           crossorigin=""/>
     <!-- Leaflet Draw CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <!-- jsPDF para exportación a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* Reset y estilos base */
         * {
@@ -443,7 +446,7 @@
             color: #666;
         }
         
-        select, input[type="number"] {
+        select, input[type="number"], input[type="text"], textarea {
             flex: 1;
             padding: 8px 12px;
             border: 1px solid #ddd;
@@ -943,6 +946,86 @@
             color: white;
             border-color: #00a553;
         }
+        
+        /* Nuevos estilos para los cambios solicitados */
+        .tuberia-btn.conexion-btn {
+            background-color: #ff9f43;
+            border-color: #ff9f43;
+            color: white;
+        }
+        
+        .tuberia-btn.conexion-btn:hover {
+            background-color: #e6892f;
+        }
+        
+        .tuberia-btn.modo-conexion-activo {
+            background-color: #ff9f43 !important;
+            color: white !important;
+            border-color: #ff9f43 !important;
+        }
+        
+        .punto-activo {
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 0 5px rgba(255, 107, 107, 0.5) !important;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+        
+        /* Estilos para la pestaña de resultados */
+        .resultados-tab {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .resultado-seccion {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .resultado-titulo {
+            color: #1772af;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .resultado-tabla {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .resultado-tabla th {
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #ddd;
+        }
+        
+        .resultado-tabla td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+        }
+        
+        .resultado-tabla tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .btn-export-pdf {
+            width: 100%;
+            margin-top: 15px;
+            background-color: #e74c3c;
+        }
+        
+        .btn-export-pdf:hover {
+            background-color: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -1091,14 +1174,13 @@
                 <div class="cad-panel fade-in delay-1">
                     <div class="cad-header">
                         <h3>Diseño del Sistema de Riego</h3>
-                        <p>Configura tuberías, emisores y secciones del sistema</p>
+                        <p>Configura tuberías, emisores y elementos del sistema</p>
                     </div>
                     
                     <div class="cad-tabs">
                         <div class="cad-tab active" data-tab="tuberias">Tuberías</div>
                         <div class="cad-tab" data-tab="elementos">Elementos</div>
-                        <div class="cad-tab" data-tab="secciones">Secciones</div>
-                        <div class="cad-tab" data-tab="emisores">Emisores</div>
+                        <div class="cad-tab" data-tab="resultados">Resultados</div>
                         <div class="cad-tab" data-tab="galeria">Galería</div>
                     </div>
                     
@@ -1110,7 +1192,7 @@
                                 <div class="control-row">
                                     <div class="control-label">Color:</div>
                                     <div class="color-indicator color-principal"></div>
-                                    <div>Rojo (Grosor: 6px)</div>
+                                    <div>Rojo (Grosor: 8px)</div>
                                 </div>
                                 <div class="control-row">
                                     <div class="control-label">Diámetro:</div>
@@ -1135,8 +1217,11 @@
                                         <option value="manguera">Manguera</option>
                                     </select>
                                 </div>
-                                <button class="tuberia-btn" onclick="iniciarDibujoTuberia('principal')" id="btnTuberiaPrincipal">
+                                <button class="tuberia-btn" onclick="iniciarModoTuberia('principal')" id="btnTuberiaPrincipal">
                                     <i class="fas fa-pencil-alt"></i> Dibujar Tubería Principal
+                                </button>
+                                <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('principal')" id="btnConectarPrincipal" style="margin-top: 5px;">
+                                    <i class="fas fa-link"></i> Conectar Tuberías
                                 </button>
                                 <div class="instrucciones-tuberia" id="instruccionesPrincipal" style="display: none;">
                                     Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
@@ -1148,7 +1233,7 @@
                                 <div class="control-row">
                                     <div class="control-label">Color:</div>
                                     <div class="color-indicator color-secundaria"></div>
-                                    <div>Turquesa (Grosor: 4px)</div>
+                                    <div>Turquesa (Grosor: 6px)</div>
                                 </div>
                                 <div class="control-row">
                                     <div class="control-label">Diámetro:</div>
@@ -1167,8 +1252,11 @@
                                         <option value="manguera">Manguera</option>
                                     </select>
                                 </div>
-                                <button class="tuberia-btn" onclick="iniciarDibujoTuberia('secundaria')" id="btnTuberiaSecundaria">
+                                <button class="tuberia-btn" onclick="iniciarModoTuberia('secundaria')" id="btnTuberiaSecundaria">
                                     <i class="fas fa-pencil-alt"></i> Dibujar Tubería Secundaria
+                                </button>
+                                <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('secundaria')" id="btnConectarSecundaria" style="margin-top: 5px;">
+                                    <i class="fas fa-link"></i> Conectar Tuberías
                                 </button>
                                 <div class="instrucciones-tuberia" id="instruccionesSecundaria" style="display: none;">
                                     Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
@@ -1180,7 +1268,7 @@
                                 <div class="control-row">
                                     <div class="control-label">Color:</div>
                                     <div class="color-indicator color-regante"></div>
-                                    <div>Azul (Grosor: 2px)</div>
+                                    <div>Azul (Grosor: 4px)</div>
                                 </div>
                                 <div class="control-row">
                                     <div class="control-label">Diámetro:</div>
@@ -1197,8 +1285,11 @@
                                         <option value="manguera">Manguera</option>
                                     </select>
                                 </div>
-                                <button class="tuberia-btn" onclick="iniciarDibujoTuberia('regante')" id="btnTuberiaRegante">
+                                <button class="tuberia-btn" onclick="iniciarModoTuberia('regante')" id="btnTuberiaRegante">
                                     <i class="fas fa-pencil-alt"></i> Dibujar Tubería Regante
+                                </button>
+                                <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('regante')" id="btnConectarRegante" style="margin-top: 5px;">
+                                    <i class="fas fa-link"></i> Conectar Tuberías
                                 </button>
                                 <div class="instrucciones-tuberia" id="instruccionesRegante" style="display: none;">
                                     Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
@@ -1207,21 +1298,8 @@
                             
                             <div class="cad-resumen">
                                 <h4>Resumen de Tuberías</h4>
-                                <div class="resumen-item">
-                                    <span>Principal:</span>
-                                    <span id="metrosPrincipal">0 m</span>
-                                </div>
-                                <div class="resumen-item">
-                                    <span>Secundaria:</span>
-                                    <span id="metrosSecundaria">0 m</span>
-                                </div>
-                                <div class="resumen-item">
-                                    <span>Regante:</span>
-                                    <span id="metrosRegante">0 m</span>
-                                </div>
-                                <div class="resumen-item" style="font-weight: bold; border-top: 1px solid #ddd; padding-top: 8px;">
-                                    <span>Total:</span>
-                                    <span id="metrosTotal">0 m</span>
+                                <div id="resumenTuberiasDetallado">
+                                    <!-- Aquí se mostrará el resumen detallado por diámetros -->
                                 </div>
                             </div>
                         </div>
@@ -1260,66 +1338,16 @@
                             </div>
                         </div>
                         
-                        <!-- Pestaña de Secciones -->
-                        <div class="cad-tab-content" id="secciones-tab">
+                        <!-- Pestaña de Resultados -->
+                        <div class="cad-tab-content resultados-tab" id="resultados-tab">
                             <div class="control-group">
-                                <h4>Secciones del Sistema (A1-Z10)</h4>
-                                <div class="secciones-grid" id="seccionesGrid">
-                                    <p style="grid-column: 1 / -1; text-align: center; color: #666;">Primero delimita el terreno en el mapa</p>
+                                <h4>Resultados del Diseño</h4>
+                                <div id="resultadosCalculos">
+                                    <!-- Aquí se mostrarán todos los cálculos -->
                                 </div>
-                            </div>
-                            
-                            <div class="seccion-config" id="seccionConfig">
-                                <h4>Configuración de Sección</h4>
-                                <p>Selecciona una sección para configurarla</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Pestaña de Emisores -->
-                        <div class="cad-tab-content" id="emisores-tab">
-                            <div class="control-group">
-                                <h4>Tipo de Emisor</h4>
-                                <div class="control-row">
-                                    <div class="control-label">Tipo:</div>
-                                    <select id="tipoEmisor">
-                                        <option value="goteo">Goteo</option>
-                                        <option value="aspersion">Aspersión</option>
-                                        <option value="microaspersion">Microaspersión</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="emisor-panel">
-                                <div class="emisor-header">
-                                    <h4>Características del Emisor</h4>
-                                    <div id="caudalTotal">Caudal Total: 0 L/h</div>
-                                </div>
-                                
-                                <div class="control-row">
-                                    <div class="control-label">Caudal:</div>
-                                    <input type="number" id="caudalEmisor" min="1" max="100" value="4" step="0.5"> L/h
-                                </div>
-                                
-                                <div class="control-row">
-                                    <div class="control-label">Separación:</div>
-                                    <input type="number" id="separacionEmisor" min="0.1" max="5" value="0.5" step="0.1"> m
-                                </div>
-                                
-                                <div class="control-row">
-                                    <div class="control-label">Separación surco:</div>
-                                    <input type="number" id="separacionSurco" min="0.5" max="3" value="1.5" step="0.1"> m
-                                </div>
-                                
-                                <div class="emisor-info">
-                                    <div class="resumen-item">
-                                        <span>Emisores por m²:</span>
-                                        <span id="emisoresPorM2">0</span>
-                                    </div>
-                                    <div class="resumen-item">
-                                        <span>Caudal por m²:</span>
-                                        <span id="caudalPorM2">0 L/h</span>
-                                    </div>
-                                </div>
+                                <button class="btn btn-export-pdf" onclick="exportarPDF()">
+                                    <i class="fas fa-file-pdf"></i> Exportar a PDF
+                                </button>
                             </div>
                         </div>
                         
@@ -1332,10 +1360,10 @@
                                         <i class="fas fa-save"></i> Guardar Actual
                                     </button>
                                     <button class="btn btn-secondary" onclick="exportarDiseño()">
-                                        <i class="fas fa-download"></i> Exportar
+                                        <i class="fas fa-download"></i> Exportar JSON
                                     </button>
                                     <label class="btn btn-secondary" style="display: inline-block; cursor: pointer;">
-                                        <i class="fas fa-upload"></i> Importar
+                                        <i class="fas fa-upload"></i> Importar JSON
                                         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importarDiseño(event)">
                                     </label>
                                 </div>
@@ -1441,8 +1469,7 @@
     let currentDrawMode = null;
     let areaTotal = 0;
     let selectedElement = 'cabezal';
-    let secciones = {};
-    let seccionActual = null;
+    let valvulas = [];
     let tuberias = [];
     let elementosGraficos = [];
     let modoDibujoTuberia = null;
@@ -1450,32 +1477,56 @@
     let puntoInicioTuberia = null;
     let diseñosGuardados = [];
     let modoAgregarElemento = null;
-    
-    // Nuevas variables para el sistema de 2 puntos
     let modoConexion = false;
     let tuberiaConexionTipo = null;
     let puntoOrigenConexion = null;
-    let puntosTuberias = []; // Puntos de conexión de todas las tuberías
+    let puntosTuberias = [];
+    let cabezales = [];
+    
+    // Función para obtener el grosor basado en el tipo y diámetro
+    function getGrosorTuberia(tipo, diametro) {
+        const grosoresBase = {
+            'principal': 8,
+            'secundaria': 6,
+            'regante': 4
+        };
+        
+        const base = grosoresBase[tipo] || 4;
+        const diametroNum = parseFloat(diametro);
+        
+        if (tipo === 'principal') {
+            return base + (diametroNum * 0.5);
+        } else if (tipo === 'secundaria') {
+            return base + (diametroNum * 0.3);
+        } else {
+            return base + (diametroNum * 0.2);
+        }
+    }
+    
+    // Función para obtener color de tubería
+    function getColorTuberia(tipo) {
+        const colores = {
+            'principal': '#ff6b6b',
+            'secundaria': '#4ecdc4',
+            'regante': '#45b7d1'
+        };
+        return colores[tipo] || '#000000';
+    }
     
     // Inicializar el mapa
     function initMap() {
-        // Coordenadas de Los Mochis, Sinaloa
         const losMochis = [25.8133, -108.9719];
         
-        // Crear mapa
         map = L.map('map').setView(losMochis, 15);
         
-        // Añadir capa de OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
         
-        // Capa para dibujar elementos
         drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
         
-        // Configurar herramientas de dibujo
         drawControl = new L.Control.Draw({
             position: 'topright',
             draw: {
@@ -1511,7 +1562,6 @@
         
         map.addControl(drawControl);
         
-        // Eventos de dibujo
         map.on(L.Draw.Event.CREATED, function(event) {
             const layer = event.layer;
             drawnItems.addLayer(layer);
@@ -1522,14 +1572,12 @@
                 calcularLongitudPolilinea(layer);
             }
             
-            // Desactivar modo de dibujo después de crear
             if (currentDrawMode) {
                 currentDrawMode.disable();
                 currentDrawMode = null;
             }
         });
         
-        // Evento de edición
         map.on(L.Draw.Event.EDITED, function(event) {
             const layers = event.layers;
             layers.eachLayer(function(layer) {
@@ -1541,79 +1589,42 @@
             });
         });
         
-        // Evento de eliminación
         map.on(L.Draw.Event.DELETED, function(event) {
             const layers = event.layers;
             layers.eachLayer(function(layer) {
                 if (layer instanceof L.Polygon) {
                     areaTotal = 0;
                     document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
-                    actualizarCalculos();
-                    inicializarSecciones();
+                    actualizarResultados();
                     mostrarControlesMapa();
                 }
             });
         });
-        
-        // Inicializar secciones
-        inicializarSecciones();
-        
-        // Calcular emisores iniciales
-        calcularEmisores();
-        
-        // Configurar eventos de tuberías
-        configurarEventosTuberias();
-        
-        // Evento para agregar elementos
-        map.on('click', function(e) {
-            if (modoAgregarElemento) {
-                agregarElementoGrafico(e.latlng, modoAgregarElemento);
-                modoAgregarElemento = null;
-                document.getElementById('instruccionesElementos').style.display = 'none';
-                mostrarMensaje('Elemento agregado. Selecciona otro para agregar más.');
-            }
-        });
     }
     
-    // Calcular área del polígono
     function calcularAreaPoligono(polygon) {
-        // Calcular área usando Leaflet
         areaTotal = L.GeometryUtil.geodesicArea(polygon.getLatLngs()[0]);
         
-        // Actualizar display
         document.getElementById('areaDisplay').textContent = 
             `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha)`;
         
-        // Ocultar controles del mapa
         ocultarControlesMapa();
-        
-        // Actualizar cálculos basados en área
-        actualizarCalculos();
-        
-        // Generar secciones automáticamente
-        generarSecciones();
+        actualizarResultados();
     }
     
-    // Ocultar controles del mapa
     function ocultarControlesMapa() {
         const controls = document.getElementById('mapaControls');
         controls.style.display = 'none';
-        
-        // Mostrar botón para mostrar controles
         document.getElementById('showControlsBtn').style.display = 'block';
     }
     
-    // Mostrar controles del mapa
     function mostrarControlesMapa() {
         const controls = document.getElementById('mapaControls');
         controls.style.display = 'block';
-        
-        // Ocultar botón de mostrar controles
         document.getElementById('showControlsBtn').style.display = 'none';
         document.getElementById('hideControlsBtn').style.display = 'none';
     }
     
-    // Calcular longitud de polilínea
     function calcularLongitudPolilinea(polyline) {
         const latlngs = polyline.getLatLngs();
         let length = 0;
@@ -1622,211 +1633,16 @@
             length += latlngs[i].distanceTo(latlngs[i + 1]);
         }
         
-        // Mostrar longitud
         const areaDisplay = document.getElementById('areaDisplay');
         const currentArea = areaDisplay.textContent.includes('Longitud') ? 
             areaDisplay.textContent.split(' | ')[0] : areaDisplay.textContent;
         areaDisplay.textContent = `${currentArea} | Longitud: ${length.toFixed(2)} m`;
     }
     
-    // Generar secciones automáticamente
-    function generarSecciones() {
-        const seccionesGrid = document.getElementById('seccionesGrid');
-        seccionesGrid.innerHTML = '';
-        
-        // Crear 16 secciones (A1-D4)
-        const letras = ['A', 'B', 'C', 'D'];
-        const numeros = ['1', '2', '3', '4'];
-        
-        let contador = 0;
-        for (let i = 0; i < letras.length && contador < 16; i++) {
-            for (let j = 0; j < numeros.length && contador < 16; j++) {
-                const codigo = letras[i] + numeros[j];
-                
-                // Crear sección
-                secciones[codigo] = {
-                    nombre: codigo,
-                    area: areaTotal / 16, // Dividir área total en 16 partes
-                    caudal: 0,
-                    configurado: false
-                };
-                
-                // Crear elemento en la cuadrícula
-                const seccionElement = document.createElement('div');
-                seccionElement.className = 'seccion-item';
-                seccionElement.textContent = codigo;
-                seccionElement.dataset.seccion = codigo;
-                
-                seccionElement.addEventListener('click', function() {
-                    seleccionarSeccion(codigo);
-                });
-                
-                seccionesGrid.appendChild(seccionElement);
-                contador++;
-            }
-        }
-        
-        // Seleccionar primera sección por defecto
-        if (Object.keys(secciones).length > 0) {
-            seleccionarSeccion(Object.keys(secciones)[0]);
-        }
-    }
-    
-    // Inicializar secciones vacías
-    function inicializarSecciones() {
-        const seccionesGrid = document.getElementById('seccionesGrid');
-        seccionesGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666;">Primero delimita el terreno en el mapa</p>';
-    }
-    
-    // Seleccionar una sección
-    function seleccionarSeccion(codigo) {
-        // Quitar clase active de todas las secciones
-        document.querySelectorAll('.seccion-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        
-        // Agregar clase active a la sección seleccionada
-        const seccionElement = document.querySelector(`.seccion-item[data-seccion="${codigo}"]`);
-        if (seccionElement) {
-            seccionElement.classList.add('active');
-        }
-        
-        seccionActual = codigo;
-        actualizarConfiguracionSeccion();
-    }
-    
-    // Actualizar configuración de sección
-    function actualizarConfiguracionSeccion() {
-        const configDiv = document.getElementById('seccionConfig');
-        
-        if (!seccionActual || !secciones[seccionActual]) {
-            configDiv.innerHTML = '<h4>Configuración de Sección</h4><p>Selecciona una sección para configurarla</p>';
-            return;
-        }
-        
-        const seccion = secciones[seccionActual];
-        
-        configDiv.innerHTML = `
-            <h4>Configuración de Sección ${seccionActual}</h4>
-            <div class="control-row">
-                <div class="control-label">Área:</div>
-                <div>${seccion.area.toFixed(2)} m²</div>
-            </div>
-            <div class="control-row">
-                <div class="control-label">Caudal calculado:</div>
-                <div id="caudalSeccionDisplay">${seccion.caudal.toFixed(2)} L/h</div>
-            </div>
-            <div class="control-row">
-                <div class="control-label">Separación surco:</div>
-                <input type="number" id="separacionSurcoSeccion" min="0.5" max="3" value="${seccion.separacionSurco || 1.5}" step="0.1" onchange="actualizarCaudalSeccion()"> m
-            </div>
-            <div class="control-row">
-                <div class="control-label">Separación emisor:</div>
-                <input type="number" id="separacionEmisorSeccion" min="0.1" max="5" value="${seccion.separacionEmisor || 0.5}" step="0.1" onchange="actualizarCaudalSeccion()"> m
-            </div>
-            <div class="control-row">
-                <div class="control-label">Caudal emisor:</div>
-                <input type="number" id="caudalEmisorSeccion" min="1" max="100" value="${seccion.caudalEmisor || 4}" step="0.5" onchange="actualizarCaudalSeccion()"> L/h
-            </div>
-        `;
-        
-        // Calcular caudal inicial
-        actualizarCaudalSeccion();
-    }
-    
-    // Actualizar caudal de sección
-    function actualizarCaudalSeccion() {
-        if (!seccionActual) return;
-        
-        const separacionSurco = parseFloat(document.getElementById('separacionSurcoSeccion').value) || 1.5;
-        const separacionEmisor = parseFloat(document.getElementById('separacionEmisorSeccion').value) || 0.5;
-        const caudalEmisor = parseFloat(document.getElementById('caudalEmisorSeccion').value) || 4;
-        
-        // Calcular emisores por metro lineal
-        const emisoresPorMetro = 1 / separacionEmisor;
-        
-        // Calcular líneas de riego por metro
-        const lineasPorMetro = 1 / separacionSurco;
-        
-        // Calcular caudal por m²
-        const caudalPorM2 = emisoresPorMetro * lineasPorMetro * caudalEmisor;
-        
-        // Calcular caudal total para la sección
-        const caudalTotal = caudalPorM2 * secciones[seccionActual].area;
-        
-        // Actualizar objeto sección
-        secciones[seccionActual].caudal = caudalTotal;
-        secciones[seccionActual].separacionSurco = separacionSurco;
-        secciones[seccionActual].separacionEmisor = separacionEmisor;
-        secciones[seccionActual].caudalEmisor = caudalEmisor;
-        secciones[seccionActual].configurado = true;
-        
-        // Actualizar display
-        document.getElementById('caudalSeccionDisplay').textContent = caudalTotal.toFixed(2) + ' L/h';
-        
-        // Actualizar caudal total
-        actualizarCaudalTotal();
-    }
-    
-    // Calcular emisores y caudal
-    function calcularEmisores() {
-        const caudalEmisor = parseFloat(document.getElementById('caudalEmisor').value) || 4;
-        const separacionEmisor = parseFloat(document.getElementById('separacionEmisor').value) || 0.5;
-        const separacionSurco = parseFloat(document.getElementById('separacionSurco').value) || 1.5;
-        
-        // Calcular emisores por m²
-        const emisoresPorM2 = (1 / separacionEmisor) * (1 / separacionSurco);
-        
-        // Calcular caudal por m²
-        const caudalPorM2 = emisoresPorM2 * caudalEmisor;
-        
-        // Actualizar displays
-        document.getElementById('emisoresPorM2').textContent = emisoresPorM2.toFixed(2);
-        document.getElementById('caudalPorM2').textContent = caudalPorM2.toFixed(2) + ' L/h';
-        
-        // Actualizar caudal total si hay área definida
-        if (areaTotal > 0) {
-            const caudalTotal = caudalPorM2 * areaTotal;
-            document.getElementById('caudalTotal').textContent = `Caudal Total: ${caudalTotal.toFixed(2)} L/h`;
-        }
-    }
-    
-    // Actualizar caudal total sumando todas las secciones
-    function actualizarCaudalTotal() {
-        let caudalTotal = 0;
-        
-        for (const codigo in secciones) {
-            if (secciones[codigo].configurado) {
-                caudalTotal += secciones[codigo].caudal;
-            }
-        }
-        
-        document.getElementById('caudalTotal').textContent = `Caudal Total: ${caudalTotal.toFixed(2)} L/h`;
-    }
-    
-    // Actualizar cálculos basados en área
-    function actualizarCalculos() {
-        // Actualizar metros lineales (estimación basada en área)
-        const metrosPrincipal = Math.sqrt(areaTotal) * 2;
-        const metrosSecundaria = Math.sqrt(areaTotal) * 4;
-        const metrosRegante = Math.sqrt(areaTotal) * 8;
-        const metrosTotal = metrosPrincipal + metrosSecundaria + metrosRegante;
-        
-        document.getElementById('metrosPrincipal').textContent = metrosPrincipal.toFixed(2) + ' m';
-        document.getElementById('metrosSecundaria').textContent = metrosSecundaria.toFixed(2) + ' m';
-        document.getElementById('metrosRegante').textContent = metrosRegante.toFixed(2) + ' m';
-        document.getElementById('metrosTotal').textContent = metrosTotal.toFixed(2) + ' m';
-        
-        // Recalcular emisores
-        calcularEmisores();
-    }
-    
-    // Buscar ubicación en el mapa
     function buscarUbicacion() {
         const query = document.getElementById('location-search').value;
         if (!query.trim()) return;
         
-        // Usar Nominatim (servicio de geocodificación de OpenStreetMap)
         fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
@@ -1837,7 +1653,6 @@
                     
                     map.setView([lat, lon], 15);
                     
-                    // Añadir marcador
                     L.marker([lat, lon])
                         .addTo(map)
                         .bindPopup(`<b>${result.display_name}</b>`)
@@ -1852,28 +1667,7 @@
             });
     }
     
-    // Sistema de tuberías como líneas rectas de 2 puntos
-    function getColorTuberia(tipo) {
-        const colores = {
-            'principal': '#ff6b6b',
-            'secundaria': '#4ecdc4',
-            'regante': '#45b7d1'
-        };
-        return colores[tipo] || '#000000';
-    }
-    
-    function getGrosorTuberia(tipo) {
-        const grosores = {
-            'principal': 6,
-            'secundaria': 4,
-            'regante': 2
-        };
-        return grosores[tipo] || 2;
-    }
-    
-    // Función para iniciar modo tubería (2 puntos)
     function iniciarModoTuberia(tipoTuberia) {
-        // Desactivar otros modos
         if (currentDrawMode) {
             currentDrawMode.disable();
             currentDrawMode = null;
@@ -1883,62 +1677,53 @@
         tuberiaConexionTipo = null;
         puntoOrigenConexion = null;
         
-        // Quitar clases de modo conexión
         document.querySelectorAll('.tuberia-btn').forEach(btn => {
             btn.classList.remove('modo-conexion-activo');
         });
         
-        // Quitar clase activa de todos los botones
         document.querySelectorAll('.tuberia-btn').forEach(btn => {
             btn.classList.remove('activo');
         });
         
-        // Agregar clase activa al botón clickeado
         const botonId = tipoTuberia === 'principal' ? 'btnTuberiaPrincipal' : 
                        tipoTuberia === 'secundaria' ? 'btnTuberiaSecundaria' : 'btnTuberiaRegante';
         document.getElementById(botonId).classList.add('activo');
-        
-        // Mostrar instrucciones
-        const tipos = {
-            'principal': 'Principal',
-            'secundaria': 'Secundaria',
-            'regante': 'Regante'
-        };
         
         const instruccionesId = tipoTuberia === 'principal' ? 'instruccionesPrincipal' : 
                                tipoTuberia === 'secundaria' ? 'instruccionesSecundaria' : 'instruccionesRegante';
         document.getElementById(instruccionesId).style.display = 'block';
         
-        // Configurar para dibujar tubería de 2 puntos
+        const diametroSelectId = tipoTuberia === 'principal' ? 'diametroPrincipal' : 
+                                 tipoTuberia === 'secundaria' ? 'diametroSecundaria' : 'diametroRegante';
+        const diametro = document.getElementById(diametroSelectId).value;
+        
+        const tipoSelectId = tipoTuberia === 'principal' ? 'tipoPrincipal' : 
+                             tipoTuberia === 'secundaria' ? 'tipoSecundaria' : 'tipoRegante';
+        const tipoMaterial = document.getElementById(tipoSelectId).value;
+        
         tuberiaActual = {
             tipo: tipoTuberia,
             puntoInicio: null,
             puntoFin: null,
             color: getColorTuberia(tipoTuberia),
-            grosor: getGrosorTuberia(tipoTuberia),
-            diametro: document.getElementById(`diametro${tipos[tipoTuberia]}`).value,
-            tipoMaterial: document.getElementById(`tipo${tipos[tipoTuberia]}`).value,
+            grosor: getGrosorTuberia(tipoTuberia, diametro),
+            diametro: diametro,
+            tipoMaterial: tipoMaterial,
             id: Date.now(),
-            conexiones: [] // Para almacenar conexiones con otras tuberías
+            conexiones: []
         };
         
-        mostrarMensaje(`Modo dibujo tubería ${tipoTuberia}. Haz clic en el mapa para establecer el punto de inicio.`);
+        mostrarMensaje(`Modo dibujo tubería ${tipoTuberia} (${diametro}"). Haz clic en el mapa para establecer el punto de inicio.`);
         
-        // Configurar evento único para el primer clic
-        map.off('click'); // Remover eventos previos
+        map.off('click');
         map.on('click', function(e) {
             if (tuberiaActual && !tuberiaActual.puntoInicio) {
-                // Primer clic: establecer punto de inicio
                 tuberiaActual.puntoInicio = e.latlng;
                 
-                // Crear marcador de inicio
-                const marcadorInicio = crearMarcadorTuberia(e.latlng, 'inicio', tipoTuberia);
+                const marcadorInicio = crearMarcadorTuberia(e.latlng, 'inicio', tipoTuberia, diametro);
                 marcadorInicio.addTo(map);
-                
-                // Guardar referencia
                 tuberiaActual.marcadorInicio = marcadorInicio;
                 
-                // Añadir a puntos de tuberías
                 puntosTuberias.push({
                     tipo: tipoTuberia,
                     latlng: e.latlng,
@@ -1946,29 +1731,25 @@
                     esInicio: true
                 });
                 
-                mostrarMensaje(`Punto de inicio establecido. Ahora haz clic para establecer el punto final.
-                Puedes hacer clic en un punto existente de otra tubería para conectar.`);
+                mostrarMensaje(`Punto de inicio establecido. Ahora haz clic para establecer el punto final.`);
                 
-                // Preparar para el segundo clic
                 map.off('click');
                 map.on('click', function(e2) {
-                    establecerPuntoFinal(e2.latlng, tipoTuberia);
+                    establecerPuntoFinal(e2.latlng, tipoTuberia, diametro, tipoMaterial);
                 });
             }
         });
     }
     
-    // Función para establecer punto final
-    function establecerPuntoFinal(latlng, tipoTuberia) {
+    function establecerPuntoFinal(latlng, tipoTuberia, diametro, tipoMaterial) {
         if (!tuberiaActual || !tuberiaActual.puntoInicio) return;
         
-        // Verificar si se hizo clic en un punto existente
         let puntoExistente = null;
         let esConexion = false;
         
         puntosTuberias.forEach(punto => {
             const distancia = latlng.distanceTo(punto.latlng);
-            if (distancia < 5) { // Si está cerca (5 metros)
+            if (distancia < 5) {
                 puntoExistente = punto;
                 esConexion = true;
             }
@@ -1976,13 +1757,11 @@
         
         tuberiaActual.puntoFin = puntoExistente ? puntoExistente.latlng : latlng;
         
-        // Crear marcador de fin (si no es conexión con punto existente)
         if (!puntoExistente) {
-            const marcadorFin = crearMarcadorTuberia(latlng, 'fin', tipoTuberia);
+            const marcadorFin = crearMarcadorTuberia(latlng, 'fin', tipoTuberia, diametro);
             marcadorFin.addTo(map);
             tuberiaActual.marcadorFin = marcadorFin;
             
-            // Añadir a puntos de tuberías
             puntosTuberias.push({
                 tipo: tipoTuberia,
                 latlng: latlng,
@@ -1990,33 +1769,28 @@
                 esInicio: false
             });
         } else {
-            // Registrar conexión
             tuberiaActual.conexiones.push({
                 tuberiaId: puntoExistente.tuberiaId,
                 punto: puntoExistente.esInicio ? 'inicio' : 'fin',
                 latlng: puntoExistente.latlng
             });
             
-            // También actualizar la otra tubería
             const otraTuberia = tuberias.find(t => t.id === puntoExistente.tuberiaId);
             if (otraTuberia) {
                 otraTuberia.conexiones.push({
                     tuberiaId: tuberiaActual.id,
-                    punto: 'pendiente', // Se determinará después
+                    punto: 'pendiente',
                     latlng: tuberiaActual.puntoFin
                 });
             }
         }
         
-        // Dibujar la línea
-        const linea = dibujarLineaTuberia(tuberiaActual.puntoInicio, tuberiaActual.puntoFin, tipoTuberia);
+        const linea = dibujarLineaTuberia(tuberiaActual.puntoInicio, tuberiaActual.puntoFin, tipoTuberia, diametro);
         tuberiaActual.linea = linea;
         
-        // Calcular longitud
         const longitud = tuberiaActual.puntoInicio.distanceTo(tuberiaActual.puntoFin);
         tuberiaActual.longitud = longitud;
         
-        // Añadir etiqueta de longitud
         const centro = L.latLng(
             (tuberiaActual.puntoInicio.lat + tuberiaActual.puntoFin.lat) / 2,
             (tuberiaActual.puntoInicio.lng + tuberiaActual.puntoFin.lng) / 2
@@ -2025,78 +1799,63 @@
         const etiqueta = L.marker(centro, {
             icon: L.divIcon({
                 className: 'tuberia-label',
-                html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 10px; font-weight: bold;">
-                       ${longitud.toFixed(1)}m</div>`,
-                iconSize: [60, 20],
-                iconAnchor: [30, 10]
+                html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
+                       ${longitud.toFixed(1)}m - ${diametro}"</div>`,
+                iconSize: [80, 20],
+                iconAnchor: [40, 10]
             })
         }).addTo(map);
         
         tuberiaActual.etiquetaLongitud = etiqueta;
         
-        // Guardar tubería
         tuberias.push({...tuberiaActual});
         
-        // Actualizar resumen
         actualizarResumenTuberias();
+        actualizarResultados();
         
-        // Resetear para nueva tubería
         tuberiaActual = null;
-        
-        // Remover eventos
         map.off('click');
         
-        // Ocultar instrucciones
         const instruccionesId = tipoTuberia === 'principal' ? 'instruccionesPrincipal' : 
                                tipoTuberia === 'secundaria' ? 'instruccionesSecundaria' : 'instruccionesRegante';
         document.getElementById(instruccionesId).style.display = 'none';
         
-        // Quitar clase activa del botón
         const botonId = tipoTuberia === 'principal' ? 'btnTuberiaPrincipal' : 
                        tipoTuberia === 'secundaria' ? 'btnTuberiaSecundaria' : 'btnTuberiaRegante';
         document.getElementById(botonId).classList.remove('activo');
         
-        mostrarMensaje(`Tubería ${tipoTuberia} creada. Longitud: ${longitud.toFixed(1)} metros`);
+        mostrarMensaje(`Tubería ${tipoTuberia} (${diametro}") creada. Longitud: ${longitud.toFixed(1)} metros`);
         
         if (esConexion) {
             mostrarMensaje('¡Conexión establecida con tubería existente!');
         }
     }
     
-    // Función para crear marcadores de tubería
-    function crearMarcadorTuberia(latlng, tipo, tipoTuberia) {
-        const colores = {
-            'principal': '#ff6b6b',
-            'secundaria': '#4ecdc4',
-            'regante': '#45b7d1'
-        };
-        
+    function crearMarcadorTuberia(latlng, tipo, tipoTuberia, diametro) {
+        const colores = getColorTuberia(tipoTuberia);
         const tamanos = {
-            'principal': 15,
-            'secundaria': 12,
-            'regante': 10
+            'principal': 18,
+            'secundaria': 15,
+            'regante': 12
         };
         
-        const color = colores[tipoTuberia];
         const tamano = tamanos[tipoTuberia];
         
         const marcador = L.marker(latlng, {
             icon: L.divIcon({
                 className: 'tuberia-punto',
-                html: `<div style="background: ${color}; width: ${tamano}px; height: ${tamano}px; 
+                html: `<div style="background: ${colores}; width: ${tamano}px; height: ${tamano}px; 
                        border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); 
-                       cursor: pointer;"></div>`,
+                       cursor: pointer;" title="${tipoTuberia} ${diametro}"></div>`,
                 iconSize: [tamano, tamano],
                 iconAnchor: [tamano/2, tamano/2]
             })
         });
         
-        // Hacer el marcador arrastrable
         marcador.draggable = true;
         marcador.on('dragend', function(e) {
             const nuevoLatLng = e.target.getLatLng();
             
-            // Actualizar punto en puntosTuberias
             const puntoIndex = puntosTuberias.findIndex(p => 
                 Math.abs(p.latlng.lat - latlng.lat) < 0.00001 && 
                 Math.abs(p.latlng.lng - latlng.lng) < 0.00001
@@ -2106,17 +1865,15 @@
                 puntosTuberias[puntoIndex].latlng = nuevoLatLng;
             }
             
-            // Actualizar tuberías que usan este punto
             actualizarTuberiasConPunto(latlng, nuevoLatLng);
         });
         
         return marcador;
     }
     
-    // Función para dibujar línea entre dos puntos
-    function dibujarLineaTuberia(puntoInicio, puntoFin, tipoTuberia) {
+    function dibujarLineaTuberia(puntoInicio, puntoFin, tipoTuberia, diametro) {
         const color = getColorTuberia(tipoTuberia);
-        const grosor = getGrosorTuberia(tipoTuberia);
+        const grosor = getGrosorTuberia(tipoTuberia, diametro);
         
         const linea = L.polyline([puntoInicio, puntoFin], {
             color: color,
@@ -2126,28 +1883,23 @@
             lineJoin: 'round'
         }).addTo(map);
         
-        // Hacer la línea editable
         linea.editing.enable();
         
         return linea;
     }
     
-    // Función para actualizar tuberías cuando se mueve un punto
     function actualizarTuberiasConPunto(viejoLatLng, nuevoLatLng) {
         tuberias.forEach(tuberia => {
-            // Actualizar punto de inicio si coincide
             if (tuberia.puntoInicio && 
                 Math.abs(tuberia.puntoInicio.lat - viejoLatLng.lat) < 0.00001 && 
                 Math.abs(tuberia.puntoInicio.lng - viejoLatLng.lng) < 0.00001) {
                 tuberia.puntoInicio = nuevoLatLng;
                 
-                // Actualizar línea
                 if (tuberia.linea && tuberia.puntoFin) {
                     const nuevosPuntos = [nuevoLatLng, tuberia.puntoFin];
                     tuberia.linea.setLatLngs(nuevosPuntos);
                 }
                 
-                // Actualizar etiqueta de longitud
                 if (tuberia.etiquetaLongitud && tuberia.puntoFin) {
                     const centro = L.latLng(
                         (nuevoLatLng.lat + tuberia.puntoFin.lat) / 2,
@@ -2155,32 +1907,28 @@
                     );
                     tuberia.etiquetaLongitud.setLatLng(centro);
                     
-                    // Actualizar texto de longitud
                     const nuevaLongitud = nuevoLatLng.distanceTo(tuberia.puntoFin);
                     tuberia.longitud = nuevaLongitud;
                     tuberia.etiquetaLongitud.setIcon(L.divIcon({
                         className: 'tuberia-label',
-                        html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 10px; font-weight: bold;">
-                               ${nuevaLongitud.toFixed(1)}m</div>`,
-                        iconSize: [60, 20],
-                        iconAnchor: [30, 10]
+                        html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
+                               ${nuevaLongitud.toFixed(1)}m - ${tuberia.diametro}"</div>`,
+                        iconSize: [80, 20],
+                        iconAnchor: [40, 10]
                     }));
                 }
             }
             
-            // Actualizar punto de fin si coincide
             if (tuberia.puntoFin && 
                 Math.abs(tuberia.puntoFin.lat - viejoLatLng.lat) < 0.00001 && 
                 Math.abs(tuberia.puntoFin.lng - viejoLatLng.lng) < 0.00001) {
                 tuberia.puntoFin = nuevoLatLng;
                 
-                // Actualizar línea
                 if (tuberia.linea && tuberia.puntoInicio) {
                     const nuevosPuntos = [tuberia.puntoInicio, nuevoLatLng];
                     tuberia.linea.setLatLngs(nuevosPuntos);
                 }
                 
-                // Actualizar etiqueta de longitud
                 if (tuberia.etiquetaLongitud && tuberia.puntoInicio) {
                     const centro = L.latLng(
                         (tuberia.puntoInicio.lat + nuevoLatLng.lat) / 2,
@@ -2188,27 +1936,85 @@
                     );
                     tuberia.etiquetaLongitud.setLatLng(centro);
                     
-                    // Actualizar texto de longitud
                     const nuevaLongitud = tuberia.puntoInicio.distanceTo(nuevoLatLng);
                     tuberia.longitud = nuevaLongitud;
                     tuberia.etiquetaLongitud.setIcon(L.divIcon({
                         className: 'tuberia-label',
-                        html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 10px; font-weight: bold;">
-                               ${nuevaLongitud.toFixed(1)}m</div>`,
-                        iconSize: [60, 20],
-                        iconAnchor: [30, 10]
+                        html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
+                               ${nuevaLongitud.toFixed(1)}m - ${tuberia.diametro}"</div>`,
+                        iconSize: [80, 20],
+                        iconAnchor: [40, 10]
                     }));
                 }
             }
         });
         
-        // Actualizar resumen
         actualizarResumenTuberias();
+        actualizarResultados();
     }
     
-    // Función para iniciar modo conexión entre tuberías
+    function actualizarResumenTuberias() {
+        const resumen = {};
+        
+        tuberias.forEach(t => {
+            const key = `${t.tipo}_${t.diametro}`;
+            if (!resumen[key]) {
+                resumen[key] = {
+                    tipo: t.tipo,
+                    diametro: t.diametro,
+                    longitudTotal: 0,
+                    tipoMaterial: t.tipoMaterial,
+                    conexiones: 0
+                };
+            }
+            resumen[key].longitudTotal += t.longitud || 0;
+            resumen[key].conexiones += t.conexiones ? t.conexiones.length : 0;
+        });
+        
+        let html = '<h4>Resumen de Tuberías por Diámetro</h4>';
+        
+        const totalesPorTipo = {};
+        
+        Object.keys(resumen).forEach(key => {
+            const item = resumen[key];
+            if (!totalesPorTipo[item.tipo]) {
+                totalesPorTipo[item.tipo] = 0;
+            }
+            totalesPorTipo[item.tipo] += item.longitudTotal;
+        });
+        
+        ['principal', 'secundaria', 'regante'].forEach(tipo => {
+            const itemsTipo = Object.values(resumen).filter(item => item.tipo === tipo);
+            if (itemsTipo.length > 0) {
+                html += `<div style="margin-bottom: 10px;">`;
+                html += `<strong>${tipo.charAt(0).toUpperCase() + tipo.slice(1)}:</strong>`;
+                
+                itemsTipo.forEach(item => {
+                    html += `<div class="resumen-item">
+                        <span>${item.diametro}" (${item.tipoMaterial}):</span>
+                        <span>${item.longitudTotal.toFixed(2)} m</span>
+                    </div>`;
+                });
+                
+                html += `<div class="resumen-item" style="font-weight: bold;">
+                    <span>Total ${tipo}:</span>
+                    <span>${totalesPorTipo[tipo]?.toFixed(2) || '0.00'} m</span>
+                </div>`;
+                html += `</div>`;
+            }
+        });
+        
+        const totalGeneral = Object.values(totalesPorTipo).reduce((sum, val) => sum + val, 0);
+        
+        html += `<div class="resumen-item" style="font-weight: bold; border-top: 1px solid #ddd; padding-top: 8px;">
+            <span>Total General:</span>
+            <span>${totalGeneral.toFixed(2)} m</span>
+        </div>`;
+        
+        document.getElementById('resumenTuberiasDetallado').innerHTML = html;
+    }
+    
     function iniciarModoConexion(tipoTuberia) {
-        // Desactivar otros modos
         if (currentDrawMode) {
             currentDrawMode.disable();
             currentDrawMode = null;
@@ -2218,12 +2024,10 @@
             tuberiaActual = null;
         }
         
-        // Quitar clase activa de todos los botones
         document.querySelectorAll('.tuberia-btn').forEach(btn => {
             btn.classList.remove('activo');
         });
         
-        // Agregar clase modo conexión
         const botonId = tipoTuberia === 'principal' ? 'btnConectarPrincipal' : 
                        tipoTuberia === 'secundaria' ? 'btnConectarSecundaria' : 'btnConectarRegante';
         document.getElementById(botonId).classList.add('modo-conexion-activo');
@@ -2232,24 +2036,29 @@
         tuberiaConexionTipo = tipoTuberia;
         puntoOrigenConexion = null;
         
-        mostrarMensaje(`Modo conexión ${tipoTuberia}. Haz clic en un punto de tubería para iniciar la conexión.`);
+        const diametroSelectId = tipoTuberia === 'principal' ? 'diametroPrincipal' : 
+                                 tipoTuberia === 'secundaria' ? 'diametroSecundaria' : 'diametroRegante';
+        const diametro = document.getElementById(diametroSelectId).value;
         
-        // Configurar evento para seleccionar puntos
+        const tipoSelectId = tipoTuberia === 'principal' ? 'tipoPrincipal' : 
+                             tipoTuberia === 'secundaria' ? 'tipoSecundaria' : 'tipoRegante';
+        const tipoMaterial = document.getElementById(tipoSelectId).value;
+        
+        mostrarMensaje(`Modo conexión ${tipoTuberia} (${diametro}"). Haz clic en un punto de tubería para iniciar la conexión.`);
+        
         map.off('click');
         map.on('click', function(e) {
-            manejarClicConexion(e.latlng, tipoTuberia);
+            manejarClicConexion(e.latlng, tipoTuberia, diametro, tipoMaterial);
         });
     }
     
-    // Función para manejar clics en modo conexión
-    function manejarClicConexion(latlng, tipoTuberia) {
-        // Buscar punto cercano
+    function manejarClicConexion(latlng, tipoTuberia, diametro, tipoMaterial) {
         let puntoCercano = null;
         let distanciaMinima = Infinity;
         
         puntosTuberias.forEach(punto => {
             const distancia = latlng.distanceTo(punto.latlng);
-            if (distancia < 10) { // 10 metros de tolerancia
+            if (distancia < 10) {
                 if (distancia < distanciaMinima) {
                     distanciaMinima = distancia;
                     puntoCercano = punto;
@@ -2263,33 +2072,28 @@
         }
         
         if (!puntoOrigenConexion) {
-            // Primer clic: establecer punto origen
             puntoOrigenConexion = {
                 punto: puntoCercano,
                 latlng: puntoCercano.latlng
             };
             
-            // Resaltar punto
             resaltarPunto(puntoCercano.latlng);
-            
             mostrarMensaje('Punto origen seleccionado. Ahora haz clic en otro punto para conectar.');
         } else {
-            // Segundo clic: establecer conexión
             if (puntoCercano.latlng.lat === puntoOrigenConexion.latlng.lat && 
                 puntoCercano.latlng.lng === puntoOrigenConexion.latlng.lng) {
                 mostrarMensaje('No puedes conectar un punto consigo mismo. Selecciona otro punto.');
                 return;
             }
             
-            // Crear nueva tubería que conecta los dos puntos
             const nuevaTuberia = {
                 tipo: tipoTuberia,
                 puntoInicio: puntoOrigenConexion.latlng,
                 puntoFin: puntoCercano.latlng,
                 color: getColorTuberia(tipoTuberia),
-                grosor: getGrosorTuberia(tipoTuberia),
-                diametro: document.getElementById(`diametro${tipoTuberia.charAt(0).toUpperCase() + tipoTuberia.slice(1)}`).value,
-                tipoMaterial: document.getElementById(`tipo${tipoTuberia.charAt(0).toUpperCase() + tipoTuberia.slice(1)}`).value,
+                grosor: getGrosorTuberia(tipoTuberia, diametro),
+                diametro: diametro,
+                tipoMaterial: tipoMaterial,
                 id: Date.now(),
                 conexiones: [
                     {
@@ -2306,14 +2110,11 @@
                 esConexion: true
             };
             
-            // Dibujar la tubería de conexión
-            const linea = dibujarLineaTuberia(nuevaTuberia.puntoInicio, nuevaTuberia.puntoFin, tipoTuberia);
+            const linea = dibujarLineaTuberia(nuevaTuberia.puntoInicio, nuevaTuberia.puntoFin, tipoTuberia, diametro);
             nuevaTuberia.linea = linea;
             
-            // Calcular longitud
             nuevaTuberia.longitud = nuevaTuberia.puntoInicio.distanceTo(nuevaTuberia.puntoFin);
             
-            // Añadir etiqueta de longitud
             const centro = L.latLng(
                 (nuevaTuberia.puntoInicio.lat + nuevaTuberia.puntoFin.lat) / 2,
                 (nuevaTuberia.puntoInicio.lng + nuevaTuberia.puntoFin.lng) / 2
@@ -2322,19 +2123,17 @@
             const etiqueta = L.marker(centro, {
                 icon: L.divIcon({
                     className: 'tuberia-label',
-                    html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 10px; font-weight: bold;">
-                           ${nuevaTuberia.longitud.toFixed(1)}m</div>`,
-                    iconSize: [60, 20],
-                    iconAnchor: [30, 10]
+                    html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
+                           ${nuevaTuberia.longitud.toFixed(1)}m - ${diametro}"</div>`,
+                    iconSize: [80, 20],
+                    iconAnchor: [40, 10]
                 })
             }).addTo(map);
             
             nuevaTuberia.etiquetaLongitud = etiqueta;
             
-            // Guardar tubería
             tuberias.push(nuevaTuberia);
             
-            // Actualizar las tuberías conectadas
             const tuberiaOrigen = tuberias.find(t => t.id === puntoOrigenConexion.punto.tuberiaId);
             const tuberiaDestino = tuberias.find(t => t.id === puntoCercano.tuberiaId);
             
@@ -2356,32 +2155,25 @@
                 });
             }
             
-            // Actualizar resumen
             actualizarResumenTuberias();
+            actualizarResultados();
             
-            // Resetear modo conexión
             modoConexion = false;
             tuberiaConexionTipo = null;
             puntoOrigenConexion = null;
             
-            // Quitar clase modo conexión
             const botonId = tipoTuberia === 'principal' ? 'btnConectarPrincipal' : 
                            tipoTuberia === 'secundaria' ? 'btnConectarSecundaria' : 'btnConectarRegante';
             document.getElementById(botonId).classList.remove('modo-conexion-activo');
             
-            // Remover eventos
             map.off('click');
-            
-            // Quitar resaltado
             quitarResaltadoPuntos();
             
             mostrarMensaje(`Conexión establecida entre tuberías. Longitud: ${nuevaTuberia.longitud.toFixed(1)} metros`);
         }
     }
     
-    // Función para resaltar punto
     function resaltarPunto(latlng) {
-        // Buscar marcador en el mapa y añadir clase de animación
         map.eachLayer(layer => {
             if (layer instanceof L.Marker) {
                 const markerLatLng = layer.getLatLng();
@@ -2397,7 +2189,6 @@
         });
     }
     
-    // Función para quitar resaltado de puntos
     function quitarResaltadoPuntos() {
         map.eachLayer(layer => {
             if (layer instanceof L.Marker) {
@@ -2409,73 +2200,41 @@
         });
     }
     
-    // Función actualizada para actualizar resumen de tuberías
-    function actualizarResumenTuberias() {
-        let totalPrincipal = 0;
-        let totalSecundaria = 0;
-        let totalRegante = 0;
-        
-        tuberias.forEach(t => {
-            if (t.tipo === 'principal') totalPrincipal += t.longitud || 0;
-            if (t.tipo === 'secundaria') totalSecundaria += t.longitud || 0;
-            if (t.tipo === 'regante') totalRegante += t.longitud || 0;
-        });
-        
-        document.getElementById('metrosPrincipal').textContent = totalPrincipal.toFixed(2) + ' m';
-        document.getElementById('metrosSecundaria').textContent = totalSecundaria.toFixed(2) + ' m';
-        document.getElementById('metrosRegante').textContent = totalRegante.toFixed(2) + ' m';
-        
-        const total = totalPrincipal + totalSecundaria + totalRegante;
-        document.getElementById('metrosTotal').textContent = total.toFixed(2) + ' m';
-    }
-    
-    // Configurar eventos de tuberías (viejo sistema - mantener para compatibilidad)
-    function configurarEventosTuberias() {
-        // Esta función se mantiene para compatibilidad con código existente
-        // pero el nuevo sistema usa las funciones anteriores
-    }
-    
-    // Sistema de elementos gráficos tipo "stickers"
     function iniciarModoElemento(tipoElemento) {
-        // Desactivar modo tubería si está activo
         if (tuberiaActual) {
             tuberiaActual = null;
             puntoInicioTuberia = null;
             
-            // Quitar clase activa de los botones de tubería
             document.querySelectorAll('.tuberia-btn').forEach(btn => {
                 btn.classList.remove('activo');
             });
             
-            // Ocultar instrucciones de tubería
             document.getElementById('instruccionesPrincipal').style.display = 'none';
             document.getElementById('instruccionesSecundaria').style.display = 'none';
             document.getElementById('instruccionesRegante').style.display = 'none';
         }
         
-        // Desactivar modo conexión si está activo
         if (modoConexion) {
             modoConexion = false;
             tuberiaConexionTipo = null;
             puntoOrigenConexion = null;
             
-            // Quitar clase modo conexión
             document.querySelectorAll('.tuberia-btn').forEach(btn => {
                 btn.classList.remove('modo-conexion-activo');
             });
         }
         
-        // Quitar clase active de todos los botones de elemento
         document.querySelectorAll('.elemento-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         
-        // Agregar clase active al botón clickeado
         document.querySelector(`.elemento-btn[data-elemento="${tipoElemento}"]`).classList.add('active');
         
         modoAgregarElemento = tipoElemento;
         document.getElementById('instruccionesElementos').style.display = 'block';
         mostrarMensaje(`Modo elemento activado. Haz clic en el mapa para colocar el ${tipoElemento}.`);
+        
+        actualizarConfiguracionElemento(tipoElemento);
     }
     
     function agregarElementoGrafico(latlng, tipo) {
@@ -2508,165 +2267,762 @@
         
         elemento.bindPopup(`<b>${tipo.toUpperCase()}</b><br>Arrastra para mover`);
         
-        // Evento para actualizar posición al arrastrar
         elemento.on('dragend', function(e) {
             const nuevaPos = e.target.getLatLng();
-            // Buscar y actualizar el elemento en el array
             const elementoIndex = elementosGraficos.findIndex(e => e.layer === elemento);
             if (elementoIndex !== -1) {
                 elementosGraficos[elementoIndex].posicion = nuevaPos;
+                
+                if (tipo === 'valvula') {
+                    const valvulaIndex = valvulas.findIndex(v => v.elementoId === elementosGraficos[elementoIndex].id);
+                    if (valvulaIndex !== -1) {
+                        valvulas[valvulaIndex].posicion = nuevaPos;
+                    }
+                } else if (tipo === 'cabezal') {
+                    const cabezalIndex = cabezales.findIndex(c => c.elementoId === elementosGraficos[elementoIndex].id);
+                    if (cabezalIndex !== -1) {
+                        cabezales[cabezalIndex].posicion = nuevaPos;
+                    }
+                }
             }
         });
         
+        const elementoId = Date.now();
         elementosGraficos.push({
+            id: elementoId,
             type: 'elemento',
             layer: elemento,
             tipo: tipo,
             posicion: latlng
         });
         
-        // Actualizar configuración del elemento
-        actualizarConfiguracionElemento(tipo);
+        if (tipo === 'valvula') {
+            const nombre = generarNombreValvula();
+            valvulas.push({
+                id: elementoId,
+                nombre: nombre,
+                elementoId: elementoId,
+                posicion: latlng,
+                caudalEmisor: 4,
+                numeroEmisores: 100,
+                tipo: 'Manual',
+                diametro: '2"',
+                presion: 3,
+                caudalTotal: 400
+            });
+            
+            elemento.bindPopup(`<b>VÁLVULA ${nombre}</b><br>Caudal: 400 L/h<br>Arrastra para mover`);
+            
+            actualizarResultados();
+        }
+        
+        if (tipo === 'cabezal') {
+            cabezales.push({
+                id: elementoId,
+                elementoId: elementoId,
+                posicion: latlng,
+                caudalBomba: 50,
+                diametroSuccion: '4"',
+                diametroDescarga: '3"',
+                numeroFiltros: 2,
+                tipoFiltros: 'Anillas',
+                notas: 'Cabezal principal del sistema'
+            });
+            
+            elemento.bindPopup(`<b>CABEZAL PRINCIPAL</b><br>Caudal: 50 L/s<br>Arrastra para mover`);
+            
+            actualizarResultados();
+        }
+        
+        actualizarConfiguracionElemento(tipo, elementoId);
     }
     
-    function actualizarConfiguracionElemento(tipo) {
-        const configDiv = document.getElementById('elementoConfig');
-        let contenido = '';
+    function generarNombreValvula() {
+        const letras = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+        const numeros = Array.from({length: 10}, (_, i) => i + 1);
         
-        switch(tipo) {
-            case 'cabezal':
-                contenido = `
-                    <h4>Configuración del Cabezal</h4>
+        const nombresExistentes = valvulas.map(v => v.nombre);
+        
+        for (let letra of letras) {
+            for (let numero of numeros) {
+                const nombre = `${letra}${numero}`;
+                if (!nombresExistentes.includes(nombre)) {
+                    return nombre;
+                }
+            }
+        }
+        
+        return `V${valvulas.length + 1}`;
+    }
+    
+    function actualizarConfiguracionElemento(tipo, elementoId = null) {
+        const configDiv = document.getElementById('elementoConfig');
+        
+        if (tipo === 'valvula' && elementoId) {
+            const valvula = valvulas.find(v => v.id === elementoId);
+            if (valvula) {
+                configDiv.innerHTML = `
+                    <h4>Configuración de Válvula ${valvula.nombre}</h4>
+                    <div class="control-row">
+                        <div class="control-label">Nombre:</div>
+                        <input type="text" id="nombreValvula" value="${valvula.nombre}" onchange="actualizarValvula('${elementoId}', 'nombre', this.value)">
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Caudal emisor:</div>
+                        <input type="number" id="caudalEmisorValvula" value="${valvula.caudalEmisor}" step="0.5" min="1" max="100" onchange="actualizarValvula('${elementoId}', 'caudalEmisor', this.value)">
+                        L/h
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">N° emisores:</div>
+                        <input type="number" id="numEmisoresValvula" value="${valvula.numeroEmisores}" min="1" max="10000" onchange="actualizarValvula('${elementoId}', 'numeroEmisores', this.value)">
+                    </div>
                     <div class="control-row">
                         <div class="control-label">Tipo:</div>
-                        <select id="tipoCabezal">
-                            <option>Básico</option>
-                            <option>Filtración</option>
-                            <option>Fertirriego</option>
-                            <option>Automático</option>
-                        </select>
-                    </div>
-                    <div class="control-row">
-                        <div class="control-label">Bombas:</div>
-                        <input type="number" id="bombasCabezal" min="1" max="3" value="1">
-                    </div>
-                    <div class="control-row">
-                        <div class="control-label">Potencia:</div>
-                        <input type="number" id="potenciaCabezal" min="1" max="100" value="10"> HP
-                    </div>
-                `;
-                break;
-                
-            case 'purgaterminal':
-                contenido = `
-                    <h4>Configuración de Purgas/Terminales</h4>
-                    <div class="control-row">
-                        <div class="control-label">Cantidad:</div>
-                        <input type="number" id="cantidadPurgas" min="1" max="20" value="4">
-                    </div>
-                    <div class="control-row">
-                        <div class="control-label">Tipo:</div>
-                        <select id="tipoPurgas">
-                            <option>Automática</option>
-                            <option>Manual</option>
+                        <select id="tipoValvula" onchange="actualizarValvula('${elementoId}', 'tipo', this.value)">
+                            <option value="Manual" ${valvula.tipo === 'Manual' ? 'selected' : ''}>Manual</option>
+                            <option value="Automática" ${valvula.tipo === 'Automática' ? 'selected' : ''}>Automática</option>
+                            <option value="Electroválvula" ${valvula.tipo === 'Electroválvula' ? 'selected' : ''}>Electroválvula</option>
                         </select>
                     </div>
                     <div class="control-row">
                         <div class="control-label">Diámetro:</div>
-                        <select id="diametroPurgas">
-                            <option>1"</option>
-                            <option>1.5"</option>
-                            <option>2"</option>
-                        </select>
-                    </div>
-                `;
-                break;
-                
-            case 'tomagua':
-                contenido = `
-                    <h4>Configuración de Toma de Agua</h4>
-                    <div class="control-row">
-                        <div class="control-label">Diámetro:</div>
-                        <select id="diametroToma">
-                            <option>2"</option>
-                            <option>3"</option>
-                            <option>4"</option>
-                            <option>6"</option>
-                        </select>
-                    </div>
-                    <div class="control-row">
-                        <div class="control-label">Profundidad:</div>
-                        <input type="number" id="profundidadToma" min="0.5" max="5" value="1.2" step="0.1"> m
-                    </div>
-                    <div class="control-row">
-                        <div class="control-label">Caudal:</div>
-                        <input type="number" id="caudalToma" min="1" max="1000" value="50" step="5"> L/s
-                    </div>
-                `;
-                break;
-                
-            case 'valvula':
-                contenido = `
-                    <h4>Configuración de Válvula</h4>
-                    <div class="control-row">
-                        <div class="control-label">Tipo:</div>
-                        <select id="tipoValvula">
-                            <option>Manual</option>
-                            <option>Automática</option>
-                            <option>Electroválvula</option>
-                        </select>
-                    </div>
-                    <div class="control-row">
-                        <div class="control-label">Diámetro:</div>
-                        <select id="diametroValvula">
-                            <option>1"</option>
-                            <option>2"</option>
-                            <option>3"</option>
-                            <option>4"</option>
+                        <select id="diametroValvula" onchange="actualizarValvula('${elementoId}', 'diametro', this.value)">
+                            <option value="1\"" ${valvula.diametro === '1"' ? 'selected' : ''}>1"</option>
+                            <option value="2\"" ${valvula.diametro === '2"' ? 'selected' : ''}>2"</option>
+                            <option value="3\"" ${valvula.diametro === '3"' ? 'selected' : ''}>3"</option>
+                            <option value="4\"" ${valvula.diametro === '4"' ? 'selected' : ''}>4"</option>
                         </select>
                     </div>
                     <div class="control-row">
                         <div class="control-label">Presión:</div>
-                        <input type="number" id="presionValvula" min="1" max="10" value="3" step="0.5"> bar
+                        <input type="number" id="presionValvula" value="${valvula.presion}" step="0.5" min="1" max="10" onchange="actualizarValvula('${elementoId}', 'presion', this.value)">
+                        bar
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background-color: #e8f4fd; border-radius: 5px;">
+                        <strong>Caudal Total:</strong> ${valvula.caudalTotal} L/h (${(valvula.caudalTotal / 3600).toFixed(2)} L/s)
                     </div>
                 `;
-                break;
-                
-            case 'filtro':
-                contenido = `
-                    <h4>Configuración de Filtro</h4>
+            }
+        } else if (tipo === 'cabezal' && elementoId) {
+            const cabezal = cabezales.find(c => c.id === elementoId);
+            if (cabezal) {
+                configDiv.innerHTML = `
+                    <h4>Configuración del Cabezal</h4>
                     <div class="control-row">
-                        <div class="control-label">Tipo:</div>
-                        <select id="tipoFiltro">
-                            <option>Anillas</option>
-                            <option>Arena</option>
-                            <option>Malla</option>
-                            <option>Hidrociclón</option>
+                        <div class="control-label">Caudal bomba:</div>
+                        <input type="number" id="caudalBomba" value="${cabezal.caudalBomba}" step="5" min="1" max="1000" onchange="actualizarCabezal('${elementoId}', 'caudalBomba', this.value)">
+                        L/s
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Diámetro succión:</div>
+                        <select id="diametroSuccion" onchange="actualizarCabezal('${elementoId}', 'diametroSuccion', this.value)">
+                            <option value="2\"" ${cabezal.diametroSuccion === '2"' ? 'selected' : ''}>2"</option>
+                            <option value="3\"" ${cabezal.diametroSuccion === '3"' ? 'selected' : ''}>3"</option>
+                            <option value="4\"" ${cabezal.diametroSuccion === '4"' ? 'selected' : ''}>4"</option>
+                            <option value="6\"" ${cabezal.diametroSuccion === '6"' ? 'selected' : ''}>6"</option>
+                            <option value="8\"" ${cabezal.diametroSuccion === '8"' ? 'selected' : ''}>8"</option>
                         </select>
                     </div>
                     <div class="control-row">
-                        <div class="control-label">Diámetro:</div>
-                        <select id="diametroFiltro">
-                            <option>2"</option>
-                            <option>3"</option>
-                            <option>4"</option>
+                        <div class="control-label">Diámetro descarga:</div>
+                        <select id="diametroDescarga" onchange="actualizarCabezal('${elementoId}', 'diametroDescarga', this.value)">
+                            <option value="2\"" ${cabezal.diametroDescarga === '2"' ? 'selected' : ''}>2"</option>
+                            <option value="3\"" ${cabezal.diametroDescarga === '3"' ? 'selected' : ''}>3"</option>
+                            <option value="4\"" ${cabezal.diametroDescarga === '4"' ? 'selected' : ''}>4"</option>
+                            <option value="6\"" ${cabezal.diametroDescarga === '6"' ? 'selected' : ''}>6"</option>
                         </select>
                     </div>
                     <div class="control-row">
-                        <div class="control-label">Capacidad:</div>
-                        <input type="number" id="capacidadFiltro" min="10" max="500" value="100" step="10"> m³/h
+                        <div class="control-label">N° filtros:</div>
+                        <input type="number" id="numFiltros" value="${cabezal.numeroFiltros}" min="1" max="10" onchange="actualizarCabezal('${elementoId}', 'numeroFiltros', this.value)">
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Tipo filtros:</div>
+                        <select id="tipoFiltros" onchange="actualizarCabezal('${elementoId}', 'tipoFiltros', this.value)">
+                            <option value="Anillas" ${cabezal.tipoFiltros === 'Anillas' ? 'selected' : ''}>Anillas</option>
+                            <option value="Arena" ${cabezal.tipoFiltros === 'Arena' ? 'selected' : ''}>Arena</option>
+                            <option value="Malla" ${cabezal.tipoFiltros === 'Malla' ? 'selected' : ''}>Malla</option>
+                            <option value="Hidrociclón" ${cabezal.tipoFiltros === 'Hidrociclón' ? 'selected' : ''}>Hidrociclón</option>
+                        </select>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-label">Notas:</div>
+                        <textarea id="notasCabezal" rows="3" style="width: 100%; margin-top: 5px;" onchange="actualizarCabezal('${elementoId}', 'notas', this.value)">${cabezal.notas}</textarea>
                     </div>
                 `;
-                break;
-                
-            default:
-                contenido = `<p>Selecciona un elemento para configurarlo</p>`;
+            }
+        } else {
+            let contenido = '';
+            
+            switch(tipo) {
+                case 'cabezal':
+                    contenido = `
+                        <h4>Configuración del Cabezal</h4>
+                        <div class="control-row">
+                            <div class="control-label">Caudal bomba:</div>
+                            <input type="number" id="caudalBomba" value="50" step="5" min="1" max="1000"> L/s
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Diámetro succión:</div>
+                            <select id="diametroSuccion">
+                                <option value="2\"" selected>2"</option>
+                                <option value="3"">3"</option>
+                                <option value="4"">4"</option>
+                                <option value="6"">6"</option>
+                                <option value="8"">8"</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Diámetro descarga:</div>
+                            <select id="diametroDescarga">
+                                <option value="2\"">2"</option>
+                                <option value="3\"" selected>3"</option>
+                                <option value="4\"">4"</option>
+                                <option value="6\"">6"</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">N° filtros:</div>
+                            <input type="number" id="numFiltros" value="2" min="1" max="10">
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Tipo filtros:</div>
+                            <select id="tipoFiltros">
+                                <option value="Anillas" selected>Anillas</option>
+                                <option value="Arena">Arena</option>
+                                <option value="Malla">Malla</option>
+                                <option value="Hidrociclón">Hidrociclón</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Notas:</div>
+                            <textarea id="notasCabezal" rows="3" style="width: 100%; margin-top: 5px;">Cabezal principal del sistema</textarea>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'purgaterminal':
+                    contenido = `
+                        <h4>Configuración de Purgas/Terminales</h4>
+                        <div class="control-row">
+                            <div class="control-label">Cantidad:</div>
+                            <input type="number" id="cantidadPurgas" min="1" max="20" value="4">
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Tipo:</div>
+                            <select id="tipoPurgas">
+                                <option>Automática</option>
+                                <option>Manual</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Diámetro:</div>
+                            <select id="diametroPurgas">
+                                <option>1"</option>
+                                <option>1.5"</option>
+                                <option>2"</option>
+                            </select>
+                    `;
+                    break;
+                    
+                case 'tomagua':
+                    contenido = `
+                        <h4>Configuración de Toma de Agua</h4>
+                        <div class="control-row">
+                            <div class="control-label">Diámetro:</div>
+                            <select id="diametroToma">
+                                <option>2"</option>
+                                <option>3"</option>
+                                <option>4"</option>
+                                <option>6"</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Profundidad:</div>
+                            <input type="number" id="profundidadToma" min="0.5" max="5" value="1.2" step="0.1"> m
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Caudal:</div>
+                            <input type="number" id="caudalToma" min="1" max="1000" value="50" step="5"> L/s
+                        </div>
+                    `;
+                    break;
+                    
+                case 'valvula':
+                    const nombreValvula = generarNombreValvula();
+                    contenido = `
+                        <h4>Configuración de Válvula ${nombreValvula}</h4>
+                        <div class="control-row">
+                            <div class="control-label">Nombre:</div>
+                            <input type="text" id="nombreValvula" value="${nombreValvula}">
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Caudal emisor:</div>
+                            <input type="number" id="caudalEmisorValvula" value="4" step="0.5" min="1" max="100"> L/h
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">N° emisores:</div>
+                            <input type="number" id="numEmisoresValvula" value="100" min="1" max="10000">
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Tipo:</div>
+                            <select id="tipoValvula">
+                                <option value="Manual">Manual</option>
+                                <option value="Automática">Automática</option>
+                                <option value="Electroválvula">Electroválvula</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Diámetro:</div>
+                            <select id="diametroValvula">
+                                <option value="1\"">1"</option>
+                                <option value="2\"" selected>2"</option>
+                                <option value="3\"">3"</option>
+                                <option value="4\"">4"</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Presión:</div>
+                            <input type="number" id="presionValvula" value="3" step="0.5" min="1" max="10"> bar
+                        </div>
+                        <div style="margin-top: 10px; padding: 10px; background-color: #e8f4fd; border-radius: 5px;">
+                            <strong>Caudal Total Estimado:</strong> 400 L/h (0.11 L/s)
+                        </div>
+                    `;
+                    break;
+                    
+                case 'filtro':
+                    contenido = `
+                        <h4>Configuración de Filtro</h4>
+                        <div class="control-row">
+                            <div class="control-label">Tipo:</div>
+                            <select id="tipoFiltro">
+                                <option>Anillas</option>
+                                <option>Arena</option>
+                                <option>Malla</option>
+                                <option>Hidrociclón</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Diámetro:</div>
+                            <select id="diametroFiltro">
+                                <option>2"</option>
+                                <option>3"</option>
+                                <option>4"</option>
+                            </select>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-label">Capacidad:</div>
+                            <input type="number" id="capacidadFiltro" min="10" max="500" value="100" step="10"> m³/h
+                        </div>
+                    `;
+                    break;
+                    
+                default:
+                    contenido = `<p>Selecciona un elemento para configurarlo</p>`;
+            }
+            
+            configDiv.innerHTML = contenido;
         }
-        
-        configDiv.innerHTML = contenido;
     }
     
-    // Sistema de guardado/exportación/importación
+    function actualizarValvula(elementoId, campo, valor) {
+        const valvula = valvulas.find(v => v.id === parseInt(elementoId));
+        if (valvula) {
+            valvula[campo] = valor;
+            
+            if (campo === 'caudalEmisor' || campo === 'numeroEmisores') {
+                valvula.caudalTotal = valvula.caudalEmisor * valvula.numeroEmisores;
+            }
+            
+            const elementoGrafico = elementosGraficos.find(e => e.id === parseInt(elementoId));
+            if (elementoGrafico && elementoGrafico.layer) {
+                elementoGrafico.layer.bindPopup(`<b>VÁLVULA ${valvula.nombre}</b><br>Caudal: ${valvula.caudalTotal} L/h<br>Tipo: ${valvula.tipo}<br>Arrastra para mover`);
+            }
+            
+            actualizarResultados();
+        }
+    }
+    
+    function actualizarCabezal(elementoId, campo, valor) {
+        const cabezal = cabezales.find(c => c.id === parseInt(elementoId));
+        if (cabezal) {
+            cabezal[campo] = valor;
+            
+            const elementoGrafico = elementosGraficos.find(e => e.id === parseInt(elementoId));
+            if (elementoGrafico && elementoGrafico.layer) {
+                elementoGrafico.layer.bindPopup(`<b>CABEZAL PRINCIPAL</b><br>Caudal: ${cabezal.caudalBomba} L/s<br>Filtros: ${cabezal.numeroFiltros} ${cabezal.tipoFiltros}<br>Arrastra para mover`);
+            }
+            
+            actualizarResultados();
+        }
+    }
+    
+    function actualizarResultados() {
+        const resultadosDiv = document.getElementById('resultadosCalculos');
+        
+        if (tuberias.length === 0 && valvulas.length === 0 && cabezales.length === 0) {
+            resultadosDiv.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No hay elementos en el diseño. Agrega tuberías y elementos para ver los resultados.</p>';
+            return;
+        }
+        
+        let html = '';
+        
+        html += '<div class="resultado-seccion">';
+        html += '<h4 class="resultado-titulo">Información General</h4>';
+        html += '<table class="resultado-tabla">';
+        html += '<tr><th>Área Total</th><td>' + (areaTotal > 0 ? areaTotal.toFixed(2) + ' m² (' + (areaTotal / 10000).toFixed(2) + ' ha)' : 'No definida') + '</td></tr>';
+        html += '<tr><th>Fecha de Diseño</th><td>' + new Date().toLocaleDateString() + '</td></tr>';
+        html += '</table>';
+        html += '</div>';
+        
+        if (tuberias.length > 0) {
+            html += '<div class="resultado-seccion">';
+            html += '<h4 class="resultado-titulo">Tuberías por Diámetro</h4>';
+            html += '<table class="resultado-tabla">';
+            html += '<tr><th>Tipo</th><th>Diámetro</th><th>Material</th><th>Longitud (m)</th><th>Conexiones</th></tr>';
+            
+            const resumen = {};
+            
+            tuberias.forEach(t => {
+                const key = `${t.tipo}_${t.diametro}_${t.tipoMaterial}`;
+                if (!resumen[key]) {
+                    resumen[key] = {
+                        tipo: t.tipo,
+                        diametro: t.diametro,
+                        tipoMaterial: t.tipoMaterial,
+                        longitudTotal: 0,
+                        conexiones: 0
+                    };
+                }
+                resumen[key].longitudTotal += t.longitud || 0;
+                resumen[key].conexiones += t.conexiones ? t.conexiones.length : 0;
+            });
+            
+            let totalGeneral = 0;
+            Object.values(resumen).forEach(item => {
+                html += `<tr>
+                    <td>${item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)}</td>
+                    <td>${item.diametro}"</td>
+                    <td>${item.tipoMaterial}</td>
+                    <td>${item.longitudTotal.toFixed(2)}</td>
+                    <td>${item.conexiones}</td>
+                </tr>`;
+                totalGeneral += item.longitudTotal;
+            });
+            
+            html += `<tr style="font-weight: bold; background-color: #f0f0f0;">
+                <td colspan="3">TOTAL GENERAL</td>
+                <td>${totalGeneral.toFixed(2)} m</td>
+                <td></td>
+            </tr>`;
+            
+            html += '</table>';
+            html += '</div>';
+        }
+        
+        if (valvulas.length > 0) {
+            html += '<div class="resultado-seccion">';
+            html += '<h4 class="resultado-titulo">Válvulas de Control</h4>';
+            html += '<table class="resultado-tabla">';
+            html += '<tr><th>Nombre</th><th>Tipo</th><th>Diámetro</th><th>Presión (bar)</th><th>Emisores</th><th>Caudal Emisor (L/h)</th><th>Caudal Total (L/h)</th></tr>';
+            
+            let caudalTotalSistema = 0;
+            valvulas.forEach(valvula => {
+                html += `<tr>
+                    <td>${valvula.nombre}</td>
+                    <td>${valvula.tipo}</td>
+                    <td>${valvula.diametro}</td>
+                    <td>${valvula.presion}</td>
+                    <td>${valvula.numeroEmisores}</td>
+                    <td>${valvula.caudalEmisor}</td>
+                    <td>${valvula.caudalTotal}</td>
+                </tr>`;
+                caudalTotalSistema += valvula.caudalTotal;
+            });
+            
+            html += `<tr style="font-weight: bold; background-color: #f0f0f0;">
+                <td colspan="6">CAUDAL TOTAL DEL SISTEMA</td>
+                <td>${caudalTotalSistema.toFixed(2)} L/h (${(caudalTotalSistema / 3600).toFixed(2)} L/s)</td>
+            </tr>`;
+            
+            html += '</table>';
+            html += '</div>';
+        }
+        
+        if (cabezales.length > 0) {
+            html += '<div class="resultado-seccion">';
+            html += '<h4 class="resultado-titulo">Cabezal de Bombeo y Filtración</h4>';
+            
+            cabezales.forEach(cabezal => {
+                html += '<table class="resultado-tabla" style="margin-bottom: 15px;">';
+                html += `<tr><th colspan="2" style="text-align: center;">CABEZAL PRINCIPAL</th></tr>`;
+                html += `<tr><td>Caudal de Bomba</td><td>${cabezal.caudalBomba} L/s</td></tr>`;
+                html += `<tr><td>Diámetro Succión</td><td>${cabezal.diametroSuccion}</td></tr>`;
+                html += `<tr><td>Diámetro Descarga</td><td>${cabezal.diametroDescarga}</td></tr>`;
+                html += `<tr><td>Número de Filtros</td><td>${cabezal.numeroFiltros}</td></tr>`;
+                html += `<tr><td>Tipo de Filtros</td><td>${cabezal.tipoFiltros}</td></tr>`;
+                if (cabezal.notas) {
+                    html += `<tr><td>Notas</td><td>${cabezal.notas}</td></tr>`;
+                }
+                html += '</table>';
+            });
+            
+            html += '</div>';
+        }
+        
+        if (valvulas.length > 0) {
+            html += '<div class="resultado-seccion">';
+            html += '<h4 class="resultado-titulo">Resumen Hidráulico</h4>';
+            html += '<table class="resultado-tabla">';
+            html += '<tr><th>Parámetro</th><th>Valor</th><th>Observaciones</th></tr>';
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            const caudalLps = caudalTotalSistema / 3600;
+            
+            html += `<tr>
+                <td>Caudal Total Requerido</td>
+                <td>${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)</td>
+                <td>Suma de todas las válvulas</td>
+            </tr>`;
+            
+            if (cabezales.length > 0) {
+                const cabezalPrincipal = cabezales[0];
+                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
+                const diferencia = caudalCabezal - caudalTotalSistema;
+                const porcentaje = (diferencia / caudalCabezal) * 100;
+                
+                html += `<tr>
+                    <td>Caudal Disponible (Cabezal)</td>
+                    <td>${(cabezalPrincipal.caudalBomba * 1000).toFixed(2)} L/h (${cabezalPrincipal.caudalBomba} L/s)</td>
+                    <td>Capacidad del sistema de bombeo</td>
+                </tr>`;
+                
+                html += `<tr>
+                    <td>Diferencia</td>
+                    <td>${diferencia.toFixed(2)} L/h (${(diferencia / 3600).toFixed(2)} L/s)</td>
+                    <td>${diferencia >= 0 ? 'Sobrecapacidad: ' + porcentaje.toFixed(1) + '%' : 'Deficit: ' + Math.abs(porcentaje).toFixed(1) + '%'}</td>
+                </tr>`;
+            }
+            
+            if (areaTotal > 0 && caudalTotalSistema > 0) {
+                const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
+                const horasPara10mm = 10 / laminaPorHora;
+                
+                html += `<tr>
+                    <td>Lámina de Riego por Hora</td>
+                    <td>${laminaPorHora.toFixed(3)} mm/h</td>
+                    <td></td>
+                </tr>`;
+                html += `<tr>
+                    <td>Tiempo para 10 mm de riego</td>
+                    <td>${horasPara10mm.toFixed(1)} horas</td>
+                    <td>Lámina estándar para muchos cultivos</td>
+                </tr>`;
+            }
+            
+            html += '</table>';
+            html += '</div>';
+        }
+        
+        resultadosDiv.innerHTML = html;
+    }
+    
+    function exportarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        doc.setFontSize(20);
+        doc.setTextColor(0, 165, 83);
+        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Agrosistemas - Asesoría Técnica', 105, 30, { align: 'center' });
+        doc.text('Fecha: ' + new Date().toLocaleDateString(), 105, 37, { align: 'center' });
+        
+        let yPos = 50;
+        
+        doc.setFontSize(14);
+        doc.setTextColor(23, 114, 175);
+        doc.text('1. INFORMACIÓN GENERAL', 20, yPos);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        yPos += 10;
+        doc.text('Área Total: ' + (areaTotal > 0 ? areaTotal.toFixed(2) + ' m² (' + (areaTotal / 10000).toFixed(2) + ' ha)' : 'No definida'), 25, yPos);
+        yPos += 7;
+        doc.text('Fecha de Diseño: ' + new Date().toLocaleDateString(), 25, yPos);
+        yPos += 7;
+        doc.text('Número de Válvulas: ' + valvulas.length, 25, yPos);
+        yPos += 7;
+        doc.text('Longitud Total de Tuberías: ' + tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0).toFixed(2) + ' m', 25, yPos);
+        
+        yPos += 15;
+        
+        if (tuberias.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('2. TUBERÍAS POR DIÁMETRO', 20, yPos);
+            yPos += 10;
+            
+            const resumen = {};
+            tuberias.forEach(t => {
+                const key = `${t.tipo}_${t.diametro}_${t.tipoMaterial}`;
+                if (!resumen[key]) {
+                    resumen[key] = {
+                        tipo: t.tipo,
+                        diametro: t.diametro,
+                        tipoMaterial: t.tipoMaterial,
+                        longitudTotal: 0,
+                        conexiones: 0
+                    };
+                }
+                resumen[key].longitudTotal += t.longitud || 0;
+                resumen[key].conexiones += t.conexiones ? t.conexiones.length : 0;
+            });
+            
+            const headers = [['Tipo', 'Diámetro', 'Material', 'Longitud (m)', 'Conexiones']];
+            const data = Object.values(resumen).map(item => [
+                item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1),
+                item.diametro + '"',
+                item.tipoMaterial,
+                item.longitudTotal.toFixed(2),
+                item.conexiones.toString()
+            ]);
+            
+            const totalGeneral = tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0);
+            data.push(['TOTAL GENERAL', '', '', totalGeneral.toFixed(2), '']);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: headers,
+                body: data,
+                margin: { left: 20 },
+                theme: 'grid',
+                headStyles: { fillColor: [23, 114, 175] },
+                styles: { fontSize: 9 }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+        
+        if (valvulas.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('3. VÁLVULAS DE CONTROL', 20, yPos);
+            yPos += 10;
+            
+            const headers = [['Nombre', 'Tipo', 'Diámetro', 'Presión (bar)', 'Emisores', 'Caudal Emisor (L/h)', 'Caudal Total (L/h)']];
+            const data = valvulas.map(valvula => [
+                valvula.nombre,
+                valvula.tipo,
+                valvula.diametro,
+                valvula.presion.toString(),
+                valvula.numeroEmisores.toString(),
+                valvula.caudalEmisor.toString(),
+                valvula.caudalTotal.toString()
+            ]);
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            data.push(['CAUDAL TOTAL', '', '', '', '', '', caudalTotalSistema.toFixed(2)]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: headers,
+                body: data,
+                margin: { left: 20 },
+                theme: 'grid',
+                headStyles: { fillColor: [23, 114, 175] },
+                styles: { fontSize: 8 },
+                columnStyles: {
+                    0: { cellWidth: 20 },
+                    6: { cellWidth: 25 }
+                }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+        
+        if (cabezales.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('4. CABEZAL DE BOMBEO Y FILTRACIÓN', 20, yPos);
+            yPos += 10;
+            
+            cabezales.forEach(cabezal => {
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Caudal de Bomba: ' + cabezal.caudalBomba + ' L/s', 25, yPos);
+                yPos += 6;
+                doc.text('Diámetro Succión: ' + cabezal.diametroSuccion, 25, yPos);
+                yPos += 6;
+                doc.text('Diámetro Descarga: ' + cabezal.diametroDescarga, 25, yPos);
+                yPos += 6;
+                doc.text('Número de Filtros: ' + cabezal.numeroFiltros, 25, yPos);
+                yPos += 6;
+                doc.text('Tipo de Filtros: ' + cabezal.tipoFiltros, 25, yPos);
+                yPos += 6;
+                if (cabezal.notas) {
+                    doc.text('Notas: ' + cabezal.notas, 25, yPos);
+                    yPos += 6;
+                }
+                yPos += 5;
+            });
+        }
+        
+        if (valvulas.length > 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('5. RESUMEN HIDRÁULICO', 20, yPos);
+            yPos += 10;
+            
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            const caudalLps = caudalTotalSistema / 3600;
+            
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Caudal Total Requerido: ' + caudalTotalSistema.toFixed(2) + ' L/h (' + caudalLps.toFixed(2) + ' L/s)', 25, yPos);
+            yPos += 6;
+            
+            if (cabezales.length > 0) {
+                const cabezalPrincipal = cabezales[0];
+                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
+                const diferencia = caudalCabezal - caudalTotalSistema;
+                const porcentaje = (diferencia / caudalCabezal) * 100;
+                
+                doc.text('Caudal Disponible (Cabezal): ' + caudalCabezal.toFixed(2) + ' L/h (' + cabezalPrincipal.caudalBomba + ' L/s)', 25, yPos);
+                yPos += 6;
+                doc.text('Diferencia: ' + diferencia.toFixed(2) + ' L/h (' + (diferencia / 3600).toFixed(2) + ' L/s)', 25, yPos);
+                yPos += 6;
+                doc.text('Estado: ' + (diferencia >= 0 ? 'Sobrecapacidad (' + porcentaje.toFixed(1) + '%)' : 'Deficit (' + Math.abs(porcentaje).toFixed(1) + '%)'), 25, yPos);
+                yPos += 6;
+            }
+            
+            if (areaTotal > 0) {
+                const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
+                const horasPara10mm = 10 / laminaPorHora;
+                
+                doc.text('Lámina de Riego por Hora: ' + laminaPorHora.toFixed(3) + ' mm/h', 25, yPos);
+                yPos += 6;
+                doc.text('Tiempo para 10 mm de riego: ' + horasPara10mm.toFixed(1) + ' horas', 25, yPos);
+            }
+        }
+        
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Página ' + i + ' de ' + pageCount, 105, 285, { align: 'center' });
+            doc.text('Agrosistemas - www.agrosistemas.com', 105, 290, { align: 'center' });
+        }
+        
+        doc.save('Memoria_Calculo_Riego_' + new Date().toISOString().slice(0, 10) + '.pdf');
+        
+        mostrarMensaje('PDF generado correctamente');
+    }
+    
     function guardarDiseño(nombre = null) {
         if (!nombre) {
             nombre = prompt('Nombre del diseño:', `Diseño_${new Date().toLocaleDateString()}`);
@@ -2694,7 +3050,8 @@
                 tipo: e.tipo,
                 posicion: [e.posicion.lat, e.posicion.lng]
             })),
-            secciones: secciones,
+            valvulas: valvulas,
+            cabezales: cabezales,
             puntosTuberias: puntosTuberias.map(p => ({
                 tipo: p.tipo,
                 latlng: [p.latlng.lat, p.latlng.lng],
@@ -2703,7 +3060,6 @@
             }))
         };
         
-        // Guardar en localStorage
         diseñosGuardados = JSON.parse(localStorage.getItem('diseñosRiego') || '[]');
         diseñosGuardados.push(diseño);
         localStorage.setItem('diseñosRiego', JSON.stringify(diseñosGuardados));
@@ -2717,7 +3073,6 @@
     function exportarDiseño() {
         const diseño = guardarDiseño('Exportado_' + Date.now());
         
-        // Crear JSON para descargar
         const dataStr = JSON.stringify(diseño, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
         
@@ -2749,10 +3104,8 @@
     }
     
     function cargarDiseño(diseño) {
-        // Limpiar mapa actual
         limpiarDiseño();
         
-        // Restaurar puntos de tuberías primero
         if (diseño.puntosTuberias) {
             puntosTuberias = diseño.puntosTuberias.map(p => ({
                 tipo: p.tipo,
@@ -2762,24 +3115,20 @@
             }));
         }
         
-        // Cargar tuberías
         if (diseño.tuberias) {
             diseño.tuberias.forEach(tData => {
                 if (tData.puntoInicio && tData.puntoFin) {
                     const puntoInicio = L.latLng(tData.puntoInicio[0], tData.puntoInicio[1]);
                     const puntoFin = L.latLng(tData.puntoFin[0], tData.puntoFin[1]);
                     
-                    // Crear marcadores
-                    const marcadorInicio = crearMarcadorTuberia(puntoInicio, 'inicio', tData.tipo);
+                    const marcadorInicio = crearMarcadorTuberia(puntoInicio, 'inicio', tData.tipo, tData.diametro);
                     marcadorInicio.addTo(map);
                     
-                    const marcadorFin = crearMarcadorTuberia(puntoFin, 'fin', tData.tipo);
+                    const marcadorFin = crearMarcadorTuberia(puntoFin, 'fin', tData.tipo, tData.diametro);
                     marcadorFin.addTo(map);
                     
-                    // Dibujar línea
-                    const linea = dibujarLineaTuberia(puntoInicio, puntoFin, tData.tipo);
+                    const linea = dibujarLineaTuberia(puntoInicio, puntoFin, tData.tipo, tData.diametro);
                     
-                    // Añadir etiqueta de longitud
                     const centro = L.latLng(
                         (puntoInicio.lat + puntoFin.lat) / 2,
                         (puntoInicio.lng + puntoFin.lng) / 2
@@ -2788,14 +3137,13 @@
                     const etiqueta = L.marker(centro, {
                         icon: L.divIcon({
                             className: 'tuberia-label',
-                            html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 10px; font-weight: bold;">
-                                   ${tData.longitud.toFixed(1)}m</div>`,
-                            iconSize: [60, 20],
-                            iconAnchor: [30, 10]
+                            html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
+                                   ${tData.longitud.toFixed(1)}m - ${tData.diametro}"</div>`,
+                            iconSize: [80, 20],
+                            iconAnchor: [40, 10]
                         })
                     }).addTo(map);
                     
-                    // Guardar tubería
                     const tuberia = {
                         id: tData.id || Date.now() + Math.random(),
                         tipo: tData.tipo,
@@ -2819,36 +3167,41 @@
             });
         }
         
-        // Cargar elementos
         if (diseño.elementos) {
             diseño.elementos.forEach(eData => {
                 agregarElementoGrafico(L.latLng(eData.posicion[0], eData.posicion[1]), eData.tipo);
             });
         }
         
-        // Cargar área y secciones
+        if (diseño.valvulas) {
+            valvulas = diseño.valvulas.map(v => ({
+                ...v,
+                posicion: v.posicion ? L.latLng(v.posicion[0], v.posicion[1]) : null
+            }));
+        }
+        
+        if (diseño.cabezales) {
+            cabezales = diseño.cabezales.map(c => ({
+                ...c,
+                posicion: c.posicion ? L.latLng(c.posicion[0], c.posicion[1]) : null
+            }));
+        }
+        
         if (diseño.area) {
             areaTotal = diseño.area;
             document.getElementById('areaDisplay').textContent = 
                 `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha)`;
         }
         
-        if (diseño.secciones) {
-            secciones = diseño.secciones;
-            generarSeccionesDesdeDatos();
-        }
-        
         actualizarResumenTuberias();
-        actualizarCalculos();
+        actualizarResultados();
         
-        // Ocultar controles si hay área definida
         if (areaTotal > 0) {
             ocultarControlesMapa();
         }
     }
     
     function limpiarDiseño() {
-        // Limpiar tuberías
         tuberias.forEach(t => {
             if (t.marcadorInicio) map.removeLayer(t.marcadorInicio);
             if (t.marcadorFin) map.removeLayer(t.marcadorFin);
@@ -2857,42 +3210,32 @@
         });
         tuberias = [];
         
-        // Limpiar puntos
         puntosTuberias = [];
         
-        // Limpiar elementos gráficos
         elementosGraficos.forEach(e => map.removeLayer(e.layer));
         elementosGraficos = [];
         
-        // Limpiar área
         drawnItems.clearLayers();
         areaTotal = 0;
         document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
         
-        // Resetear secciones
-        secciones = {};
-        seccionActual = null;
-        inicializarSecciones();
+        valvulas = [];
+        cabezales = [];
         
-        // Resetear cálculos
         actualizarResumenTuberias();
-        actualizarCalculos();
+        actualizarResultados();
         
-        // Mostrar controles
         mostrarControlesMapa();
         
-        // Resetear modo de dibujo
         modoDibujoTuberia = null;
         tuberiaActual = null;
         puntoInicioTuberia = null;
         modoAgregarElemento = null;
         
-        // Resetear modo conexión
         modoConexion = false;
         tuberiaConexionTipo = null;
         puntoOrigenConexion = null;
         
-        // Quitar clases activas
         document.querySelectorAll('.tuberia-btn').forEach(btn => {
             btn.classList.remove('activo');
             btn.classList.remove('modo-conexion-activo');
@@ -2902,17 +3245,14 @@
             btn.classList.remove('active');
         });
         
-        // Ocultar instrucciones
         document.getElementById('instruccionesPrincipal').style.display = 'none';
         document.getElementById('instruccionesSecundaria').style.display = 'none';
         document.getElementById('instruccionesRegante').style.display = 'none';
         document.getElementById('instruccionesElementos').style.display = 'none';
         
-        // Quitar resaltado de puntos
         quitarResaltadoPuntos();
     }
     
-    // Funciones para la galería
     function actualizarGaleriaDiseños() {
         const galeriaDiv = document.getElementById('galeriaDiseños');
         diseñosGuardados = JSON.parse(localStorage.getItem('diseñosRiego') || '[]');
@@ -2922,7 +3262,6 @@
             return;
         }
         
-        // Ordenar por fecha (más reciente primero)
         diseñosGuardados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         
         let html = '<div class="diseños-lista">';
@@ -2966,33 +3305,7 @@
         }
     }
     
-    // Función para generar secciones desde datos cargados
-    function generarSeccionesDesdeDatos() {
-        const seccionesGrid = document.getElementById('seccionesGrid');
-        seccionesGrid.innerHTML = '';
-        
-        for (const codigo in secciones) {
-            const seccionElement = document.createElement('div');
-            seccionElement.className = 'seccion-item';
-            seccionElement.textContent = codigo;
-            seccionElement.dataset.seccion = codigo;
-            
-            seccionElement.addEventListener('click', function() {
-                seleccionarSeccion(codigo);
-            });
-            
-            seccionesGrid.appendChild(seccionElement);
-        }
-        
-        // Seleccionar primera sección si existe
-        if (Object.keys(secciones).length > 0) {
-            seleccionarSeccion(Object.keys(secciones)[0]);
-        }
-    }
-    
-    // Función para mostrar mensajes temporales
     function mostrarMensaje(mensaje) {
-        // Crear o actualizar elemento de mensaje
         let mensajeDiv = document.getElementById('mensajeTemporal');
         if (!mensajeDiv) {
             mensajeDiv = document.createElement('div');
@@ -3016,22 +3329,18 @@
         mensajeDiv.textContent = mensaje;
         mensajeDiv.style.display = 'block';
         
-        // Ocultar después de 3 segundos
         setTimeout(() => {
             mensajeDiv.style.display = 'none';
         }, 3000);
     }
     
-    // DOMContentLoaded
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar el mapa inmediatamente
         initMap();
         
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const mainNav = document.getElementById('mainNav');
         const mainHeader = document.getElementById('mainHeader');
         
-        // Menú móvil
         mobileMenuBtn.addEventListener('click', function() {
             mainNav.classList.toggle('active');
             
@@ -3047,7 +3356,6 @@
             }
         });
         
-        // Cerrar menú al hacer clic en un enlace
         const navLinks = document.querySelectorAll('#mainNav a');
         navLinks.forEach(link => {
             link.addEventListener('click', function() {
@@ -3058,7 +3366,6 @@
             });
         });
         
-        // Header scroll effect
         window.addEventListener('scroll', function() {
             if (window.scrollY > 50) {
                 mainHeader.classList.add('scrolled');
@@ -3067,7 +3374,6 @@
             }
         });
         
-        // Animaciones al hacer scroll
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -3081,12 +3387,10 @@
             });
         }, observerOptions);
         
-        // Observar elementos con clase fade-in
         document.querySelectorAll('.fade-in').forEach(el => {
             observer.observe(el);
         });
         
-        // Smooth scroll para enlaces internos
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
                 const href = this.getAttribute('href');
@@ -3103,76 +3407,60 @@
             });
         });
         
-        // Controladores para el diseñador de riego
-        
-        // Botón de búsqueda
         document.getElementById('searchBtn').addEventListener('click', buscarUbicacion);
         
-        // Buscar al presionar Enter
         document.getElementById('location-search').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 buscarUbicacion();
             }
         });
         
-        // Botón para delimitar terreno
         document.getElementById('drawPolygonBtn').addEventListener('click', function() {
-            // Desactivar cualquier modo de dibujo actual
             if (currentDrawMode) {
                 currentDrawMode.disable();
+                currentDrawMode = null;
             }
             
-            // Desactivar modo tubería si está activo
             if (tuberiaActual) {
                 tuberiaActual = null;
                 puntoInicioTuberia = null;
                 
-                // Quitar clase activa de los botones de tubería
                 document.querySelectorAll('.tuberia-btn').forEach(btn => {
                     btn.classList.remove('activo');
                 });
                 
-                // Ocultar instrucciones de tubería
                 document.getElementById('instruccionesPrincipal').style.display = 'none';
                 document.getElementById('instruccionesSecundaria').style.display = 'none';
                 document.getElementById('instruccionesRegante').style.display = 'none';
             }
             
-            // Desactivar modo elemento si está activo
             if (modoAgregarElemento) {
                 modoAgregarElemento = null;
                 document.getElementById('instruccionesElementos').style.display = 'none';
                 
-                // Quitar clase active de los botones de elemento
                 document.querySelectorAll('.elemento-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
             }
             
-            // Desactivar modo conexión si está activo
             if (modoConexion) {
                 modoConexion = false;
                 tuberiaConexionTipo = null;
                 puntoOrigenConexion = null;
                 
-                // Quitar clase modo conexión
                 document.querySelectorAll('.tuberia-btn').forEach(btn => {
                     btn.classList.remove('modo-conexion-activo');
                 });
             }
             
-            // Activar modo dibujo de polígono
             currentDrawMode = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
             currentDrawMode.enable();
             
-            // Mostrar botón para ocultar controles
             document.getElementById('hideControlsBtn').style.display = 'block';
             
-            // Cambiar texto del botón
             this.innerHTML = '<i class="fas fa-hand-pointer"></i> Click para dibujar';
             this.style.backgroundColor = '#ff6b6b';
             
-            // Restaurar botón después de 5 segundos
             setTimeout(() => {
                 this.innerHTML = '<i class="fas fa-draw-polygon"></i> Delimitar Terreno';
                 this.style.backgroundColor = '';
@@ -3181,61 +3469,50 @@
             mostrarMensaje('Haz clic en el mapa para iniciar el polígono. Doble clic para finalizar.');
         });
         
-        // Botón para medir
         document.getElementById('measureBtn').addEventListener('click', function() {
-            // Desactivar cualquier modo de dibujo actual
             if (currentDrawMode) {
                 currentDrawMode.disable();
+                currentDrawMode = null;
             }
             
-            // Desactivar modo tubería si está activo
             if (tuberiaActual) {
                 tuberiaActual = null;
                 puntoInicioTuberia = null;
                 
-                // Quitar clase activa de los botones de tubería
                 document.querySelectorAll('.tuberia-btn').forEach(btn => {
                     btn.classList.remove('activo');
                 });
                 
-                // Ocultar instrucciones de tubería
                 document.getElementById('instruccionesPrincipal').style.display = 'none';
                 document.getElementById('instruccionesSecundaria').style.display = 'none';
                 document.getElementById('instruccionesRegante').style.display = 'none';
             }
             
-            // Desactivar modo elemento si está activo
             if (modoAgregarElemento) {
                 modoAgregarElemento = null;
                 document.getElementById('instruccionesElementos').style.display = 'none';
                 
-                // Quitar clase active de los botones de elemento
                 document.querySelectorAll('.elemento-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
             }
             
-            // Desactivar modo conexión si está activo
             if (modoConexion) {
                 modoConexion = false;
                 tuberiaConexionTipo = null;
                 puntoOrigenConexion = null;
                 
-                // Quitar clase modo conexión
                 document.querySelectorAll('.tuberia-btn').forEach(btn => {
                     btn.classList.remove('modo-conexion-activo');
                 });
             }
             
-            // Activar modo dibujo de polilínea
             currentDrawMode = new L.Draw.Polyline(map, drawControl.options.draw.polyline);
             currentDrawMode.enable();
             
-            // Cambiar texto del botón
             this.innerHTML = '<i class="fas fa-hand-pointer"></i> Click para medir';
             this.style.backgroundColor = '#ff6b6b';
             
-            // Restaurar botón después de 5 segundos
             setTimeout(() => {
                 this.innerHTML = '<i class="fas fa-ruler"></i> Medir';
                 this.style.backgroundColor = '';
@@ -3244,48 +3521,43 @@
             mostrarMensaje('Haz clic en el mapa para iniciar la medición. Doble clic para finalizar.');
         });
         
-        // Botón para limpiar
         document.getElementById('clearBtn').addEventListener('click', function() {
             limpiarDiseño();
             mostrarMensaje('Diseño limpiado completamente');
         });
         
-        // Botón para ocultar controles
         document.getElementById('hideControlsBtn').addEventListener('click', function() {
             ocultarControlesMapa();
             mostrarMensaje('Controles ocultados');
         });
         
-        // Botón para mostrar controles
         document.getElementById('showControlsBtn').addEventListener('click', function() {
             mostrarControlesMapa();
             mostrarMensaje('Controles mostrados');
         });
         
-        // Pestañas CAD
         document.querySelectorAll('.cad-tab').forEach(tab => {
             tab.addEventListener('click', function() {
                 const tabId = this.dataset.tab;
                 
-                // Remover clase active de todas las pestañas
                 document.querySelectorAll('.cad-tab').forEach(t => {
                     t.classList.remove('active');
                 });
                 
-                // Agregar clase active a la pestaña clickeada
                 this.classList.add('active');
                 
-                // Ocultar todos los contenidos
                 document.querySelectorAll('.cad-tab-content').forEach(content => {
                     content.classList.remove('active');
                 });
                 
-                // Mostrar el contenido correspondiente
                 document.getElementById(tabId + '-tab').classList.add('active');
+                
+                if (tabId === 'resultados') {
+                    actualizarResultados();
+                }
             });
         });
         
-        // Botones para dibujar tuberías
         document.getElementById('btnTuberiaPrincipal').addEventListener('click', function() {
             iniciarModoTuberia('principal');
         });
@@ -3298,7 +3570,6 @@
             iniciarModoTuberia('regante');
         });
         
-        // Botones para conectar tuberías
         document.getElementById('btnConectarPrincipal').addEventListener('click', function() {
             iniciarModoConexion('principal');
         });
@@ -3311,55 +3582,9 @@
             iniciarModoConexion('regante');
         });
         
-        // Elementos del diseño
-        document.querySelectorAll('.elemento-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Remover clase active de todos los botones
-                document.querySelectorAll('.elemento-btn').forEach(b => {
-                    b.classList.remove('active');
-                });
-                
-                // Agregar clase active al botón clickeado
-                this.classList.add('active');
-                
-                selectedElement = this.dataset.elemento;
-                actualizarConfiguracionElemento(selectedElement);
-            });
-        });
-        
-        // Eventos para cálculos de emisores
-        document.getElementById('caudalEmisor').addEventListener('input', calcularEmisores);
-        document.getElementById('separacionEmisor').addEventListener('input', calcularEmisores);
-        document.getElementById('separacionSurco').addEventListener('input', calcularEmisores);
-        document.getElementById('tipoEmisor').addEventListener('change', function() {
-            // Cambiar valores por defecto según tipo de emisor
-            const tipo = this.value;
-            const caudalInput = document.getElementById('caudalEmisor');
-            const separacionInput = document.getElementById('separacionEmisor');
-            
-            switch(tipo) {
-                case 'goteo':
-                    caudalInput.value = 4;
-                    separacionInput.value = 0.5;
-                    break;
-                case 'aspersion':
-                    caudalInput.value = 30;
-                    separacionInput.value = 12;
-                    break;
-                case 'microaspersion':
-                    caudalInput.value = 15;
-                    separacionInput.value = 4;
-                    break;
-            }
-            
-            calcularEmisores();
-        });
-        
-        // Cargar galería de diseños
-        actualizarGaleriaDiseños();
-        
-        // Inicializar configuración de elemento
         actualizarConfiguracionElemento('cabezal');
+        actualizarResultados();
+        actualizarGaleriaDiseños();
     });
 </script>
 </body>
