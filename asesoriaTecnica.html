@@ -1559,37 +1559,55 @@ async function exportarPDF() {
         currentY += 25;
         
         // SECCIÓN 1: IMAGEN DEL DISEÑO (si se capturó)
+
         if (capturaTomada && capturaMapaDataUrl) {
             try {
                 doc.setFontSize(14);
-                doc.setTextColor(23, 114, 175); // Azul
+                doc.setTextColor(23, 114, 175);
                 doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
                 currentY += 8;
                 
-                // Añadir la imagen del mapa
-                const imgWidth = 170; // Ancho en mm para A4
-                const imgHeight = 110; // Alto en mm
-                
-                doc.addImage(capturaMapaDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
-                currentY += imgHeight + 10;
-                
-                // Si la imagen hace que nos pasemos de la página, añadir nueva
-                if (currentY > 250) {
-                    doc.addPage();
-                    currentY = 20;
+                // Verificar que la imagen sea válida
+                if (capturaMapaDataUrl.startsWith('data:image/')) {
+                    // Añadir la imagen del mapa con tamaño optimizado
+                    const imgWidth = 170; // Ancho en mm para A4
+                    const imgHeight = 120; // Alto en mm (un poco más alto)
+                    
+                    // Intentar cargar la imagen
+                    doc.addImage(capturaMapaDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
+                    currentY += imgHeight + 10;
+                    
+                    // Añadir nota sobre la captura
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('Nota: Imagen capturada del diseño interactivo', 20, currentY);
+                    currentY += 5;
+                    
+                } else {
+                    throw new Error('Formato de imagen inválido');
                 }
+                
             } catch (imgError) {
                 console.error('Error añadiendo imagen al PDF:', imgError);
                 doc.setFontSize(10);
                 doc.setTextColor(150, 0, 0);
-                doc.text('Error al incluir imagen del diseño', 20, currentY);
+                doc.text('Error: No se pudo incluir la imagen del diseño', 20, currentY);
                 currentY += 10;
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Por favor, captura el diseño nuevamente antes de exportar', 20, currentY);
+                currentY += 7;
             }
         } else {
             doc.setFontSize(12);
             doc.setTextColor(100, 100, 100);
-            doc.text('Nota: No se incluye imagen del diseño. Captura el diseño primero con el botón "Capturar Diseño Actual".', 20, currentY);
-            currentY += 15;
+            doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
+            currentY += 8;
+            doc.setFontSize(10);
+            doc.text('No se incluye imagen del diseño.', 25, currentY);
+            currentY += 6;
+            doc.text('Para incluirla: Ve a la pestaña "Galería" → "Capturar Diseño Actual"', 25, currentY);
+            currentY += 6;
         }
         
         // SECCIÓN 2: LEYENDA DE ELEMENTOS
@@ -1993,31 +2011,79 @@ async function exportarPDF() {
 
 async function capturarDiseñoActual() {
     try {
-        mostrarMensaje('Capturando diseño actual... Esto puede tomar unos segundos.');
+        mostrarMensaje('Preparando captura del diseño... Asegúrate de que todo el diseño sea visible en el mapa.');
         
         // Deshabilitar el botón temporalmente
         const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
         const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturando...';
+        const originalText = btn.textContent;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando captura...';
         btn.disabled = true;
+        
+        // Ajustar el mapa para mostrar todo
+        if (tuberias.length > 0 || elementosGraficos.length > 0) {
+            // Crear un grupo con todos los elementos para ajustar la vista
+            const boundsGroup = new L.featureGroup();
+            
+            // Añadir tuberías al grupo
+            tuberias.forEach(t => {
+                if (t.puntoInicio && t.puntoFin) {
+                    boundsGroup.addLayer(L.polyline([t.puntoInicio, t.puntoFin]));
+                }
+            });
+            
+            // Añadir elementos al grupo
+            elementosGraficos.forEach(e => {
+                boundsGroup.addLayer(L.marker(e.posicion));
+            });
+            
+            // Añadir polígonos del terreno
+            drawnItems.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon) {
+                    boundsGroup.addLayer(layer);
+                }
+            });
+            
+            // Ajustar el mapa para mostrar todos los elementos
+            if (boundsGroup.getLayers().length > 0) {
+                map.fitBounds(boundsGroup.getBounds().pad(0.1));
+            }
+        }
+        
+        // Esperar un momento para que se ajuste el mapa
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Verificar que html2canvas está cargado
         if (typeof html2canvas === 'undefined') {
-            throw new Error('html2canvas no está cargado');
+            throw new Error('html2canvas no está cargado. Recarga la página.');
         }
+        
+        mostrarMensaje('Capturando diseño... Esto puede tomar unos segundos.');
         
         // Capturar el mapa
         capturaMapaDataUrl = await capturarMapaExacto();
         capturaTomada = true;
         
+        // Mostrar vista previa
+        mostrarVistaPreviaCaptura(capturaMapaDataUrl);
+        
         // Mostrar estado
         const statusDiv = document.getElementById('capturaStatus');
         if (statusDiv) {
-            statusDiv.innerHTML = '<span style="color: #00a553;"><i class="fas fa-check-circle"></i> Diseño capturado correctamente</span>';
-            statusDiv.innerHTML += '<br><small>Ahora puedes exportar el PDF con la imagen del diseño.</small>';
+            statusDiv.innerHTML = `
+                <div style="background: #e8f5e9; padding: 10px; border-radius: 5px; border-left: 4px solid #00a553;">
+                    <strong><i class="fas fa-check-circle" style="color: #00a553;"></i> Diseño capturado correctamente</strong>
+                    <br>
+                    <small>Vista previa disponible. Ahora puedes exportar el PDF con la imagen del diseño.</small>
+                    <br>
+                    <button onclick="mostrarVistaPreviaCaptura('${capturaMapaDataUrl}')" style="margin-top: 5px; padding: 5px 10px; background: #1772af; color: white; border: none; border-radius: 3px; font-size: 0.8rem;">
+                        <i class="fas fa-eye"></i> Ver vista previa
+                    </button>
+                </div>
+            `;
         }
         
-        mostrarMensaje('¡Diseño capturado correctamente! Ahora puedes exportar el PDF.');
+        mostrarMensaje('¡Diseño capturado correctamente! Ahora puedes exportar el PDF.', 5000);
         
         // Restaurar el botón
         btn.innerHTML = originalHTML;
@@ -2030,10 +2096,20 @@ async function capturarDiseñoActual() {
         
         const statusDiv = document.getElementById('capturaStatus');
         if (statusDiv) {
-            statusDiv.innerHTML = '<span style="color: #ff6b6b;"><i class="fas fa-exclamation-circle"></i> Error al capturar el diseño</span>';
+            statusDiv.innerHTML = `
+                <div style="background: #ffeaea; padding: 10px; border-radius: 5px; border-left: 4px solid #ff6b6b;">
+                    <strong><i class="fas fa-exclamation-circle" style="color: #ff6b6b;"></i> Error al capturar el diseño</strong>
+                    <br>
+                    <small>${error.message}</small>
+                    <br>
+                    <button onclick="capturarDiseñoActual()" style="margin-top: 5px; padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 3px; font-size: 0.8rem;">
+                        <i class="fas fa-redo"></i> Intentar nuevamente
+                    </button>
+                </div>
+            `;
         }
         
-        mostrarMensaje('Error al capturar el diseño. Intenta nuevamente.');
+        mostrarMensaje(`Error: ${error.message}`, 5000);
         
         // Restaurar el botón
         const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
@@ -2044,6 +2120,74 @@ async function capturarDiseñoActual() {
         
         throw error;
     }
+}
+
+function mostrarVistaPreviaCaptura(dataUrl) {
+    // Eliminar vista previa anterior si existe
+    const previewExistente = document.getElementById('vistaPreviaCaptura');
+    if (previewExistente) {
+        previewExistente.remove();
+    }
+    
+    // Crear modal para vista previa
+    const modal = document.createElement('div');
+    modal.id = 'vistaPreviaCaptura';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 10000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    // Estilos para animación
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    `;
+    document.head.appendChild(style);
+    
+    // Contenido del modal
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 10px; padding: 20px; max-width: 90%; max-height: 90%; animation: zoomIn 0.3s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #333;">Vista Previa de la Captura</h3>
+                <button onclick="document.getElementById('vistaPreviaCaptura').remove();" 
+                        style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="overflow: auto; max-height: 70vh;">
+                <img src="${dataUrl}" 
+                     style="max-width: 100%; border: 1px solid #ddd; border-radius: 5px;"
+                     alt="Vista previa del diseño capturado">
+            </div>
+            <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9rem;">
+                <p>Esta es la imagen que se incluirá en el PDF.</p>
+                <button onclick="document.getElementById('vistaPreviaCaptura').remove();" 
+                        style="background: #00a553; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+                    <i class="fas fa-check"></i> Continuar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Cerrar modal al hacer clic fuera
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+            if (style.parentNode) style.remove();
+        }
+    });
 }
 
 // Función para mostrar mensajes temporales
@@ -3884,125 +4028,131 @@ function mostrarMensaje(texto, duracion = 3000) {
     }
 
    // Función mejorada para capturar el mapa con todos los elementos
-function capturarMapaExacto() {
-    return new Promise((resolve, reject) => {
-        // 1. Ocultar controles de mapa temporales
-        const controles = document.getElementById('mapaControls');
-        const controlesVisibles = controles && controles.style.display !== 'none';
-        if (controles && controlesVisibles) {
-            controles.style.display = 'none';
-        }
-        
-        // 2. Ocultar controles de Leaflet (zoom, etc.)
-        const leafletControls = document.querySelectorAll('.leaflet-control-container');
-        const originalDisplay = [];
-        leafletControls.forEach((control, index) => {
-            originalDisplay[index] = control.style.display || 'block';
-            control.style.display = 'none';
-        });
-        
-        // 3. Ocultar el botón "Mostrar Controles" si está visible
-        const showControlsBtn = document.getElementById('showControlsBtn');
-        const showControlsVisible = showControlsBtn && showControlsBtn.style.display !== 'none';
-        if (showControlsBtn && showControlsVisible) {
-            showControlsBtn.style.display = 'none';
-        }
-        
-        // 4. Asegurar que el mapa tenga el tamaño correcto
-        const mapElement = document.getElementById('map');
-        const originalWidth = mapElement.style.width;
-        const originalHeight = mapElement.style.height;
-        const originalPosition = mapElement.style.position;
-        
-        // Forzar tamaño fijo para la captura
-        mapElement.style.width = '800px';
-        mapElement.style.height = '600px';
-        mapElement.style.position = 'relative';
-        
-        // 5. Esperar a que se apliquen los cambios CSS
-        setTimeout(() => {
-            // 6. Capturar con html2canvas
-            html2canvas(mapElement, {
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: '#ffffff',
-                scale: 2, // Alta resolución
-                logging: false,
-                width: 800,
-                height: 600,
-                onclone: function(clonedDoc) {
-                    // En el documento clonado, asegurar que todo se vea bien
-                    const clonedMap = clonedDoc.getElementById('map');
-                    if (clonedMap) {
-                        clonedMap.style.width = '800px';
-                        clonedMap.style.height = '600px';
-                        clonedMap.style.position = 'relative';
-                        
-                        // Ocultar controles en el clon también
-                        const clonedControls = clonedDoc.getElementById('mapaControls');
-                        if (clonedControls) {
-                            clonedControls.style.display = 'none';
-                        }
-                        
-                        const clonedLeafletControls = clonedDoc.querySelectorAll('.leaflet-control-container');
-                        clonedLeafletControls.forEach(control => {
-                            control.style.display = 'none';
-                        });
-                        
-                        const clonedShowBtn = clonedDoc.getElementById('showControlsBtn');
-                        if (clonedShowBtn) {
-                            clonedShowBtn.style.display = 'none';
+    function capturarMapaExacto() {
+        return new Promise((resolve, reject) => {
+            // Obtener el contenedor del mapa
+            const mapElement = document.getElementById('map');
+            
+            // Ocultar controles temporales
+            const controles = document.getElementById('mapaControls');
+            const controlesVisibles = controles && controles.style.display !== 'none';
+            if (controles && controlesVisibles) {
+                controles.style.display = 'none';
+            }
+            
+            // Ocultar controles de Leaflet
+            const leafletControls = document.querySelectorAll('.leaflet-control-container');
+            leafletControls.forEach(control => {
+                control.style.display = 'none';
+            });
+            
+            // Ocultar botón "Mostrar Controles" si está visible
+            const showControlsBtn = document.getElementById('showControlsBtn');
+            if (showControlsBtn && showControlsBtn.style.display !== 'none') {
+                showControlsBtn.style.display = 'none';
+            }
+            
+            // Guardar estilos originales
+            const originalStyle = {
+                position: mapElement.style.position,
+                zIndex: mapElement.style.zIndex,
+                width: mapElement.style.width,
+                height: mapElement.style.height
+            };
+            
+            // Aplicar estilos para la captura
+            mapElement.style.position = 'relative';
+            mapElement.style.zIndex = '9999';
+            mapElement.style.width = '100%';
+            mapElement.style.height = '600px';
+            
+            // Dar tiempo para que se apliquen los estilos
+            setTimeout(() => {
+                // Usar html2canvas con opciones mejoradas
+                html2canvas(mapElement, {
+                    scale: 1, // Usar escala 1 para mejor compatibilidad
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: mapElement.offsetWidth,
+                    height: mapElement.offsetHeight,
+                    windowWidth: mapElement.scrollWidth,
+                    windowHeight: mapElement.scrollHeight,
+                    onclone: function(clonedDoc) {
+                        // En el documento clonado, asegurar que todo esté visible
+                        const clonedMap = clonedDoc.getElementById('map');
+                        if (clonedMap) {
+                            // Ocultar controles en el clon
+                            const clonedControls = clonedDoc.getElementById('mapaControls');
+                            if (clonedControls) {
+                                clonedControls.style.display = 'none';
+                            }
+                            
+                            const clonedLeafletControls = clonedDoc.querySelectorAll('.leaflet-control-container');
+                            clonedLeafletControls.forEach(control => {
+                                control.style.display = 'none';
+                            });
+                            
+                            const clonedShowBtn = clonedDoc.getElementById('showControlsBtn');
+                            if (clonedShowBtn) {
+                                clonedShowBtn.style.display = 'none';
+                            }
+                            
+                            // Asegurar que los tiles de mapa sean visibles
+                            const tiles = clonedMap.querySelectorAll('.leaflet-tile-loaded');
+                            tiles.forEach(tile => {
+                                tile.style.opacity = '1';
+                            });
                         }
                     }
-                }
-            }).then(canvas => {
-                // 7. Restaurar estilos originales
-                mapElement.style.width = originalWidth;
-                mapElement.style.height = originalHeight;
-                mapElement.style.position = originalPosition;
-                
-                // 8. Restaurar controles de Leaflet
-                leafletControls.forEach((control, index) => {
-                    control.style.display = originalDisplay[index];
+                }).then(canvas => {
+                    // Restaurar estilos originales
+                    mapElement.style.position = originalStyle.position;
+                    mapElement.style.zIndex = originalStyle.zIndex;
+                    mapElement.style.width = originalStyle.width;
+                    mapElement.style.height = originalStyle.height;
+                    
+                    // Restaurar controles
+                    if (controles && controlesVisibles) {
+                        controles.style.display = 'block';
+                    }
+                    
+                    leafletControls.forEach(control => {
+                        control.style.display = 'block';
+                    });
+                    
+                    if (showControlsBtn) {
+                        showControlsBtn.style.display = 'block';
+                    }
+                    
+                    // Convertir canvas a data URL con calidad mejorada
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    resolve(dataUrl);
+                    
+                }).catch(error => {
+                    // Restaurar todo en caso de error
+                    mapElement.style.position = originalStyle.position;
+                    mapElement.style.zIndex = originalStyle.zIndex;
+                    mapElement.style.width = originalStyle.width;
+                    mapElement.style.height = originalStyle.height;
+                    
+                    if (controles && controlesVisibles) {
+                        controles.style.display = 'block';
+                    }
+                    
+                    leafletControls.forEach(control => {
+                        control.style.display = 'block';
+                    });
+                    
+                    if (showControlsBtn) {
+                        showControlsBtn.style.display = 'block';
+                    }
+                    
+                    reject(error);
                 });
-                
-                // 9. Restaurar controles del mapa
-                if (controles && controlesVisibles) {
-                    controles.style.display = 'block';
-                }
-                
-                // 10. Restaurar botón "Mostrar Controles"
-                if (showControlsBtn && showControlsVisible) {
-                    showControlsBtn.style.display = 'block';
-                }
-                
-                // 11. Convertir canvas a data URL
-                const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
-                resolve(dataUrl);
-                
-            }).catch(error => {
-                // Restaurar todo en caso de error
-                mapElement.style.width = originalWidth;
-                mapElement.style.height = originalHeight;
-                mapElement.style.position = originalPosition;
-                
-                leafletControls.forEach((control, index) => {
-                    control.style.display = originalDisplay[index];
-                });
-                
-                if (controles && controlesVisibles) {
-                    controles.style.display = 'block';
-                }
-                
-                if (showControlsBtn && showControlsVisible) {
-                    showControlsBtn.style.display = 'block';
-                }
-                
-                reject(error);
-            });
-        }, 1000); // Esperar 1 segundo para asegurar que todo está listo
-    });
-}
+            }, 500); // Esperar medio segundo
+        });
+    }
 
     function limpiarDiseño() {
         // Limpiar tuberías
