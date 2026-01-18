@@ -3,208 +3,1126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Network Monitor</title>
+<title>Network Monitor Pro</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-body{
-  margin:0;
-  background:#0f2027;
-  color:#eaf6ff;
-  font-family:system-ui;
-  padding:20px;
+:root {
+  --bg-primary: #0a1929;
+  --bg-secondary: #112240;
+  --bg-card: #1a2c3e;
+  --accent-primary: #00d4ff;
+  --accent-secondary: #0077ff;
+  --success: #2ecc71;
+  --warning: #f1c40f;
+  --danger: #e74c3c;
+  --text-primary: #e6f1ff;
+  --text-secondary: #8892b0;
+  --border-radius: 12px;
+  --transition: all 0.3s ease;
 }
-.container{max-width:1200px;margin:auto}
-h1{text-align:center}
-.card{
-  background:#16232e;
-  padding:20px;
-  border-radius:16px;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
-canvas{
-  width:100%;
-  background:#0e1a22;
-  border-radius:12px;
-  cursor:pointer;
+
+body {
+  background: linear-gradient(135deg, var(--bg-primary), #0c2233);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 20px;
+  overflow-x: hidden;
 }
-.tooltip{
-  position:absolute;
-  background:#1c2f3d;
-  border:1px solid #2a475a;
-  padding:8px 10px;
-  border-radius:8px;
-  font-size:.8rem;
-  pointer-events:none;
-  display:none;
-  color:#eaf6ff;
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
 }
-.legend{
-  margin-top:8px;
-  font-size:.85rem;
-  display:flex;
-  gap:15px;
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 20px 0;
+  position: relative;
 }
-.legend span{display:flex;gap:6px;align-items:center}
-.dot{width:8px;height:8px;border-radius:50%}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+}
+
+.header h1 {
+  font-size: 2.8rem;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+.header-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Grid Layout */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: 25px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  transition: var(--transition);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+/* Inputs & Buttons */
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.input-field {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+}
+
+.input-field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn {
+  padding: 14px 22px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent-primary);
+}
+
+.btn-danger {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Status Indicator */
+.status-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 25px 0;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--danger);
+  position: relative;
+}
+
+.status-dot::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.5;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.status-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.status-good { background: var(--success); }
+.status-medium { background: var(--warning); }
+.status-bad { background: var(--danger); }
+
+/* Main Metric Display */
+.main-metric {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.metric-value {
+  font-size: 3.5rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.metric-label {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.stat-box {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 18px 10px;
+  text-align: center;
+  transition: var(--transition);
+}
+
+.stat-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Chart Container */
+.chart-container {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-top: 20px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chart-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.chart-btn {
+  padding: 8px 15px;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.chart-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.chart-btn.active {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--accent-primary);
+}
+
+.chart-wrapper {
+  position: relative;
+  flex-grow: 1;
+  min-height: 250px;
+}
+
+/* Chart Canvas */
+#netChart {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.latency-color { background: var(--accent-primary); }
+.download-color { background: var(--success); }
+.upload-color { background: var(--warning); }
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.network-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background: var(--bg-secondary);
+  border-radius: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header h1 {
+    font-size: 2.2rem;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+  
+  .input-group {
+    flex-direction: column;
+  }
+  
+  .footer {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .metric-value {
+    font-size: 2.8rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.card:nth-child(2) {
+  animation-delay: 0.1s;
+}
 </style>
 </head>
 
 <body>
 <div class="container">
-<h1>Network Monitor</h1>
+  <header class="header">
+    <h1><i class="fas fa-network-wired"></i> Network Monitor Pro</h1>
+    <p class="header-subtitle">Monitoreo avanzado de latencia, velocidad y rendimiento de red en tiempo real</p>
+  </header>
 
-<div class="card">
-<canvas id="netChart" height="260"></canvas>
+  <div class="grid">
+    <!-- Card 1: Ping -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">
+          <i class="fas fa-satellite-dish"></i>
+        </div>
+        <h2>Prueba de Ping</h2>
+      </div>
+      
+      <div class="input-group">
+        <input type="text" class="input-field" id="hostInput" value="8.8.8.8" placeholder="Introduce una dirección IP o hostname">
+      </div>
+      
+      <div class="button-group">
+        <button class="btn btn-primary" id="btnPing">
+          <i class="fas fa-play"></i> Realizar Ping
+        </button>
+        <button class="btn btn-secondary" id="btnLoop">
+          <i class="fas fa-sync-alt"></i> Monitoreo Continuo
+        </button>
+        <button class="btn btn-danger" id="btnStop" disabled>
+          <i class="fas fa-stop"></i> Detener
+        </button>
+      </div>
+      
+      <div class="status-container">
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <div class="status-text" id="statusText">Esperando conexión...</div>
+        </div>
+        <div class="network-info">
+          <i class="fas fa-wifi"></i>
+          <span id="netType">Cargando...</span>
+        </div>
+      </div>
+      
+      <div class="main-metric">
+        <div class="metric-value" id="pingValue">--</div>
+        <div class="metric-label">Milisegundos (ms)</div>
+      </div>
+      
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="avgPing">--</div>
+          <div class="stat-label">Promedio</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="minPing">--</div>
+          <div class="stat-label">Mínimo</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="maxPing">--</div>
+          <div class="stat-label">Máximo</div>
+        </div>
+      </div>
+    </div>
 
-<div class="legend">
-<span><div class="dot" style="background:#00c6ff"></div>Latency (ms)</span>
-<span><div class="dot" style="background:#4caf50"></div>Download (Mbps)</span>
-<span><div class="dot" style="background:#ffc107"></div>Upload (Mbps)</span>
-</div>
-</div>
-</div>
+    <!-- Card 2: Métricas de Red -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <h2>Métricas de Red</h2>
+      </div>
+      
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="downSpeed">--</div>
+          <div class="stat-label">Descarga (Mbps)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="upSpeed">--</div>
+          <div class="stat-label">Subida (Mbps)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="jitterValue">--</div>
+          <div class="stat-label">Jitter (ms)</div>
+        </div>
+      </div>
+      
+      <div class="button-group" style="margin: 20px 0;">
+        <button class="btn btn-primary" id="btnSpeed" style="flex: 1;">
+          <i class="fas fa-tachometer-alt"></i> Test de Velocidad
+        </button>
+        <button class="btn btn-secondary" id="btnHistory">
+          <i class="fas fa-history"></i> Historial
+        </button>
+      </div>
+      
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Rendimiento de Red en Tiempo Real</div>
+          <div class="chart-controls">
+            <button class="chart-btn active" data-chart="all">Todo</button>
+            <button class="chart-btn" data-chart="latency">Latencia</button>
+            <button class="chart-btn" data-chart="speed">Velocidad</button>
+          </div>
+        </div>
+        
+        <div class="chart-wrapper">
+          <canvas id="netChart"></canvas>
+        </div>
+        
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color latency-color"></div>
+            <span>Latencia (ms)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color download-color"></div>
+            <span>Descarga (Mbps)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color upload-color"></div>
+            <span>Subida (Mbps)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<div class="tooltip" id="tooltip"></div>
+  <footer class="footer">
+    <div class="footer-info">
+      <i class="fas fa-server"></i>
+      <span>Network Monitor Pro • Canvas • HTML5</span>
+    </div>
+    <div id="lastUpdate">
+      Última actualización: <span id="updateTime">--:--:--</span>
+    </div>
+    <div class="network-info">
+      <i class="fas fa-signal"></i>
+      <span id="connectionInfo">Conectando...</span>
+    </div>
+  </footer>
+</div>
 
 <script>
-/* ==========================
-   DATA
-========================== */
-const canvas = document.getElementById('netChart');
-const ctx = canvas.getContext('2d');
-const tooltip = document.getElementById('tooltip');
+// =======================
+// ESTADO GLOBAL Y CONFIGURACIÓN
+// =======================
+const state = {
+  pingTimes: [],
+  netData: [],
+  maxDataPoints: 30,
+  chartMode: 'all',
+  isLooping: false,
+  chartInstance: null,
+  lastPingTime: null,
+  jitterValues: []
+};
 
-let data = [];
-const MAX = 20;
+// =======================
+// ELEMENTOS DEL DOM
+// =======================
+const pingValue = document.getElementById('pingValue');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const avgPing = document.getElementById('avgPing');
+const minPing = document.getElementById('minPing');
+const maxPing = document.getElementById('maxPing');
+const downSpeed = document.getElementById('downSpeed');
+const upSpeed = document.getElementById('upSpeed');
+const jitterValue = document.getElementById('jitterValue');
+const netType = document.getElementById('netType');
+const connectionInfo = document.getElementById('connectionInfo');
+const updateTime = document.getElementById('updateTime');
+const hostInput = document.getElementById('hostInput');
 
-/* DEMO DATA */
-setInterval(()=>{
-  addSample({
-    latency: Math.random()*180+30,
-    down: Math.random()*60,
-    up: Math.random()*25
-  });
-},2000);
+const btnPing = document.getElementById('btnPing');
+const btnLoop = document.getElementById('btnLoop');
+const btnStop = document.getElementById('btnStop');
+const btnSpeed = document.getElementById('btnSpeed');
+const btnHistory = document.getElementById('btnHistory');
+const chartButtons = document.querySelectorAll('.chart-btn');
 
-function addSample(v){
-  data.push({
-    time:new Date().toLocaleTimeString(),
-    latency:v.latency,
-    down:v.down,
-    up:v.up
-  });
-  if(data.length>MAX) data.shift();
-  draw();
+// =======================
+// FUNCIONES DE UTILIDAD
+// =======================
+function updateTimestamp() {
+  const now = new Date();
+  updateTime.textContent = now.toLocaleTimeString();
 }
 
-/* ==========================
-   DRAW
-========================== */
-const pad = 45;
-let points=[];
-
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  points=[];
-
-  const w=canvas.width, h=canvas.height;
-  const latMax=Math.max(...data.map(d=>d.latency),200);
-  const downMax=Math.max(...data.map(d=>d.down),50);
-  const upMax=Math.max(...data.map(d=>d.up),20);
-
-  drawGrid(latMax);
-  drawAxis(latMax);
-
-  plot('latency',latMax,'#00c6ff','ms');
-  plot('down',downMax,'#4caf50','Mbps');
-  plot('up',upMax,'#ffc107','Mbps');
+function updateStatus(status, latency = null) {
+  // Actualizar texto de estado
+  statusText.textContent = status;
+  
+  // Actualizar color del punto según la latencia
+  if (latency !== null) {
+    if (latency < 50) {
+      statusDot.className = 'status-dot status-good';
+    } else if (latency < 150) {
+      statusDot.className = 'status-dot status-medium';
+    } else {
+      statusDot.className = 'status-dot status-bad';
+    }
+  } else {
+    statusDot.className = 'status-dot status-bad';
+  }
 }
 
-function drawGrid(maxY){
-  ctx.strokeStyle='#1f3b4d';
-  ctx.lineWidth=1;
-  const steps=5;
-  for(let i=0;i<=steps;i++){
-    const y = pad + i*(canvas.height-pad-20)/steps;
+function calculateJitter() {
+  if (state.pingTimes.length < 2) return 0;
+  
+  let jitter = 0;
+  for (let i = 1; i < state.pingTimes.length; i++) {
+    jitter += Math.abs(state.pingTimes[i] - state.pingTimes[i - 1]);
+  }
+  jitter = jitter / (state.pingTimes.length - 1);
+  
+  state.jitterValues.push(jitter);
+  if (state.jitterValues.length > 10) state.jitterValues.shift();
+  
+  const avgJitter = state.jitterValues.reduce((a, b) => a + b, 0) / state.jitterValues.length;
+  return Math.round(avgJitter * 10) / 10;
+}
+
+// =======================
+// FUNCIONES DE PING
+// =======================
+async function simulatePing(host = '8.8.8.8') {
+  return new Promise(resolve => {
+    // Simulación más realista con diferentes tiempos según el host
+    let baseTime;
+    if (host.includes('google') || host === '8.8.8.8' || host === '8.8.4.4') {
+      baseTime = 15 + Math.random() * 40; // Google DNS es rápido
+    } else if (host.includes('cloudflare') || host === '1.1.1.1') {
+      baseTime = 10 + Math.random() * 30; // Cloudflare es muy rápido
+    } else {
+      baseTime = 30 + Math.random() * 150; // Otros hosts
+    }
+    
+    // Pequeña probabilidad de timeout o latencia muy alta
+    const isTimeout = Math.random() < 0.05;
+    const isHighLatency = Math.random() < 0.1;
+    
+    let latency;
+    if (isTimeout) {
+      latency = null; // Simular timeout
+    } else if (isHighLatency) {
+      latency = Math.round(baseTime * 3 + Math.random() * 200);
+    } else {
+      latency = Math.round(baseTime);
+    }
+    
+    setTimeout(() => resolve(latency), latency !== null ? latency : 2000);
+  });
+}
+
+async function doPing() {
+  const host = hostInput.value.trim() || '8.8.8.8';
+  
+  updateStatus('Probando conexión...');
+  pingValue.textContent = "...";
+  pingValue.style.opacity = "0.7";
+  
+  try {
+    const latency = await simulatePing(host);
+    
+    if (latency === null) {
+      // Timeout
+      updateStatus('Timeout - Sin respuesta', 1000);
+      pingValue.textContent = "Timeout";
+      pingValue.style.color = "#e74c3c";
+      state.pingTimes.push(1000); // Registrar como valor muy alto
+    } else {
+      // Ping exitoso
+      state.pingTimes.push(latency);
+      if (state.pingTimes.length > 50) state.pingTimes.shift();
+      
+      pingValue.textContent = latency + " ms";
+      pingValue.style.color = "";
+      pingValue.style.opacity = "1";
+      
+      // Calcular estadísticas
+      const avg = Math.round(state.pingTimes.reduce((a, b) => a + b, 0) / state.pingTimes.length);
+      const min = Math.min(...state.pingTimes);
+      const max = Math.max(...state.pingTimes);
+      const jitter = calculateJitter();
+      
+      avgPing.textContent = avg;
+      minPing.textContent = min;
+      maxPing.textContent = max;
+      jitterValue.textContent = jitter;
+      
+      updateStatus('Conectado', latency);
+      updateTimestamp();
+      
+      // Registrar en datos para la gráfica
+      addDataPoint({ latency });
+      
+      // Si estamos en modo continuo, programar el siguiente ping
+      if (state.isLooping) {
+        setTimeout(doPing, 2000);
+      }
+    }
+  } catch (error) {
+    console.error('Error en ping:', error);
+    updateStatus('Error de conexión', 1000);
+    pingValue.textContent = "Error";
+    pingValue.style.color = "#e74c3c";
+  }
+}
+
+// =======================
+// FUNCIONES DE PRUEBA DE VELOCIDAD
+// =======================
+async function testDownloadSpeed() {
+  return new Promise(resolve => {
+    const startTime = performance.now();
+    // Simulación de descarga de datos (5MB)
+    const fileSizeMB = 5;
+    
+    setTimeout(() => {
+      const endTime = performance.now();
+      const duration = (endTime - startTime) / 1000; // en segundos
+      // Mbps = (MB * 8) / tiempo en segundos
+      const speed = (fileSizeMB * 8) / duration;
+      // Variación realista
+      const variedSpeed = speed * (0.8 + Math.random() * 0.4);
+      resolve(Math.round(variedSpeed * 10) / 10);
+    }, 800 + Math.random() * 400);
+  });
+}
+
+async function testUploadSpeed() {
+  return new Promise(resolve => {
+    const startTime = performance.now();
+    // Simulación de subida de datos (3MB)
+    const fileSizeMB = 3;
+    
+    setTimeout(() => {
+      const endTime = performance.now();
+      const duration = (endTime - startTime) / 1000;
+      const speed = (fileSizeMB * 8) / duration;
+      // La subida suele ser más lenta
+      const variedSpeed = speed * (0.5 + Math.random() * 0.3);
+      resolve(Math.round(variedSpeed * 10) / 10);
+    }, 600 + Math.random() * 300);
+  });
+}
+
+async function doSpeedTest() {
+  btnSpeed.disabled = true;
+  btnSpeed.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Probando...';
+  
+  downSpeed.textContent = "...";
+  upSpeed.textContent = "...";
+  
+  // Test de descarga
+  updateStatus('Probando velocidad de descarga...');
+  const downloadSpeed = await testDownloadSpeed();
+  downSpeed.textContent = downloadSpeed;
+  
+  // Test de subida
+  updateStatus('Probando velocidad de subida...');
+  const uploadSpeed = await testUploadSpeed();
+  upSpeed.textContent = uploadSpeed;
+  
+  // Registrar en datos para la gráfica
+  addDataPoint({ download: downloadSpeed, upload: uploadSpeed });
+  
+  updateStatus('Prueba completada', 50);
+  updateTimestamp();
+  
+  btnSpeed.disabled = false;
+  btnSpeed.innerHTML = '<i class="fas fa-tachometer-alt"></i> Test de Velocidad';
+}
+
+// =======================
+// GESTIÓN DE DATOS Y GRÁFICA
+// =======================
+function addDataPoint({ latency = null, download = null, upload = null }) {
+  const now = new Date();
+  const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  
+  state.netData.push({
+    time: timeString,
+    latency,
+    download,
+    upload
+  });
+  
+  // Limitar el número de puntos de datos
+  if (state.netData.length > state.maxDataPoints) {
+    state.netData.shift();
+  }
+  
+  // Actualizar gráfica
+  updateChart();
+}
+
+function updateChart() {
+  const canvas = document.getElementById('netChart');
+  const ctx = canvas.getContext('2d');
+  
+  // Asegurar dimensiones correctas del canvas
+  const container = canvas.parentElement;
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+  
+  // Limpiar canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  if (state.netData.length < 2) {
+    // Mostrar mensaje si no hay datos suficientes
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Esperando datos...', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+  
+  // Configurar área de dibujo
+  const margin = { top: 30, right: 30, bottom: 50, left: 60 };
+  const graphWidth = canvas.width - margin.left - margin.right;
+  const graphHeight = canvas.height - margin.top - margin.bottom;
+  
+  // Encontrar valores máximos para escalar la gráfica
+  const latencies = state.netData.map(d => d.latency || 0);
+  const downloads = state.netData.map(d => d.download || 0);
+  const uploads = state.netData.map(d => d.upload || 0);
+  
+  const maxLatency = Math.max(...latencies, 100);
+  const maxDownload = Math.max(...downloads, 50);
+  const maxUpload = Math.max(...uploads, 20);
+  
+  // Dibujar fondo de la cuadrícula
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1;
+  
+  // Líneas verticales
+  for (let i = 0; i <= 10; i++) {
+    const x = margin.left + (i * graphWidth) / 10;
     ctx.beginPath();
-    ctx.moveTo(pad,y);
-    ctx.lineTo(canvas.width-10,y);
+    ctx.moveTo(x, margin.top);
+    ctx.lineTo(x, margin.top + graphHeight);
     ctx.stroke();
   }
+  
+  // Líneas horizontales
+  for (let i = 0; i <= 5; i++) {
+    const y = margin.top + (i * graphHeight) / 5;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(margin.left + graphWidth, y);
+    ctx.stroke();
+  }
+  
+  // Dibujar ejes
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = 2;
+  
+  // Eje Y
+  ctx.beginPath();
+  ctx.moveTo(margin.left, margin.top);
+  ctx.lineTo(margin.left, margin.top + graphHeight);
+  ctx.stroke();
+  
+  // Eje X
+  ctx.beginPath();
+  ctx.moveTo(margin.left, margin.top + graphHeight);
+  ctx.lineTo(margin.left + graphWidth, margin.top + graphHeight);
+  ctx.stroke();
+  
+  // Dibujar etiquetas del eje Y
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'right';
+  
+  // Etiquetas para latencia
+  if (state.chartMode === 'all' || state.chartMode === 'latency') {
+    for (let i = 0; i <= 5; i++) {
+      const value = Math.round((maxLatency * i) / 5);
+      const y = margin.top + graphHeight - (i * graphHeight) / 5;
+      ctx.fillText(value + ' ms', margin.left - 10, y + 4);
+    }
+  }
+  
+  // Etiquetas para velocidad (en el lado derecho)
+  if (state.chartMode === 'all' || state.chartMode === 'speed') {
+    ctx.textAlign = 'left';
+    for (let i = 0; i <= 5; i++) {
+      const value = Math.round((maxDownload * i) / 5);
+      const y = margin.top + graphHeight - (i * graphHeight) / 5;
+      ctx.fillText(value + ' Mbps', margin.left + graphWidth + 10, y + 4);
+    }
+  }
+  
+  // Función para trazar una línea
+  function plotLine(dataKey, maxValue, color, lineWidth = 3) {
+    const points = state.netData.map((d, i) => ({
+      x: margin.left + (i * graphWidth) / (state.netData.length - 1),
+      y: margin.top + graphHeight - ((d[dataKey] || 0) / maxValue) * graphHeight,
+      value: d[dataKey]
+    })).filter(p => p.value !== null);
+    
+    if (points.length < 2) return;
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    
+    // Dibujar línea
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.stroke();
+    
+    // Dibujar puntos en los datos
+    ctx.fillStyle = color;
+    points.forEach(point => {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  
+  // Dibujar líneas según el modo
+  if (state.chartMode === 'all' || state.chartMode === 'latency') {
+    plotLine('latency', maxLatency, '#00d4ff');
+  }
+  
+  if (state.chartMode === 'all' || state.chartMode === 'speed') {
+    plotLine('download', maxDownload, '#2ecc71');
+    plotLine('upload', maxUpload, '#f1c40f');
+  }
+  
+  // Dibujar etiquetas de tiempo en el eje X
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'center';
+  
+  state.netData.forEach((d, i) => {
+    if (i % Math.ceil(state.netData.length / 6) === 0) {
+      const x = margin.left + (i * graphWidth) / (state.netData.length - 1);
+      ctx.fillText(d.time, x, margin.top + graphHeight + 20);
+    }
+  });
 }
 
-function drawAxis(maxY){
-  ctx.strokeStyle='#4a6b82';
-  ctx.beginPath();
-  ctx.moveTo(pad,10);
-  ctx.lineTo(pad,canvas.height-pad);
-  ctx.lineTo(canvas.width-10,canvas.height-pad);
-  ctx.stroke();
-
-  ctx.fillStyle='#7fbcd9';
-  ctx.font='10px system-ui';
-  const steps=5;
-  for(let i=0;i<=steps;i++){
-    const val=Math.round(maxY - (maxY/steps)*i);
-    const y=pad + i*(canvas.height-pad-20)/steps;
-    ctx.fillText(val,y>canvas.height-pad-5?0:5,y+3);
+// =======================
+// DETECCIÓN DE CONEXIÓN DE RED
+// =======================
+function updateNetworkInfo() {
+  if (navigator.connection) {
+    const connection = navigator.connection;
+    netType.textContent = `${connection.effectiveType.toUpperCase()} (${connection.downlink} Mbps)`;
+    connectionInfo.textContent = `${connection.effectiveType.toUpperCase()} • ${connection.downlink} Mbps`;
+    
+    // Escuchar cambios en la conexión
+    connection.addEventListener('change', updateNetworkInfo);
+  } else {
+    netType.textContent = 'Información no disponible';
+    connectionInfo.textContent = 'Información no disponible';
   }
 }
 
-function plot(key,max,color,unit){
-  const stepX=(canvas.width-pad-10)/(data.length-1);
-  ctx.strokeStyle=color;
-  ctx.beginPath();
+// =======================
+// EVENT LISTENERS
+// =======================
+btnPing.addEventListener('click', doPing);
 
-  data.forEach((d,i)=>{
-    const x=pad+i*stepX;
-    const y=(canvas.height-pad)-(d[key]/max)*(canvas.height-pad-20);
-    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+btnLoop.addEventListener('click', () => {
+  state.isLooping = true;
+  btnPing.disabled = true;
+  btnLoop.disabled = true;
+  btnStop.disabled = false;
+  doPing();
+});
 
-    points.push({
-      x,y,
-      label:key,
-      value:d[key].toFixed(1),
-      unit,
-      time:d.time,
-      color
-    });
+btnStop.addEventListener('click', () => {
+  state.isLooping = false;
+  btnPing.disabled = false;
+  btnLoop.disabled = false;
+  btnStop.disabled = true;
+});
+
+btnSpeed.addEventListener('click', doSpeedTest);
+
+btnHistory.addEventListener('click', () => {
+  alert('Función de historial no implementada en esta versión de demostración.');
+});
+
+// Controladores para los botones de la gráfica
+chartButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    chartButtons.forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    state.chartMode = button.dataset.chart;
+    updateChart();
   });
-  ctx.stroke();
+});
 
-  // draw points
-  points.filter(p=>p.label===key).forEach(p=>{
-    ctx.fillStyle=color;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,4,0,Math.PI*2);
-    ctx.fill();
-  });
+// Actualizar la gráfica cuando cambia el tamaño de la ventana
+window.addEventListener('resize', updateChart);
+
+// =======================
+// INICIALIZACIÓN
+// =======================
+function init() {
+  // Configurar información de red
+  updateNetworkInfo();
+  updateTimestamp();
+  
+  // Inicializar gráfica
+  updateChart();
+  
+  // Iniciar actualización periódica del timestamp
+  setInterval(updateTimestamp, 1000);
+  
+  // Añadir algunos datos iniciales para demostración
+  setTimeout(() => {
+    for (let i = 0; i < 5; i++) {
+      const latency = 30 + Math.random() * 70;
+      addDataPoint({ latency });
+    }
+  }, 500);
 }
 
-/* ==========================
-   INTERACTION
-========================== */
-canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left;
-  const my=e.clientY-r.top;
-
-  const hit=points.find(p=>Math.hypot(p.x-mx,p.y-my)<6);
-  if(hit){
-    tooltip.style.display='block';
-    tooltip.style.left=e.clientX+10+'px';
-    tooltip.style.top=e.clientY+10+'px';
-    tooltip.innerHTML=`
-      <strong>${hit.label.toUpperCase()}</strong><br>
-      ${hit.value} ${hit.unit}<br>
-      ${hit.time}
-    `;
-  }else tooltip.style.display='none';
-});
-
-canvas.addEventListener('click',()=>{
-  tooltip.style.borderColor='#00c6ff';
-  setTimeout(()=>tooltip.style.borderColor='#2a475a',200);
-});
+// Iniciar la aplicación cuando se carga la página
+window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
