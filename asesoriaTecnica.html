@@ -2158,66 +2158,51 @@ function crearImagenSimplificadaParaPDF(doc, currentY) {
     return currentY;
 }
 
-    async function capturarDiseñoActual() {
+   async function capturarDiseñoActual() {
+    try {
+        mostrarMensaje('Preparando captura del diseño...', 2000);
+        
+        // Deshabilitar botón
+        const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturando...';
+            btn.disabled = true;
+        }
+        
+        // Intentar con leaflet-image primero
         try {
-            mostrarMensaje('Preparando captura del diseño...', 2000);
-            
-            // Deshabilitar botón
-            const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturando...';
-                btn.disabled = true;
-            }
-            
-            // Ocultar controles temporales
-            ocultarControlesParaCaptura();
-            
-            // Ajustar vista del mapa
-            await ajustarVistaMapaParaCaptura();
-            
-            // Esperar para renderizado
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Usar método simplificado pero efectivo
             capturaMapaDataUrl = await capturarMapaSimple();
-
-            if (!capturaMapaDataUrl) {
-                throw new Error('No se pudo generar la captura');
-            }
-
-            // OPTIMIZAR LA IMAGEN PARA PDF
-            capturaMapaDataUrl = await optimizarImagenParaPDF(capturaMapaDataUrl);
-
-            capturaTomada = true;
-            
-            // Mostrar vista previa
-            mostrarVistaPreviaCaptura(capturaMapaDataUrl);
-            
-            // Actualizar estado
-            actualizarEstadoCaptura(true, '¡Captura completada!');
-            
-            mostrarMensaje('Diseño capturado correctamente. Ahora puedes exportar el PDF.', 3000);
-            
-            return capturaMapaDataUrl;
-            
         } catch (error) {
-            console.error('Error capturando diseño:', error);
-            actualizarEstadoCaptura(false, `Error: ${error.message}`);
-            mostrarMensaje(`Error: ${error.message}`, 5000);
-            throw error;
-        } finally {
-            // Restaurar controles
-            restaurarControlesDespuesCaptura();
-            
-            // Restaurar botón
-            const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-camera"></i> Capturar Diseño Actual';
-                btn.disabled = false;
-            }
+            console.log('leaflet-image falló, intentando método alternativo...', error);
+            capturaMapaDataUrl = await generarImagenDesdeDatos();
+        }
+        
+        if (!capturaMapaDataUrl) {
+            throw new Error('No se pudo generar la captura');
+        }
+        
+        capturaTomada = true;
+        actualizarEstadoCaptura(true, '¡Captura completada!');
+        mostrarVistaPreviaCaptura(capturaMapaDataUrl);
+        mostrarMensaje('Diseño capturado correctamente. Ahora puedes exportar el PDF.', 3000);
+        
+        return capturaMapaDataUrl;
+        
+    } catch (error) {
+        console.error('Error capturando diseño:', error);
+        actualizarEstadoCaptura(false, `Error: ${error.message}`);
+        mostrarMensaje(`Error: ${error.message}`, 5000);
+        throw error;
+    } finally {
+        // Restaurar botón
+        const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-camera"></i> Capturar Diseño Actual';
+            btn.disabled = false;
         }
     }
-    
+}
+
     function ocultarControlesParaCaptura() {
         const controles = document.getElementById('mapaControls');
         if (controles) controles.style.display = 'none';
