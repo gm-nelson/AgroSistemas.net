@@ -1735,11 +1735,14 @@
             
             // Usar método simplificado pero efectivo
             capturaMapaDataUrl = await capturarMapaSimple();
-            
+
             if (!capturaMapaDataUrl) {
                 throw new Error('No se pudo generar la captura');
             }
-            
+
+            // OPTIMIZAR LA IMAGEN PARA PDF
+            capturaMapaDataUrl = await optimizarImagenParaPDF(capturaMapaDataUrl);
+
             capturaTomada = true;
             
             // Mostrar vista previa
@@ -2171,132 +2174,54 @@ function crearCapturaFallback() {
     // FUNCIONES DE EXPORTACIÓN PDF (MEJORADAS)
     // ============================================
     
-    async function exportarPDF() {
-    try {
-        // Verificar librerías
-        if (typeof window.jspdf === 'undefined') {
-            alert('Error: jsPDF no está cargado. Recarga la página.');
-            return;
-        }
-        
-        mostrarMensaje('Preparando PDF...', 2000);
-        
-        // Verificar si hay captura
-        let tieneCaptura = capturaTomada && capturaMapaDataUrl;
-        
-        if (!tieneCaptura) {
-            const confirmar = confirm('No hay una captura del diseño. ¿Deseas capturarlo ahora antes de generar el PDF?');
-            if (confirmar) {
-                mostrarMensaje('Capturando diseño para PDF...', 2000);
+    // Función para optimizar imagen para PDF
+function optimizarImagenParaPDF(dataUrl) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Si ya es JPEG, devolver como está
+            if (dataUrl.startsWith('data:image/jpeg')) {
+                resolve(dataUrl);
+                return;
+            }
+            
+            // Si es PNG u otro formato, convertir a JPEG
+            const img = new Image();
+            img.onload = function() {
                 try {
-                    await capturarDiseñoActual();
-                    tieneCaptura = capturaTomada && capturaMapaDataUrl;
-                } catch (capturaError) {
-                    console.error('Error al capturar:', capturaError);
-                }
-            }
-        }
-        
-        mostrarMensaje('Generando PDF...', 3000);
-        
-        // Crear PDF
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        
-        let currentY = 20;
-        
-        // Título principal
-        doc.setFontSize(20);
-        doc.setTextColor(0, 165, 83);
-        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, currentY, { align: 'center' });
-        
-        doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, currentY + 8, { align: 'center' });
-        doc.text('Fecha: ' + new Date().toLocaleDateString('es-MX'), 105, currentY + 15, { align: 'center' });
-        
-        currentY += 25;
-        
-        // SECCIÓN 1: IMAGEN DEL DISEÑO
-        if (tieneCaptura && capturaMapaDataUrl) {
-            try {
-                doc.setFontSize(14);
-                doc.setTextColor(23, 114, 175);
-                doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
-                currentY += 8;
-                
-                // Verificar que la data URL sea válida
-                if (capturaMapaDataUrl && capturaMapaDataUrl.startsWith('data:image/')) {
-                    // Crear imagen para obtener dimensiones
-                    const img = new Image();
+                    // Crear canvas temporal
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.min(img.width, 800); // Limitar ancho máximo
+                    canvas.height = Math.min(img.height, 600); // Limitar alto máximo
                     
-                    await new Promise((resolve, reject) => {
-                        img.onload = function() {
-                            try {
-                                // Dimensiones fijas para A4
-                                const imgWidth = 170; // mm
-                                const imgHeight = 120; // mm
-                                
-                                // Añadir imagen centrada
-                                const xPos = 20;
-                                doc.addImage(capturaMapaDataUrl, 'JPEG', xPos, currentY, imgWidth, imgHeight);
-                                currentY += imgHeight + 10;
-                                
-                                // Nota
-                                doc.setFontSize(8);
-                                doc.setTextColor(100, 100, 100);
-                                doc.text('Representación del diseño del sistema de riego', 20, currentY);
-                                currentY += 5;
-                                
-                                resolve();
-                            } catch (addError) {
-                                reject(addError);
-                            }
-                        };
-                        
-                        img.onerror = function() {
-                            // Si falla la carga, usar método alternativo
-                            mostrarSeccionSinImagen(doc, currentY);
-                            resolve();
-                        };
-                        
-                        img.src = capturaMapaDataUrl;
-                    });
+                    const ctx = canvas.getContext('2d');
                     
-                } else {
-                    throw new Error('Formato de imagen inválido');
+                    // Dibujar imagen redimensionada
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convertir a JPEG con 85% de calidad
+                    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    
+                    console.log(`Imagen optimizada: ${dataUrl.length} → ${jpegDataUrl.length} bytes`);
+                    resolve(jpegDataUrl);
+                    
+                } catch (canvasError) {
+                    console.error('Error en canvas:', canvasError);
+                    resolve(dataUrl); // Devolver original si falla
                 }
-                
-            } catch (imgError) {
-                console.error('Error procesando imagen:', imgError);
-                // Continuar sin imagen
-                currentY = mostrarSeccionSinImagen(doc, currentY);
-            }
-        } else {
-            currentY = mostrarSeccionSinImagen(doc, currentY);
+            };
+            
+            img.onerror = function() {
+                console.error('Error cargando imagen para optimizar');
+                resolve(dataUrl); // Devolver original si falla
+            };
+            
+            img.src = dataUrl;
+            
+        } catch (error) {
+            console.error('Error en optimizarImagenParaPDF:', error);
+            resolve(dataUrl); // Devolver original si falla
         }
-        
-        // ... (el resto de tu función exportarPDF se mantiene igual)
-        // Solo asegúrate de que después de esta parte siga el resto del código
-        
-        // Resto de las secciones (mantener igual)
-        if (currentY > 250) {
-            doc.addPage();
-            currentY = 20;
-        }
-        
-        // SECCIÓN 2: INFORMACIÓN GENERAL
-        doc.setFontSize(14);
-        doc.setTextColor(23, 114, 175);
-        doc.text('2. INFORMACIÓN GENERAL DEL PROYECTO', 20, currentY);
-        currentY += 8;
-        
-        // ... (continuar con el resto de tu código original)
-        
-    } catch (error) {
-        console.error('Error en exportarPDF:', error);
-        alert(`Error al generar el PDF: ${error.message}\n\nPor favor, intente nuevamente.`);
-    }
+    });
 }
 
 // Función auxiliar para mostrar sección sin imagen
