@@ -1373,6 +1373,10 @@
                                         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importarDiseño(event)">
                                     </label>
                                 </div>
+                                <button class="btn btn-secondary" onclick="capturarDiseñoActual()">
+                                    <i class="fas fa-camera"></i> Capturar Diseño Actual
+                                </button>
+                                <div id="capturaStatus" style="margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
                                 
                                 <div class="galeria-diseños" id="galeriaDiseños" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
                                     <!-- Diseños se cargarán aquí -->
@@ -1488,6 +1492,8 @@
     let puntoOrigenConexion = null;
     let puntosTuberias = [];
     let cabezales = [];
+    let capturaMapaDataUrl = null;
+    let capturaTomada = false;
     
     // Función para obtener el grosor basado en el tipo y diámetro
     function getGrosorTuberia(tipo, diametro) {
@@ -1518,24 +1524,23 @@ async function exportarPDF() {
             return;
         }
         
-        if (typeof html2canvas === 'undefined') {
-            alert('Error: html2canvas no está cargado correctamente. Recarga la página.');
-            return;
+        // Verificar si hay una captura tomada
+        if (!capturaTomada) {
+            const confirmar = confirm('No has capturado el diseño actual. ¿Deseas capturarlo ahora antes de generar el PDF?\n\nRecomendación: Asegúrate de que el mapa muestre todo el diseño antes de capturar.');
+            if (confirmar) {
+                await capturarDiseñoActual();
+                if (!capturaTomada) {
+                    mostrarMensaje('No se pudo capturar el diseño. Intenta capturar manualmente primero.');
+                    return;
+                }
+            } else {
+                mostrarMensaje('Se generará PDF sin imagen del diseño. Presiona el botón "Capturar Diseño Actual" para incluirla.');
+            }
         }
         
-        mostrarMensaje('Generando PDF con captura del mapa... Esto puede tomar unos segundos.');
+        mostrarMensaje('Generando PDF... Esto puede tomar unos segundos.');
         
-        // Paso 1: Capturar el mapa
-        let imagenMapaDataUrl = null;
-        try {
-            imagenMapaDataUrl = await capturarMapaExacto();
-        } catch (captureError) {
-            console.error('Error capturando el mapa:', captureError);
-            mostrarMensaje('Error capturando el mapa. Generando PDF sin imagen...');
-            // Continuar sin imagen
-        }
-        
-        // Paso 2: Crear el PDF
+        // Crear el PDF
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         
@@ -1554,7 +1559,7 @@ async function exportarPDF() {
         currentY += 25;
         
         // SECCIÓN 1: IMAGEN DEL DISEÑO (si se capturó)
-        if (imagenMapaDataUrl) {
+        if (capturaTomada && capturaMapaDataUrl) {
             try {
                 doc.setFontSize(14);
                 doc.setTextColor(23, 114, 175); // Azul
@@ -1565,7 +1570,7 @@ async function exportarPDF() {
                 const imgWidth = 170; // Ancho en mm para A4
                 const imgHeight = 110; // Alto en mm
                 
-                doc.addImage(imagenMapaDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
+                doc.addImage(capturaMapaDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
                 currentY += imgHeight + 10;
                 
                 // Si la imagen hace que nos pasemos de la página, añadir nueva
@@ -1575,8 +1580,16 @@ async function exportarPDF() {
                 }
             } catch (imgError) {
                 console.error('Error añadiendo imagen al PDF:', imgError);
+                doc.setFontSize(10);
+                doc.setTextColor(150, 0, 0);
+                doc.text('Error al incluir imagen del diseño', 20, currentY);
                 currentY += 10;
             }
+        } else {
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Nota: No se incluye imagen del diseño. Captura el diseño primero con el botón "Capturar Diseño Actual".', 20, currentY);
+            currentY += 15;
         }
         
         // SECCIÓN 2: LEYENDA DE ELEMENTOS
@@ -1620,6 +1633,12 @@ async function exportarPDF() {
         });
         
         currentY += 60; // Ajustar según cantidad de elementos
+        
+        // Verificar si necesitamos nueva página
+        if (currentY > 250) {
+            doc.addPage();
+            currentY = 20;
+        }
         
         // SECCIÓN 3: INFORMACIÓN GENERAL
         doc.setFontSize(14);
@@ -1844,7 +1863,46 @@ async function exportarPDF() {
             });
         }
         
-        // SECCIÓN 7: OBSERVACIONES Y FIRMAS
+        // SECCIÓN 7: CABEZAL DE BOMBEO (si existe)
+        if (cabezales.length > 0) {
+            if (currentY > 200) {
+                doc.addPage();
+                currentY = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setTextColor(23, 114, 175);
+            doc.text('7. CABEZAL DE BOMBEO Y FILTRACIÓN', 20, currentY);
+            currentY += 10;
+            
+            cabezales.forEach((cabezal, index) => {
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                
+                if (index > 0) {
+                    doc.text(`Cabezal ${index + 1}:`, 25, currentY);
+                    currentY += 6;
+                }
+                
+                doc.text(`Caudal de Bomba: ${cabezal.caudalBomba} L/s`, 30, currentY);
+                currentY += 6;
+                doc.text(`Diámetro Succión: ${cabezal.diametroSuccion}`, 30, currentY);
+                currentY += 6;
+                doc.text(`Diámetro Descarga: ${cabezal.diametroDescarga}`, 30, currentY);
+                currentY += 6;
+                doc.text(`Número de Filtros: ${cabezal.numeroFiltros}`, 30, currentY);
+                currentY += 6;
+                doc.text(`Tipo de Filtros: ${cabezal.tipoFiltros}`, 30, currentY);
+                currentY += 6;
+                if (cabezal.notas) {
+                    doc.text(`Notas: ${cabezal.notas}`, 30, currentY);
+                    currentY += 6;
+                }
+                currentY += 5;
+            });
+        }
+        
+        // SECCIÓN 8: OBSERVACIONES Y FIRMAS
         if (currentY > 200) {
             doc.addPage();
             currentY = 20;
@@ -1852,7 +1910,7 @@ async function exportarPDF() {
         
         doc.setFontSize(14);
         doc.setTextColor(23, 114, 175);
-        doc.text('7. OBSERVACIONES Y APROBACIONES', 20, currentY);
+        doc.text('8. OBSERVACIONES Y APROBACIONES', 20, currentY);
         currentY += 15;
         
         // Línea para observaciones
@@ -1860,6 +1918,13 @@ async function exportarPDF() {
         doc.setTextColor(0, 0, 0);
         doc.text('Observaciones:', 25, currentY);
         currentY += 15;
+        
+        // Espacio para observaciones
+        doc.setLineWidth(0.5);
+        doc.line(25, currentY, 185, currentY);
+        currentY += 20;
+        doc.line(25, currentY, 185, currentY);
+        currentY += 10;
         
         // Línea para firma del diseñador
         doc.text('________________________________________', 105, currentY, { align: 'center' });
@@ -1871,6 +1936,12 @@ async function exportarPDF() {
         doc.text('________________________________________', 105, currentY, { align: 'center' });
         currentY += 7;
         doc.text('Cliente / Responsable', 105, currentY, { align: 'center' });
+        currentY += 20;
+        
+        // Línea para fecha de aprobación
+        doc.text('________________________________________', 105, currentY, { align: 'center' });
+        currentY += 7;
+        doc.text('Fecha de Aprobación', 105, currentY, { align: 'center' });
         
         // PIE DE PÁGINA EN TODAS LAS PÁGINAS
         const totalPages = doc.internal.getNumberOfPages();
@@ -1894,13 +1965,84 @@ async function exportarPDF() {
         const fechaHora = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
         const nombreArchivo = `Memoria_Calculo_Riego_${fechaHora}.pdf`;
         
-        doc.save(nombreArchivo);
-        
+        // Mostrar mensaje final
         mostrarMensaje(`PDF generado exitosamente: ${nombreArchivo}`);
+        
+        // Descargar el PDF
+        doc.save(nombreArchivo);
         
     } catch (error) {
         console.error('Error detallado en exportarPDF:', error);
-        alert(`Error al generar el PDF: ${error.message}\n\nPor favor, intente nuevamente o contacte al soporte técnico.`);
+        
+        // Mensaje de error detallado
+        let mensajeError = `Error al generar el PDF: ${error.message}`;
+        
+        if (error.message.includes('jsPDF')) {
+            mensajeError += '\n\nVerifica que la librería jsPDF esté correctamente cargada.';
+        } else if (error.message.includes('html2canvas')) {
+            mensajeError += '\n\nNo se pudo capturar la imagen del diseño.';
+        } else if (error.message.includes('autoTable')) {
+            mensajeError += '\n\nError al generar las tablas.';
+        }
+        
+        mensajeError += '\n\nPor favor, intente nuevamente o contacte al soporte técnico.';
+        
+        alert(mensajeError);
+    }
+}
+
+async function capturarDiseñoActual() {
+    try {
+        mostrarMensaje('Capturando diseño actual... Esto puede tomar unos segundos.');
+        
+        // Deshabilitar el botón temporalmente
+        const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturando...';
+        btn.disabled = true;
+        
+        // Verificar que html2canvas está cargado
+        if (typeof html2canvas === 'undefined') {
+            throw new Error('html2canvas no está cargado');
+        }
+        
+        // Capturar el mapa
+        capturaMapaDataUrl = await capturarMapaExacto();
+        capturaTomada = true;
+        
+        // Mostrar estado
+        const statusDiv = document.getElementById('capturaStatus');
+        if (statusDiv) {
+            statusDiv.innerHTML = '<span style="color: #00a553;"><i class="fas fa-check-circle"></i> Diseño capturado correctamente</span>';
+            statusDiv.innerHTML += '<br><small>Ahora puedes exportar el PDF con la imagen del diseño.</small>';
+        }
+        
+        mostrarMensaje('¡Diseño capturado correctamente! Ahora puedes exportar el PDF.');
+        
+        // Restaurar el botón
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        
+        return capturaMapaDataUrl;
+        
+    } catch (error) {
+        console.error('Error capturando diseño:', error);
+        
+        const statusDiv = document.getElementById('capturaStatus');
+        if (statusDiv) {
+            statusDiv.innerHTML = '<span style="color: #ff6b6b;"><i class="fas fa-exclamation-circle"></i> Error al capturar el diseño</span>';
+        }
+        
+        mostrarMensaje('Error al capturar el diseño. Intenta nuevamente.');
+        
+        // Restaurar el botón
+        const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-camera"></i> Capturar Diseño Actual';
+            btn.disabled = false;
+        }
+        
+        throw error;
     }
 }
 
@@ -4038,6 +4180,7 @@ function capturarMapaExacto() {
                 document.body.style.overflow = '';
             });
         });
+        
         
         window.addEventListener('scroll', function() {
             if (window.scrollY > 50) {
