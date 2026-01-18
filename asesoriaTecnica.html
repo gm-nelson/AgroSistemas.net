@@ -21,7 +21,7 @@
     
     <!-- Para captura de pantalla -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js"></script>
+    
     <style>
         /* Reset y estilos base */
         * {
@@ -36,30 +36,6 @@
             line-height: 1.6;
             background-color: #FFFFFF;
         }
-
-        /* Estilos para mejorar la captura */
-.leaflet-container {
-    will-change: transform;
-    backface-visibility: hidden;
-}
-
-.leaflet-tile {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-}
-
-/* Asegurar que los elementos sean visibles */
-.tuberia-punto div,
-.elemento-grafico div {
-    box-shadow: 0 0 3px rgba(0,0,0,0.8) !important;
-}
-
-/* Mejorar visibilidad de etiquetas */
-.tuberia-label div {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid #333 !important;
-    font-weight: bold !important;
-}
         
         .container {
             width: 100%;
@@ -1767,77 +1743,76 @@ async function exportarPDF() {
         currentY += 25;
         
         // SECCIÓN 1: IMAGEN DEL DISEÑO
-        if (capturaTomada && capturaMapaDataUrl) {
-            try {
-                doc.setFontSize(14);
-                doc.setTextColor(23, 114, 175);
-                doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
-                currentY += 8;
-                
-                // Método 1: Intentar con addImage directo
+       // En la función exportarPDF, cambiar esta parte:
+if (capturaTomada && capturaMapaDataUrl) {
+    try {
+        doc.setFontSize(14);
+        doc.setTextColor(23, 114, 175);
+        doc.text('1. REPRESENTACIÓN DEL DISEÑO', 20, currentY);
+        currentY += 8;
+        
+        // Usar la representación vectorial
+        const imgWidth = 170; // mm
+        const imgHeight = 120; // mm
+        
+        // Optimizar la imagen para PDF
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+            img.onload = function() {
                 try {
-                    // Reducir calidad para evitar problemas
-                    const imgWidth = 170; // mm
-                    const imgHeight = 100; // mm
+                    // Redimensionar si es necesario
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = 800;
+                    tempCanvas.height = 600;
+                    tempCtx.drawImage(img, 0, 0, 800, 600);
                     
-                    // Optimizar la data URL si es muy grande
-                    let optimizedDataUrl = capturaMapaDataUrl;
-                    
-                    // Si es PNG, convertir a JPEG con menor calidad
-                    if (capturaMapaDataUrl.startsWith('data:image/png')) {
-                        // Crear un canvas temporal para convertir a JPEG
-                        const tempCanvas = document.createElement('canvas');
-                        const tempCtx = tempCanvas.getContext('2d');
-                        const img = new Image();
-                        
-                        await new Promise((resolve, reject) => {
-                            img.onload = function() {
-                                tempCanvas.width = img.width;
-                                tempCanvas.height = img.height;
-                                tempCtx.drawImage(img, 0, 0);
-                                // Convertir a JPEG con 85% de calidad
-                                optimizedDataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
-                                resolve();
-                            };
-                            img.onerror = reject;
-                            img.src = capturaMapaDataUrl;
-                        });
-                    }
-                    
-                    // Intentar añadir la imagen optimizada
+                    const optimizedDataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
                     doc.addImage(optimizedDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
                     currentY += imgHeight + 10;
                     
                     doc.setFontSize(8);
                     doc.setTextColor(100, 100, 100);
-                    doc.text('Representación gráfica del diseño', 20, currentY);
+                    doc.text('Representación esquemática del sistema de riego', 20, currentY);
                     currentY += 5;
                     
-                } catch (addImageError) {
-                    console.log('Método 1 falló, intentando método 2...', addImageError);
-                    
-                    // Método 2: Crear imagen simplificada
-                    currentY = crearImagenSimplificadaParaPDF(doc, currentY);
+                    resolve();
+                } catch (error) {
+                    console.error('Error procesando imagen:', error);
+                    // Continuar sin imagen
+                    currentY += 10;
+                    resolve();
                 }
-                
-            } catch (imgError) {
-                console.error('Error con imagen:', imgError);
-                currentY = crearImagenSimplificadaParaPDF(doc, currentY);
-            }
-        } else {
-            // Sin captura
-            doc.setFontSize(14);
-            doc.setTextColor(23, 114, 175);
-            doc.text('1. DISEÑO DEL SISTEMA DE RIEGO', 20, currentY);
-            currentY += 8;
-            
-            doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            doc.text('No se incluye imagen del diseño.', 25, currentY);
-            currentY += 6;
-            doc.text('Para incluirla, captura el diseño desde la pestaña "Galería".', 25, currentY);
-            currentY += 10;
-        }
+            };
+            img.onerror = function() {
+                console.error('Error cargando imagen');
+                currentY += 10;
+                resolve();
+            };
+            img.src = capturaMapaDataUrl;
+        });
+        
+    } catch (imgError) {
+        console.error('Error con imagen:', imgError);
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('No se pudo incluir la representación gráfica del diseño.', 25, currentY);
+        currentY += 10;
+    }
+} else {
+    // Sin captura disponible
+    doc.setFontSize(14);
+    doc.setTextColor(23, 114, 175);
+    doc.text('1. REPRESENTACIÓN DEL DISEÑO', 20, currentY);
+    currentY += 8;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Para incluir una representación gráfica del diseño, use la opción "Capturar Diseño Actual".', 25, currentY);
+    currentY += 6;
+    doc.text('La información técnica se presenta en las siguientes secciones.', 25, currentY);
+    currentY += 10;
+}
         
         // Verificar nueva página
         if (currentY > 250) {
@@ -2182,48 +2157,34 @@ function crearImagenSimplificadaParaPDF(doc, currentY) {
     return currentY;
 }
 
-async function capturarDiseñoActual() {
+    async function capturarDiseñoActual() {
     try {
         mostrarMensaje('Preparando captura del diseño...', 2000);
         
-        // Deshabilitar botón
+        // Deshabilitar botón temporalmente
         const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
+        const originalText = btn ? btn.innerHTML : '';
         if (btn) {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturando...';
             btn.disabled = true;
         }
         
-        // Ocultar controles temporales
-        ocultarControlesParaCaptura();
-        
-        // Esperar a que todos los elementos se rendericen
-        await esperarRenderizadoCompleto();
-        
-        // Intentar con leaflet-image primero (más preciso para mapas)
-        capturaMapaDataUrl = await capturarMapaConLeafletImage();
+        // Método mejorado: crear representación vectorial del diseño
+        capturaMapaDataUrl = await crearRepresentacionVectorial();
         
         if (!capturaMapaDataUrl) {
-            // Fallback a html2canvas
-            console.log('Usando html2canvas como fallback...');
-            capturaMapaDataUrl = await capturarMapaConHtml2Canvas();
+            throw new Error('No se pudo generar la representación del diseño');
         }
-
-        if (!capturaMapaDataUrl) {
-            throw new Error('No se pudo generar la captura');
-        }
-
-        // Optimizar imagen
-        capturaMapaDataUrl = await optimizarImagenParaPDF(capturaMapaDataUrl);
-
+        
         capturaTomada = true;
         
         // Mostrar vista previa
         mostrarVistaPreviaCaptura(capturaMapaDataUrl);
         
         // Actualizar estado
-        actualizarEstadoCaptura(true, '¡Captura completada!');
+        actualizarEstadoCaptura(true, '¡Diseño preparado para PDF!');
         
-        mostrarMensaje('Diseño capturado correctamente. Ahora puedes exportar el PDF.', 3000);
+        mostrarMensaje('Representación del diseño creada correctamente. Ahora puedes exportar el PDF.', 3000);
         
         return capturaMapaDataUrl;
         
@@ -2233,259 +2194,366 @@ async function capturarDiseñoActual() {
         mostrarMensaje(`Error: ${error.message}`, 5000);
         throw error;
     } finally {
-        // Restaurar controles
-        restaurarControlesDespuesCaptura();
-        
         // Restaurar botón
         const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
         if (btn) {
-            btn.innerHTML = '<i class="fas fa-camera"></i> Capturar Diseño Actual';
+            btn.innerHTML = originalText;
             btn.disabled = false;
         }
     }
 }
 
-// Función para esperar el renderizado completo
-function esperarRenderizadoCompleto() {
-    return new Promise(resolve => {
-        // Forzar reflow y repaint
-        map.invalidateSize();
-        
-        // Esperar a que todos los tiles se carguen
-        map.whenReady(function() {
-            // Esperar un poco más para asegurar que todo está renderizado
-            setTimeout(resolve, 1000);
-        });
-    });
-}
-
-// Método 1: Usando leaflet-image (más preciso para mapas)
-function capturarMapaConLeafletImage() {
+async function crearRepresentacionVectorial() {
     return new Promise((resolve, reject) => {
-        if (typeof leafletImage === 'undefined') {
-            resolve(null);
-            return;
-        }
-        
         try {
-            // Obtener los bounds actuales del mapa
-            const bounds = map.getBounds();
-            
-            // Calcular tamaño basado en zoom y bounds
-            const zoom = map.getZoom();
-            const pixelBounds = map.getPixelBounds();
-            const width = Math.min(pixelBounds.getSize().x, 1920);
-            const height = Math.min(pixelBounds.getSize().y, 1080);
-            
-            console.log(`Capturando mapa con leaflet-image: ${width}x${height}, zoom: ${zoom}`);
-            
-            leafletImage(map, function(err, canvas) {
-                if (err) {
-                    console.error('Error en leaflet-image:', err);
-                    resolve(null);
-                    return;
-                }
-                
-                if (canvas && canvas.width > 0 && canvas.height > 0) {
-                    // Añadir una marca de agua o información
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Fondo blanco para bordes (opcional)
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(0, 0, canvas.width, 30); // Barra superior para título
-                    ctx.fillRect(0, canvas.height - 30, canvas.width, 30); // Barra inferior para info
-                    
-                    // Añadir título
-                    ctx.fillStyle = '#333';
-                    ctx.font = 'bold 14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('DISEÑO DE SISTEMA DE RIEGO - AGROSISTEMAS', canvas.width / 2, 20);
-                    
-                    // Añadir información
-                    ctx.font = '10px Arial';
-                    ctx.fillText(`Fecha: ${new Date().toLocaleDateString()} | Área: ${areaTotal > 0 ? areaTotal.toFixed(2) + ' m²' : 'No definida'}`, canvas.width / 2, canvas.height - 10);
-                    
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                    console.log('Captura exitosa con leaflet-image');
-                    resolve(dataUrl);
-                } else {
-                    console.log('Canvas vacío de leaflet-image');
-                    resolve(null);
-                }
-            });
-            
-        } catch (error) {
-            console.error('Error en capturarMapaConLeafletImage:', error);
-            resolve(null);
-        }
-    });
-}
-
-// Método 2: Usando html2canvas (fallback)
-function capturarMapaConHtml2Canvas() {
-    return new Promise((resolve, reject) => {
-        const mapContainer = document.getElementById('map');
-        if (!mapContainer) {
-            reject(new Error('No se encontró el contenedor del mapa'));
-            return;
-        }
-        
-        // Obtener las dimensiones reales del mapa
-        const rect = mapContainer.getBoundingClientRect();
-        const width = rect.width;
-        const height = rect.height;
-        
-        if (width === 0 || height === 0) {
-            reject(new Error('El mapa tiene dimensiones cero'));
-            return;
-        }
-        
-        // Crear un clon del mapa para capturar
-        const clone = mapContainer.cloneNode(true);
-        clone.style.width = width + 'px';
-        clone.style.height = height + 'px';
-        clone.style.position = 'absolute';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        clone.style.zIndex = '99999';
-        clone.style.visibility = 'visible';
-        
-        // Añadir el clon al documento
-        document.body.appendChild(clone);
-        
-        // Esperar a que se renderice el clon
-        setTimeout(() => {
-            const config = {
-                scale: 1,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                width: width,
-                height: height,
-                windowWidth: width,
-                windowHeight: height,
-                onclone: function(clonedDoc) {
-                    // Asegurar que el clon tenga las mismas dimensiones
-                    const clonedMap = clonedDoc.getElementById('map');
-                    if (clonedMap) {
-                        clonedMap.style.width = width + 'px';
-                        clonedMap.style.height = height + 'px';
-                        clonedMap.style.visibility = 'visible';
-                        
-                        // Forzar visibilidad de tiles
-                        const tiles = clonedMap.querySelectorAll('.leaflet-tile');
-                        tiles.forEach(tile => {
-                            tile.style.opacity = '1';
-                            tile.style.visibility = 'visible';
-                        });
-                    }
-                }
-            };
-            
-            html2canvas(clone, config).then(canvas => {
-                // Añadir información adicional al canvas
-                const ctx = canvas.getContext('2d');
-                
-                // Fondo para texto
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.fillRect(10, 10, canvas.width - 20, 40);
-                ctx.fillRect(10, canvas.height - 40, canvas.width - 20, 30);
-                
-                // Título
-                ctx.fillStyle = '#333';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('DISEÑO DE SISTEMA DE RIEGO', canvas.width / 2, 30);
-                
-                // Información
-                ctx.font = '12px Arial';
-                ctx.fillText(`Agrosistemas | ${new Date().toLocaleDateString()}`, canvas.width / 2, 50);
-                
-                // Pie
-                ctx.font = '10px Arial';
-                const infoText = `Área: ${areaTotal > 0 ? areaTotal.toFixed(2) + ' m²' : 'No definida'} | Tuberías: ${tuberias.length} | Válvulas: ${valvulas.length}`;
-                ctx.fillText(infoText, canvas.width / 2, canvas.height - 20);
-                
-                // Borde
-                ctx.strokeStyle = '#ccc';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
-                
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                
-                // Limpiar
-                document.body.removeChild(clone);
-                
-                resolve(dataUrl);
-                
-            }).catch(error => {
-                // Limpiar en caso de error
-                if (document.body.contains(clone)) {
-                    document.body.removeChild(clone);
-                }
-                console.error('Error en html2canvas:', error);
-                reject(error);
-            });
-            
-        }, 1000);
-    });
-}
-
-// Mejorar la función de optimización
-async function optimizarImagenParaPDF(dataUrl) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = function() {
-            // Calcular dimensiones óptimas para PDF
-            const maxWidth = 800;
-            const maxHeight = 600;
-            
-            let width = img.width;
-            let height = img.height;
-            
-            // Mantener relación de aspecto
-            if (width > maxWidth || height > maxHeight) {
-                const ratio = Math.min(maxWidth / width, maxHeight / height);
-                width *= ratio;
-                height *= ratio;
-            }
-            
+            // Crear canvas con dimensiones fijas para consistencia
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            
             const ctx = canvas.getContext('2d');
             
-            // Fondo blanco para transparencias
+            // Tamaño A4 en píxeles (a 96 DPI)
+            const ancho = 800;
+            const alto = 600;
+            canvas.width = ancho;
+            canvas.height = alto;
+            
+            // Fondo blanco
             ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, ancho, alto);
             
-            // Dibujar imagen
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // Añadir marca de agua sutil
-            ctx.globalAlpha = 0.1;
+            // Encabezado
             ctx.fillStyle = '#333';
-            ctx.font = 'bold 20px Arial';
+            ctx.font = 'bold 24px Arial';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('AGROSISTEMAS', canvas.width / 2, canvas.height / 2);
-            ctx.globalAlpha = 1.0;
+            ctx.fillText('DISEÑO DE SISTEMA DE RIEGO', ancho / 2, 40);
             
-            // Convertir a JPEG con buena calidad
-            const optimizedUrl = canvas.toDataURL('image/jpeg', 0.85);
-            resolve(optimizedUrl);
-        };
-        
-        img.onerror = function() {
-            // Si hay error, devolver la imagen original
+            ctx.font = '16px Arial';
+            ctx.fillText('Agrosistemas - Asesoría Técnica', ancho / 2, 70);
+            ctx.fillText('Fecha: ' + new Date().toLocaleDateString('es-MX'), ancho / 2, 90);
+            
+            // Marco para el diseño
+            const marcoX = 50;
+            const marcoY = 120;
+            const marcoAncho = ancho - 100;
+            const marcoAlto = alto - 200;
+            
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(marcoX, marcoY, marcoAncho, marcoAlto);
+            
+            // Calcular escala para representar el diseño
+            let todosLosPuntos = [];
+            
+            // Recolectar todos los puntos del diseño
+            tuberias.forEach(t => {
+                if (t.puntoInicio) todosLosPuntos.push(t.puntoInicio);
+                if (t.puntoFin) todosLosPuntos.push(t.puntoFin);
+            });
+            
+            elementosGraficos.forEach(e => {
+                todosLosPuntos.push(e.posicion);
+            });
+            
+            drawnItems.eachLayer(layer => {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    latlngs.forEach(latlng => todosLosPuntos.push(latlng));
+                }
+            });
+            
+            // Calcular límites
+            if (todosLosPuntos.length === 0) {
+                // Si no hay puntos, crear representación mínima
+                crearRepresentacionMinima(ctx, marcoX, marcoY, marcoAncho, marcoAlto);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                resolve(dataUrl);
+                return;
+            }
+            
+            let minLat = Infinity, maxLat = -Infinity;
+            let minLng = Infinity, maxLng = -Infinity;
+            
+            todosLosPuntos.forEach(point => {
+                minLat = Math.min(minLat, point.lat);
+                maxLat = Math.max(maxLat, point.lat);
+                minLng = Math.min(minLng, point.lng);
+                maxLng = Math.max(maxLng, point.lng);
+            });
+            
+            // Añadir margen
+            const latRange = maxLat - minLat;
+            const lngRange = maxLng - minLng;
+            const margin = 0.1; // 10% de margen
+            
+            minLat -= latRange * margin;
+            maxLat += latRange * margin;
+            minLng -= lngRange * margin;
+            maxLng += lngRange * margin;
+            
+            // Función para convertir coordenadas geográficas a coordenadas del canvas
+            const toCanvasCoords = (lat, lng) => {
+                const x = marcoX + ((lng - minLng) / (maxLng - minLng)) * marcoAncho;
+                const y = marcoY + marcoAlto - ((lat - minLat) / (maxLat - minLat)) * marcoAlto;
+                return { x, y };
+            };
+            
+            // Dibujar polígonos del terreno
+            drawnItems.eachLayer(layer => {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    ctx.beginPath();
+                    
+                    latlngs.forEach((latlng, index) => {
+                        const coords = toCanvasCoords(latlng.lat, latlng.lng);
+                        if (index === 0) {
+                            ctx.moveTo(coords.x, coords.y);
+                        } else {
+                            ctx.lineTo(coords.x, coords.y);
+                        }
+                    });
+                    
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(0, 165, 83, 0.2)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#008a45';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+            
+            // Dibujar tuberías
+            tuberias.forEach(t => {
+                if (t.puntoInicio && t.puntoFin) {
+                    const start = toCanvasCoords(t.puntoInicio.lat, t.puntoInicio.lng);
+                    const end = toCanvasCoords(t.puntoFin.lat, t.puntoFin.lng);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(start.x, start.y);
+                    ctx.lineTo(end.x, end.y);
+                    
+                    // Configurar estilo según tipo de tubería
+                    let color, grosor;
+                    if (t.tipo === 'principal') {
+                        color = '#ff6b6b';
+                        grosor = 6;
+                    } else if (t.tipo === 'secundaria') {
+                        color = '#4ecdc4';
+                        grosor = 4;
+                    } else {
+                        color = '#45b7d1';
+                        grosor = 3;
+                    }
+                    
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = grosor;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                    
+                    // Etiqueta de longitud
+                    const midX = (start.x + end.x) / 2;
+                    const midY = (start.y + end.y) / 2;
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(midX - 30, midY - 10, 60, 20);
+                    
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${t.longitud ? t.longitud.toFixed(1) + 'm' : ''} ${t.diametro ? t.diametro + '"' : ''}`, midX, midY + 4);
+                }
+            });
+            
+            // Dibujar elementos
+            elementosGraficos.forEach(e => {
+                const coords = toCanvasCoords(e.posicion.lat, e.posicion.lng);
+                
+                // Color según tipo de elemento
+                let color, icono;
+                switch(e.tipo) {
+                    case 'cabezal':
+                        color = '#1772af';
+                        icono = '⚙️';
+                        break;
+                    case 'valvula':
+                        color = '#ff6b6b';
+                        icono = '⚡';
+                        break;
+                    case 'tomagua':
+                        color = '#00a553';
+                        icono = '💧';
+                        break;
+                    case 'filtro':
+                        color = '#4ecdc4';
+                        icono = '🔍';
+                        break;
+                    case 'purgaterminal':
+                        color = '#ff9f43';
+                        icono = '🚰';
+                        break;
+                    default:
+                        color = '#666';
+                        icono = '📍';
+                }
+                
+                // Dibujar círculo
+                ctx.beginPath();
+                ctx.arc(coords.x, coords.y, 12, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Dibujar icono (texto emoji)
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(icono, coords.x, coords.y);
+                
+                // Etiqueta
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(e.tipo.toUpperCase(), coords.x, coords.y + 20);
+            });
+            
+            // Leyenda
+            dibujarLeyenda(ctx, ancho, alto);
+            
+            // Convertir a data URL
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            capturaCanvas = canvas;
+            
             resolve(dataUrl);
-        };
-        
-        img.src = dataUrl;
+            
+        } catch (error) {
+            console.error('Error en crearRepresentacionVectorial:', error);
+            // Fallback a representación simple
+            const fallbackUrl = crearRepresentacionMinimaFallback();
+            resolve(fallbackUrl);
+        }
     });
 }
+
+function crearRepresentacionMinima(ctx, marcoX, marcoY, marcoAncho, marcoAlto) {
+    ctx.fillStyle = '#f8f9fa';
+    ctx.fillRect(marcoX, marcoY, marcoAncho, marcoAlto);
     
+    ctx.fillStyle = '#666';
+    ctx.font = 'italic 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('No hay elementos en el diseño actual', marcoX + marcoAncho / 2, marcoY + marcoAlto / 2);
+    
+    ctx.fillText('Agrega tuberías y elementos desde el panel de diseño', marcoX + marcoAncho / 2, marcoY + marcoAlto / 2 + 30);
+}
+
+function dibujarLeyenda(ctx, ancho, alto) {
+    const leyendaX = ancho - 200;
+    const leyendaY = 120;
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillRect(leyendaX, leyendaY, 180, 200);
+    
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(leyendaX, leyendaY, 180, 200);
+    
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('LEYENDA', leyendaX + 10, leyendaY + 25);
+    
+    let y = leyendaY + 50;
+    
+    // Tubería principal
+    ctx.beginPath();
+    ctx.moveTo(leyendaX + 10, y);
+    ctx.lineTo(leyendaX + 40, y);
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    ctx.fillStyle = '#333';
+    ctx.font = '11px Arial';
+    ctx.fillText('Tubería Principal', leyendaX + 50, y + 4);
+    y += 25;
+    
+    // Tubería secundaria
+    ctx.beginPath();
+    ctx.moveTo(leyendaX + 10, y);
+    ctx.lineTo(leyendaX + 40, y);
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillText('Tubería Secundaria', leyendaX + 50, y + 4);
+    y += 25;
+    
+    // Tubería regante
+    ctx.beginPath();
+    ctx.moveTo(leyendaX + 10, y);
+    ctx.lineTo(leyendaX + 40, y);
+    ctx.strokeStyle = '#45b7d1';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillText('Tubería Regante', leyendaX + 50, y + 4);
+    y += 35;
+    
+    // Elementos
+    const elementos = [
+        {color: '#1772af', texto: 'Cabezal'},
+        {color: '#ff6b6b', texto: 'Válvula'},
+        {color: '#00a553', texto: 'Toma de agua'},
+        {color: '#4ecdc4', texto: 'Filtro'}
+    ];
+    
+    elementos.forEach(elem => {
+        ctx.beginPath();
+        ctx.arc(leyendaX + 15, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = elem.color;
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#333';
+        ctx.fillText(elem.texto, leyendaX + 30, y + 4);
+        y += 20;
+    });
+}
+
+function crearRepresentacionMinimaFallback() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 800;
+    canvas.height = 600;
+    
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('INFORMACIÓN DEL DISEÑO', canvas.width / 2, 50);
+    
+    ctx.font = '14px Arial';
+    let y = 100;
+    
+    const info = [
+        `Área total: ${areaTotal > 0 ? areaTotal.toFixed(2) + ' m²' : 'No definida'}`,
+        `Tuberías: ${tuberias.length}`,
+        `Válvulas: ${valvulas.length}`,
+        `Elementos: ${elementosGraficos.length}`,
+        `Fecha: ${new Date().toLocaleDateString()}`
+    ];
+    
+    info.forEach(texto => {
+        ctx.textAlign = 'left';
+        ctx.fillText('• ' + texto, 100, y);
+        y += 30;
+    });
+    
+    return canvas.toDataURL('image/jpeg', 0.9);
+}
+
     function ocultarControlesParaCaptura() {
         const controles = document.getElementById('mapaControls');
         if (controles) controles.style.display = 'none';
