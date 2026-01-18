@@ -1562,6 +1562,22 @@
         
         map.addControl(drawControl);
         
+        // Evento para agregar elementos gráficos cuando se hace clic en el mapa
+        map.on('click', function(e) {
+            if (modoAgregarElemento) {
+                agregarElementoGrafico(e.latlng, modoAgregarElemento);
+                modoAgregarElemento = null;
+                document.getElementById('instruccionesElementos').style.display = 'none';
+                
+                // Quitar clase active del botón
+                document.querySelectorAll('.elemento-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                mostrarMensaje('Elemento agregado. Selecciona otro para agregar más.');
+            }
+        });
+        
         map.on(L.Draw.Event.CREATED, function(event) {
             const layer = event.layer;
             drawnItems.addLayer(layer);
@@ -1601,7 +1617,6 @@
             });
         });
     }
-    
     function calcularAreaPoligono(polygon) {
         areaTotal = L.GeometryUtil.geodesicArea(polygon.getLatLngs()[0]);
         
@@ -2201,6 +2216,12 @@
     }
     
     function iniciarModoElemento(tipoElemento) {
+        // Desactivar otros modos
+        if (currentDrawMode) {
+            currentDrawMode.disable();
+            currentDrawMode = null;
+        }
+        
         if (tuberiaActual) {
             tuberiaActual = null;
             puntoInicioTuberia = null;
@@ -2224,16 +2245,22 @@
             });
         }
         
+        // Quitar clase active de todos los botones de elemento
         document.querySelectorAll('.elemento-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         
-        document.querySelector(`.elemento-btn[data-elemento="${tipoElemento}"]`).classList.add('active');
+        // Agregar clase active al botón clickeado
+        const elementoBtn = document.querySelector(`.elemento-btn[data-elemento="${tipoElemento}"]`);
+        if (elementoBtn) {
+            elementoBtn.classList.add('active');
+        }
         
         modoAgregarElemento = tipoElemento;
         document.getElementById('instruccionesElementos').style.display = 'block';
         mostrarMensaje(`Modo elemento activado. Haz clic en el mapa para colocar el ${tipoElemento}.`);
         
+        // Actualizar configuración del elemento
         actualizarConfiguracionElemento(tipoElemento);
     }
     
@@ -2254,25 +2281,66 @@
             'filtro': '#4ecdc4'
         };
         
+        const elementoId = Date.now();
         const elemento = L.marker(latlng, {
             icon: L.divIcon({
                 className: 'elemento-grafico',
                 html: `<div style="background: ${colores[tipo]}; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                       <i class="fas ${iconos[tipo]}"></i></div>`,
+                    <i class="fas ${iconos[tipo]}"></i></div>`,
                 iconSize: [30, 30],
                 iconAnchor: [15, 15]
             }),
             draggable: true
         }).addTo(map);
         
-        elemento.bindPopup(`<b>${tipo.toUpperCase()}</b><br>Arrastra para mover`);
+        // Configurar popup inicial
+        let popupContent = `<b>${tipo.toUpperCase()}</b><br>Arrastra para mover`;
+        let nombreValvula = '';
         
+        // Si es una válvula, configurar específicamente
+        if (tipo === 'valvula') {
+            nombreValvula = generarNombreValvula();
+            valvulas.push({
+                id: elementoId,
+                nombre: nombreValvula,
+                elementoId: elementoId,
+                posicion: latlng,
+                caudalEmisor: 4,
+                numeroEmisores: 100,
+                tipo: 'Manual',
+                diametro: '2"',
+                presion: 3,
+                caudalTotal: 400
+            });
+            popupContent = `<b>VÁLVULA ${nombreValvula}</b><br>Caudal: 400 L/h<br>Arrastra para mover`;
+        }
+        
+        // Si es un cabezal, configurar específicamente
+        if (tipo === 'cabezal') {
+            cabezales.push({
+                id: elementoId,
+                elementoId: elementoId,
+                posicion: latlng,
+                caudalBomba: 50,
+                diametroSuccion: '4"',
+                diametroDescarga: '3"',
+                numeroFiltros: 2,
+                tipoFiltros: 'Anillas',
+                notas: 'Cabezal principal del sistema'
+            });
+            popupContent = `<b>CABEZAL PRINCIPAL</b><br>Caudal: 50 L/s<br>Arrastra para mover`;
+        }
+        
+        elemento.bindPopup(popupContent);
+        
+        // Evento para arrastrar
         elemento.on('dragend', function(e) {
             const nuevaPos = e.target.getLatLng();
             const elementoIndex = elementosGraficos.findIndex(e => e.layer === elemento);
             if (elementoIndex !== -1) {
                 elementosGraficos[elementoIndex].posicion = nuevaPos;
                 
+                // Actualizar en el array correspondiente
                 if (tipo === 'valvula') {
                     const valvulaIndex = valvulas.findIndex(v => v.elementoId === elementosGraficos[elementoIndex].id);
                     if (valvulaIndex !== -1) {
@@ -2287,7 +2355,7 @@
             }
         });
         
-        const elementoId = Date.now();
+        // Guardar referencia
         elementosGraficos.push({
             id: elementoId,
             type: 'elemento',
@@ -2296,45 +2364,18 @@
             posicion: latlng
         });
         
-        if (tipo === 'valvula') {
-            const nombre = generarNombreValvula();
-            valvulas.push({
-                id: elementoId,
-                nombre: nombre,
-                elementoId: elementoId,
-                posicion: latlng,
-                caudalEmisor: 4,
-                numeroEmisores: 100,
-                tipo: 'Manual',
-                diametro: '2"',
-                presion: 3,
-                caudalTotal: 400
-            });
-            
-            elemento.bindPopup(`<b>VÁLVULA ${nombre}</b><br>Caudal: 400 L/h<br>Arrastra para mover`);
-            
-            actualizarResultados();
+        // Abrir popup
+        elemento.openPopup();
+        
+        // Actualizar resultados
+        actualizarResultados();
+        
+        // Actualizar configuración en panel si es válvula o cabezal
+        if (tipo === 'valvula' || tipo === 'cabezal') {
+            actualizarConfiguracionElemento(tipo, elementoId);
         }
         
-        if (tipo === 'cabezal') {
-            cabezales.push({
-                id: elementoId,
-                elementoId: elementoId,
-                posicion: latlng,
-                caudalBomba: 50,
-                diametroSuccion: '4"',
-                diametroDescarga: '3"',
-                numeroFiltros: 2,
-                tipoFiltros: 'Anillas',
-                notas: 'Cabezal principal del sistema'
-            });
-            
-            elemento.bindPopup(`<b>CABEZAL PRINCIPAL</b><br>Caudal: 50 L/s<br>Arrastra para mover`);
-            
-            actualizarResultados();
-        }
-        
-        actualizarConfiguracionElemento(tipo, elementoId);
+        return elementoId;
     }
     
     function generarNombreValvula() {
@@ -2359,7 +2400,7 @@
         const configDiv = document.getElementById('elementoConfig');
         
         if (tipo === 'valvula' && elementoId) {
-            const valvula = valvulas.find(v => v.id === elementoId);
+            const valvula = valvulas.find(v => v.id === parseInt(elementoId));
             if (valvula) {
                 configDiv.innerHTML = `
                     <h4>Configuración de Válvula ${valvula.nombre}</h4>
@@ -2404,7 +2445,7 @@
                 `;
             }
         } else if (tipo === 'cabezal' && elementoId) {
-            const cabezal = cabezales.find(c => c.id === elementoId);
+            const cabezal = cabezales.find(c => c.id === parseInt(elementoId));
             if (cabezal) {
                 configDiv.innerHTML = `
                     <h4>Configuración del Cabezal</h4>
@@ -2522,6 +2563,7 @@
                                 <option>1.5"</option>
                                 <option>2"</option>
                             </select>
+                        </div>
                     `;
                     break;
                     
@@ -3202,6 +3244,7 @@
     }
     
     function limpiarDiseño() {
+        // Limpiar tuberías
         tuberias.forEach(t => {
             if (t.marcadorInicio) map.removeLayer(t.marcadorInicio);
             if (t.marcadorFin) map.removeLayer(t.marcadorFin);
@@ -3210,32 +3253,41 @@
         });
         tuberias = [];
         
+        // Limpiar puntos
         puntosTuberias = [];
         
+        // Limpiar elementos gráficos
         elementosGraficos.forEach(e => map.removeLayer(e.layer));
         elementosGraficos = [];
         
+        // Limpiar arrays de válvulas y cabezales
+        valvulas = [];
+        cabezales = [];
+        
+        // Limpiar área
         drawnItems.clearLayers();
         areaTotal = 0;
         document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
         
-        valvulas = [];
-        cabezales = [];
-        
+        // Resetear cálculos
         actualizarResumenTuberias();
         actualizarResultados();
         
+        // Mostrar controles
         mostrarControlesMapa();
         
+        // Resetear modo de dibujo
         modoDibujoTuberia = null;
         tuberiaActual = null;
         puntoInicioTuberia = null;
         modoAgregarElemento = null;
         
+        // Resetear modo conexión
         modoConexion = false;
         tuberiaConexionTipo = null;
         puntoOrigenConexion = null;
         
+        // Quitar clases activas
         document.querySelectorAll('.tuberia-btn').forEach(btn => {
             btn.classList.remove('activo');
             btn.classList.remove('modo-conexion-activo');
@@ -3245,11 +3297,13 @@
             btn.classList.remove('active');
         });
         
+        // Ocultar instrucciones
         document.getElementById('instruccionesPrincipal').style.display = 'none';
         document.getElementById('instruccionesSecundaria').style.display = 'none';
         document.getElementById('instruccionesRegante').style.display = 'none';
         document.getElementById('instruccionesElementos').style.display = 'none';
         
+        // Quitar resaltado de puntos
         quitarResaltadoPuntos();
     }
     
@@ -3438,9 +3492,13 @@
                 modoAgregarElemento = null;
                 document.getElementById('instruccionesElementos').style.display = 'none';
                 
-                document.querySelectorAll('.elemento-btn').forEach(btn => {
-                    btn.classList.remove('active');
+                // En el DOMContentLoaded, busca esta sección y reemplázala:
+            document.querySelectorAll('.elemento-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tipoElemento = this.dataset.elemento;
+                    iniciarModoElemento(tipoElemento);
                 });
+            });
             }
             
             if (modoConexion) {
