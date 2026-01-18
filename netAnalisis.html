@@ -12,8 +12,8 @@
   --bg:#0f2027;
   --card:#16232e;
   --accent:#00c6ff;
-  --ok:#4caf50;
-  --warn:#ffc107;
+  --down:#4caf50;
+  --up:#ffc107;
   --bad:#f44336;
 }
 
@@ -124,6 +124,17 @@ canvas{
   margin-top:15px;
 }
 
+.legend{
+  margin-top:8px;
+  font-size:.85rem;
+  color:#9bdcff;
+  display:flex;
+  gap:15px;
+}
+
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{font-size:.7rem}
+
 footer{
   text-align:center;
   margin-top:30px;
@@ -138,7 +149,7 @@ footer{
 
 <header>
 <h1><i class="fas fa-network-wired"></i> Network Monitor</h1>
-<p>Latencia, velocidad y estado real de la red</p>
+<p>Latencia, velocidad y uso de red en tiempo real</p>
 </header>
 
 <div class="grid">
@@ -148,7 +159,7 @@ footer{
 <h2><i class="fas fa-satellite-dish"></i> Ping</h2>
 
 <div class="row">
-<input id="ipInput" value="8.8.8.8">
+<input value="8.8.8.8" disabled>
 <button id="btnPing">Ping</button>
 <button id="btnLoop">Continuo</button>
 <button id="btnStop" disabled>Stop</button>
@@ -170,7 +181,7 @@ footer{
 
 <!-- RENDIMIENTO -->
 <div class="card">
-<h2><i class="fas fa-tachometer-alt"></i> Rendimiento</h2>
+<h2><i class="fas fa-chart-line"></i> Métricas de Red</h2>
 
 <div class="stats">
 <div class="box"><strong id="downSpeed">--</strong>Mbps ↓</div>
@@ -180,23 +191,35 @@ footer{
 
 <button id="btnSpeed" style="margin-top:15px;width:100%">Speedtest</button>
 
-<canvas id="pingChart" height="160"></canvas>
+<canvas id="netChart" height="220"></canvas>
+
+<div class="legend">
+<span><i style="color:var(--accent)" class="fas fa-circle"></i> Latency (ms)</span>
+<span><i style="color:var(--down)" class="fas fa-circle"></i> Download (Mbps)</span>
+<span><i style="color:var(--up)" class="fas fa-circle"></i> Upload (Mbps)</span>
+</div>
 </div>
 
 </div>
 
 <footer>
-Network Monitor • HTML5 • Sin backend
+Network Monitor • Canvas • HTML5 • Sin backend
 </footer>
 
 </div>
 
 <script>
-/* ========= ESTADO ========= */
-let pingHistory=[];
-let pingIntervalId=null;
+/* =======================
+   ESTADO GLOBAL
+======================= */
+let pingTimes=[];
+let intervalId=null;
+let netData=[]; // {time, latency, down, up}
+const MAX_POINTS=20;
 
-/* ========= ELEMENTOS ========= */
+/* =======================
+   ELEMENTOS
+======================= */
 const pingValue=document.getElementById('pingValue');
 const statusDot=document.getElementById('statusDot');
 const statusText=document.getElementById('statusText');
@@ -204,15 +227,18 @@ const avgPing=document.getElementById('avgPing');
 const minPing=document.getElementById('minPing');
 const maxPing=document.getElementById('maxPing');
 
-const btnPing=document.getElementById('btnPing');
-const btnLoop=document.getElementById('btnLoop');
-const btnStop=document.getElementById('btnStop');
-
 const downSpeed=document.getElementById('downSpeed');
 const upSpeed=document.getElementById('upSpeed');
 const netType=document.getElementById('netType');
 
-/* ========= PING ========= */
+const btnPing=document.getElementById('btnPing');
+const btnLoop=document.getElementById('btnLoop');
+const btnStop=document.getElementById('btnStop');
+const btnSpeed=document.getElementById('btnSpeed');
+
+/* =======================
+   PING
+======================= */
 function simulatePing(){
   return new Promise(r=>{
     const t=30+Math.random()*150;
@@ -224,45 +250,43 @@ async function doPing(){
   pingValue.textContent="...";
   const t=await simulatePing();
 
-  pingHistory.push(t);
-  if(pingHistory.length>30) pingHistory.shift();
+  pingTimes.push(t);
+  if(pingTimes.length>30) pingTimes.shift();
 
   pingValue.textContent=t+" ms";
   statusText.textContent="Conectado";
   statusDot.style.background=t<100?"#4caf50":t<250?"#ffc107":"#f44336";
 
-  updateStats();
-  drawChart();
+  avgPing.textContent=Math.round(pingTimes.reduce((a,b)=>a+b,0)/pingTimes.length);
+  minPing.textContent=Math.min(...pingTimes);
+  maxPing.textContent=Math.max(...pingTimes);
+
+  logSample({latency:t});
 }
 
-function updateStats(){
-  const sum=pingHistory.reduce((a,b)=>a+b,0);
-  avgPing.textContent=Math.round(sum/pingHistory.length);
-  minPing.textContent=Math.min(...pingHistory);
-  maxPing.textContent=Math.max(...pingHistory);
-}
-
-/* ========= CONTROLES ========= */
 btnPing.onclick=doPing;
-
 btnLoop.onclick=()=>{
   btnPing.disabled=btnLoop.disabled=true;
   btnStop.disabled=false;
-  pingIntervalId=setInterval(doPing,2000);
+  intervalId=setInterval(doPing,2000);
 };
-
 btnStop.onclick=()=>{
-  clearInterval(pingIntervalId);
+  clearInterval(intervalId);
   btnPing.disabled=btnLoop.disabled=false;
   btnStop.disabled=true;
 };
 
-/* ========= SPEEDTEST ========= */
+/* =======================
+   SPEEDTEST
+======================= */
 btnSpeed.onclick=async()=>{
   downSpeed.textContent="...";
   upSpeed.textContent="...";
-  downSpeed.textContent=(await testSpeed(5)).toFixed(1);
-  upSpeed.textContent=(await testSpeed(3)).toFixed(1);
+  const down=await testSpeed(5);
+  const up=await testSpeed(3);
+  downSpeed.textContent=down.toFixed(1);
+  upSpeed.textContent=up.toFixed(1);
+  logSample({down,up});
 };
 
 function testSpeed(mb){
@@ -273,30 +297,70 @@ function testSpeed(mb){
   },400+Math.random()*400));
 }
 
-/* ========= INFO RED ========= */
+/* =======================
+   INFO RED
+======================= */
 if(navigator.connection){
   const c=navigator.connection;
   netType.textContent=`${c.effectiveType} (${c.downlink}Mb)`;
-}else{
-  netType.textContent="N/A";
-}
+}else netType.textContent="N/A";
 
-/* ========= GRÁFICA ========= */
-const canvas=document.getElementById('pingChart');
+/* =======================
+   DATA + GRÁFICA
+======================= */
+const canvas=document.getElementById('netChart');
 const ctx=canvas.getContext('2d');
+
+function logSample({latency=null,down=null,up=null}){
+  const now=new Date().toLocaleTimeString();
+  netData.push({time:now,latency,down,up});
+  if(netData.length>MAX_POINTS) netData.shift();
+  drawChart();
+}
 
 function drawChart(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  const pad=35,w=canvas.width,h=canvas.height;
+
+  ctx.strokeStyle="#2a475a";
   ctx.beginPath();
-  ctx.strokeStyle="#00c6ff";
-
-  pingHistory.forEach((v,i)=>{
-    const x=i*(canvas.width/30);
-    const y=canvas.height-(v/400)*canvas.height;
-    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
-  });
-
+  ctx.moveTo(pad,10);
+  ctx.lineTo(pad,h-pad);
+  ctx.lineTo(w-10,h-pad);
   ctx.stroke();
+
+  if(netData.length<2) return;
+
+  const latMax=Math.max(...netData.map(d=>d.latency||0),200);
+  const downMax=Math.max(...netData.map(d=>d.down||0),50);
+  const upMax=Math.max(...netData.map(d=>d.up||0),20);
+
+  const stepX=(w-pad-10)/(netData.length-1);
+
+  const plot=(key,max,color)=>{
+    ctx.strokeStyle=color;
+    ctx.beginPath();
+    netData.forEach((d,i)=>{
+      if(d[key]==null) return;
+      const x=pad+i*stepX;
+      const y=(h-pad)-(d[key]/max)*(h-pad-20);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.stroke();
+  };
+
+  plot('latency',latMax,'#00c6ff');
+  plot('down',downMax,'#4caf50');
+  plot('up',upMax,'#ffc107');
+
+  ctx.fillStyle='#7fbcd9';
+  ctx.font='10px system-ui';
+  netData.forEach((d,i)=>{
+    if(i%4===0){
+      const x=pad+i*stepX;
+      ctx.fillText(d.time,x-12,h-10);
+    }
+  });
 }
 </script>
 </body>
