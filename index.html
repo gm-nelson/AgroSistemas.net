@@ -50,6 +50,40 @@
             font-size: 1rem;
             letter-spacing: 0.5px;
         }
+
+        /* Agregar este estilo en la sección de CSS */
+        .servicio-content .btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .servicio-content .btn i {
+            margin-right: 8px;
+            font-size: 0.8rem;
+        }
+
+        /* Asegurar que el contenido de la tarjeta tenga suficiente espacio */
+        .servicio-content {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            height: calc(100% - 120px); /* Restar altura del icono */
+        }
+
+        .servicio-content h3 {
+            margin-bottom: 15px;
+            color: #111;
+            font-size: 1.4rem;
+        }
+
+        .servicio-content p {
+            color: #666;
+            line-height: 1.7;
+            margin-bottom: 20px;
+            flex-grow: 1; /* Hace que el párrafo ocupe el espacio disponible */
+        }
         
         .btn:hover {
             background-color: #008a45;
@@ -670,6 +704,12 @@
                     <div class="servicio-content">
                         <h3>Asesoría Técnica</h3>
                         <p>Planificación y optimización de sistemas de producción agrícola con tecnología de punta.</p>
+                        <div class="servicio-cta">
+                            <a href="asesoriaTecnica.html" class="btn-ver-mas">
+                                <span>Conocer más</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="servicio-card fade-in delay-1">
@@ -679,6 +719,12 @@
                     <div class="servicio-content">
                         <h3>Sistemas de Riego</h3>
                         <p>Diseño e implementación de sistemas eficientes que optimizan el uso del agua.</p>
+                        <div class="servicio-cta">
+                            <a href="sistemaDeRiego.html" class="btn-ver-mas">
+                                <span>Conocer más</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="servicio-card fade-in delay-2">
@@ -688,6 +734,12 @@
                     <div class="servicio-content">
                         <h3>Energía Solar</h3>
                         <p>Soluciones renovables que reducen costos y el impacto ambiental.</p>
+                        <div class="servicio-cta">
+                            <a href="energiaSolar.html" class="btn-ver-mas">
+                                <span>Conocer más</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="servicio-card fade-in">
@@ -695,8 +747,14 @@
                         <i class="fas fa-cogs"></i>
                     </div>
                     <div class="servicio-content">
-                        <h3>Equipamiento</h3>
+                        <h3>Equipamiento Agrícola</h3>
                         <p>Venta y mantenimiento de maquinaria especializada para todo tipo de cultivos.</p>
+                        <div class="servicio-cta">
+                            <a href="equipamientoAgricola.html" class="btn-ver-mas">
+                                <span>Conocer más</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
