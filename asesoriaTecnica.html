@@ -1373,9 +1373,20 @@
                                         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importarDiseño(event)">
                                     </label>
                                 </div>
-                                <button class="btn btn-secondary" onclick="capturarDiseñoActual()">
-                                    <i class="fas fa-camera"></i> Capturar Diseño Actual
-                                </button>
+                                <div class="control-group">
+                                    <h4>Captura para PDF</h4>
+                                    <div class="galeria-acciones">
+                                        <button class="btn" onclick="capturarDiseñoActual()">
+                                            <i class="fas fa-camera"></i> Capturar Diseño Actual
+                                        </button>
+                                        <button class="btn" onclick="forzarRecaptura()" style="background-color: #ff9f43;">
+                                            <i class="fas fa-sync-alt"></i> Nueva Captura
+                                        </button>
+                                    </div>
+                                    <div id="capturaStatus" style="margin-top: 10px; min-height: 60px;">
+                                        <!-- Estado de la captura aparecerá aquí -->
+                                    </div>
+                                </div>
                                 <div id="capturaStatus" style="margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
                                 
                                 <div class="galeria-diseños" id="galeriaDiseños" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
