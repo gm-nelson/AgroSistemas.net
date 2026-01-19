@@ -1,5 +1,5 @@
 // ============================================
-// VARIABLES GLOBALES (IGUAL AL ORIGINAL)
+// VARIABLES GLOBALES (MEJORADAS)
 // ============================================
 let map;
 let drawnItems;
@@ -22,10 +22,11 @@ let puntosTuberias = [];
 let cabezales = [];
 let elementoSeleccionado = null;
 
-// Variables para captura de pantalla
-let capturaMapaDataUrl = null;
-let capturaTomada = false;
-let capturaCanvas = null;
+// Función para obtener el nombre de una válvula por su elementoId
+function obtenerNombreValvulaPorElementoId(elementoId) {
+    const valvula = valvulas.find(v => v.elementoId === elementoId);
+    return valvula ? valvula.nombre : '';
+}
 
 // ============================================
 // INICIALIZACIÓN
@@ -129,7 +130,7 @@ function setupTouchEvents() {
 }
 
 // ============================================
-// INICIALIZACIÓN DEL MAPA (IGUAL AL ORIGINAL)
+// INICIALIZACIÓN DEL MAPA
 // ============================================
 
 function initMap() {
@@ -140,7 +141,7 @@ function initMap() {
         center: losMochis,
         zoom: 15,
         zoomControl: true,
-        scrollWheelZoom: true, // HABILITADO para scroll del mouse
+        scrollWheelZoom: true,
         touchZoom: true,
         doubleClickZoom: true,
         boxZoom: false,
@@ -166,7 +167,7 @@ function initMap() {
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     
-    // Configurar controles de dibujo (IGUAL AL ORIGINAL)
+    // Configurar controles de dibujo
     drawControl = new L.Control.Draw({
         position: 'topright',
         draw: {
@@ -202,7 +203,7 @@ function initMap() {
     
     map.addControl(drawControl);
     
-    // Eventos del mapa (IGUAL AL ORIGINAL)
+    // Eventos del mapa
     map.on('click', function(e) {
         if (modoAgregarElemento) {
             agregarElementoGrafico(e.latlng, modoAgregarElemento);
@@ -262,7 +263,7 @@ function initMap() {
 }
 
 // ============================================
-// FUNCIONES DE UTILIDAD (IGUAL AL ORIGINAL)
+// FUNCIONES DE UTILIDAD
 // ============================================
 
 function getGrosorTuberia(tipo, diametro) {
@@ -318,7 +319,7 @@ function calcularLongitudPolilinea(polyline) {
 }
 
 // ============================================
-// FUNCIONES DE ELEMENTOS (IGUAL AL ORIGINAL)
+// FUNCIONES DE ELEMENTOS (MEJORADAS)
 // ============================================
 
 function agregarElementoGrafico(latlng, tipo) {
@@ -355,7 +356,7 @@ function agregarElementoGrafico(latlng, tipo) {
     
     if (tipo === 'valvula') {
         nombreValvula = generarNombreValvula();
-        valvulas.push({
+        const valvulaData = {
             id: elementoId,
             nombre: nombreValvula,
             elementoId: elementoId,
@@ -366,8 +367,13 @@ function agregarElementoGrafico(latlng, tipo) {
             diametro: '2"',
             presion: 3,
             caudalTotal: 400
-        });
+        };
+        valvulas.push(valvulaData);
+        
         popupContent = `<b>VÁLVULA ${nombreValvula}</b><br>Caudal: 400 L/h<br>Arrastra para mover`;
+        
+        // Actualizar ícono con el nombre
+        actualizarIconoElemento(elementoId, nombreValvula);
     }
     
     if (tipo === 'cabezal') {
@@ -427,7 +433,8 @@ function agregarElementoGrafico(latlng, tipo) {
         type: 'elemento',
         layer: elemento,
         tipo: tipo,
-        posicion: latlng
+        posicion: latlng,
+        nombre: tipo === 'valvula' ? nombreValvula : (tipo === 'cabezal' ? 'Cabezal' : tipo)
     });
     
     if (tipo === 'valvula' || tipo === 'cabezal') {
@@ -437,6 +444,53 @@ function agregarElementoGrafico(latlng, tipo) {
     actualizarResultados();
     
     return elementoId;
+}
+
+function actualizarIconoElemento(elementoId, nombre) {
+    const elemento = elementosGraficos.find(e => e.id === elementoId);
+    if (!elemento || !elemento.layer) {
+        console.warn(`No se pudo actualizar ícono: elemento ${elementoId} no encontrado`);
+        return;
+    }
+    
+    const tipo = elemento.tipo;
+    const colores = {
+        'cabezal': '#1772af',
+        'purgaterminal': '#ff9f43',
+        'tomagua': '#00a553',
+        'valvula': '#ff6b6b',
+        'filtro': '#4ecdc4'
+    };
+    
+    const color = colores[tipo] || '#000000';
+    
+    // Determinar qué texto mostrar en el ícono
+    let texto = '';
+    if (tipo === 'valvula') {
+        // Para válvulas, usar el nombre proporcionado o buscar en el array de válvulas
+        if (nombre) {
+            texto = nombre;
+        } else {
+            // Buscar el nombre en el array de válvulas
+            const valvula = valvulas.find(v => v.elementoId === elementoId);
+            texto = valvula ? valvula.nombre : 'V';
+        }
+        // Si el nombre es muy largo, truncarlo
+        if (texto.length > 3) {
+            texto = texto.substring(0, 3);
+        }
+    } else {
+        // Para otros elementos, usar la primera letra del tipo
+        texto = tipo.charAt(0).toUpperCase();
+    }
+    
+    elemento.layer.setIcon(L.divIcon({
+        className: 'elemento-grafico',
+        html: `<div style="background: ${color}; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">
+                ${texto}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    }));
 }
 
 function seleccionarElemento(elementoId, tipo) {
@@ -449,7 +503,10 @@ function seleccionarElemento(elementoId, tipo) {
     }
     
     const elemento = elementosGraficos.find(e => e.id === elementoId);
-    if (!elemento) return;
+    if (!elemento) {
+        console.warn(`Elemento con ID ${elementoId} no encontrado`);
+        return;
+    }
     
     elementoSeleccionado = elemento;
     
@@ -461,6 +518,7 @@ function seleccionarElemento(elementoId, tipo) {
     
     elemento.layer.openPopup();
     
+    // Asegurar que estamos en la pestaña correcta
     if (!document.querySelector('.cad-tab[data-tab="elementos"]').classList.contains('active')) {
         document.querySelectorAll('.cad-tab').forEach(tab => {
             tab.classList.remove('active');
@@ -474,33 +532,22 @@ function seleccionarElemento(elementoId, tipo) {
         document.getElementById('elementos-tab').classList.add('active');
     }
     
-    actualizarConfiguracionElemento(tipo, elementoId);
+    // Forzar actualización de configuración del elemento
+    actualizarConfiguracionElemento(tipo, elementoId.toString());
     
     let nombreElemento = tipo;
     if (tipo === 'valvula') {
         const valvula = valvulas.find(v => v.elementoId === elementoId);
-        if (valvula) nombreElemento = `Válvula ${valvula.nombre}`;
+        if (valvula) {
+            nombreElemento = `Válvula ${valvula.nombre}`;
+            // Asegurar que el ícono muestra el nombre correcto
+            actualizarIconoElemento(elementoId, valvula.nombre);
+        }
     } else if (tipo === 'cabezal') {
         nombreElemento = 'Cabezal';
     }
     
     mostrarMensaje(`${nombreElemento} seleccionado. Puedes modificar sus propiedades en el panel.`);
-}
-
-function deseleccionarElemento() {
-    if (elementoSeleccionado && elementoSeleccionado.layer) {
-        const icon = elementoSeleccionado.layer.getElement();
-        if (icon) {
-            icon.style.boxShadow = '';
-            icon.style.border = '';
-        }
-        
-        elementoSeleccionado.layer.closePopup();
-    }
-    
-    elementoSeleccionado = null;
-    
-    actualizarConfiguracionElemento('cabezal');
 }
 
 function eliminarElemento(elementoId, tipo) {
@@ -513,12 +560,12 @@ function eliminarElemento(elementoId, tipo) {
     }
     
     if (tipo === 'valvula') {
-        const valvulaIndex = valvulas.findIndex(v => v.id === parseInt(elementoId));
+        const valvulaIndex = valvulas.findIndex(v => v.elementoId === parseInt(elementoId));
         if (valvulaIndex !== -1) {
             valvulas.splice(valvulaIndex, 1);
         }
     } else if (tipo === 'cabezal') {
-        const cabezalIndex = cabezales.findIndex(c => c.id === parseInt(elementoId));
+        const cabezalIndex = cabezales.findIndex(c => c.elementoId === parseInt(elementoId));
         if (cabezalIndex !== -1) {
             cabezales.splice(cabezalIndex, 1);
         }
@@ -554,12 +601,21 @@ function generarNombreValvula() {
 function actualizarConfiguracionElemento(tipo, elementoId = null) {
     const configDiv = document.getElementById('elementoConfig');
     
-    if (!elementoId && elementoSeleccionado && elementoSeleccionado.tipo === tipo) {
+    // Si hay un elemento seleccionado y tenemos un elementoId,
+    // usamos el tipo del elemento seleccionado, no el que se pasa como parámetro
+    if (elementoId && elementoSeleccionado) {
+        // Si el elementoId coincide con el elemento seleccionado, usamos su tipo
+        if (elementoSeleccionado.id === parseInt(elementoId)) {
+            tipo = elementoSeleccionado.tipo;
+        }
+    } else if (elementoSeleccionado && !elementoId) {
+        // Si no hay elementoId pero hay elemento seleccionado, usamos su tipo
+        tipo = elementoSeleccionado.tipo;
         elementoId = elementoSeleccionado.id;
     }
     
     if (tipo === 'valvula' && elementoId) {
-        const valvula = valvulas.find(v => v.id === parseInt(elementoId));
+        const valvula = valvulas.find(v => v.elementoId === parseInt(elementoId));
         if (valvula) {
             configDiv.innerHTML = `
                 <h4>Configuración de Válvula ${valvula.nombre}</h4>
@@ -607,7 +663,7 @@ function actualizarConfiguracionElemento(tipo, elementoId = null) {
             `;
         }
     } else if (tipo === 'cabezal' && elementoId) {
-        const cabezal = cabezales.find(c => c.id === parseInt(elementoId));
+        const cabezal = cabezales.find(c => c.elementoId === parseInt(elementoId));
         if (cabezal) {
             configDiv.innerHTML = `
                 <h4>Configuración del Cabezal</h4>
@@ -719,18 +775,55 @@ function actualizarConfiguracionElemento(tipo, elementoId = null) {
     }
 }
 
+function deseleccionarElemento() {
+    if (elementoSeleccionado && elementoSeleccionado.layer) {
+        const icon = elementoSeleccionado.layer.getElement();
+        if (icon) {
+            icon.style.boxShadow = '';
+            icon.style.border = '';
+        }
+        
+        elementoSeleccionado.layer.closePopup();
+    }
+    
+    elementoSeleccionado = null;
+    
+    const configDiv = document.getElementById('elementoConfig');
+    configDiv.innerHTML = `
+        <h4>Configuración de Elemento</h4>
+        <p>Selecciona un elemento en el mapa o coloca uno nuevo para configurarlo.</p>
+        <p>Puedes agregar:</p>
+        <ul style="margin-left: 20px;">
+            <li>Válvulas de control</li>
+            <li>Cabezales de bombeo</li>
+            <li>Purgas terminales</li>
+            <li>Tomas de agua</li>
+            <li>Filtros</li>
+        </ul>
+    `;
+}
+
 function actualizarValvula(elementoId, campo, valor) {
-    const valvula = valvulas.find(v => v.id === parseInt(elementoId));
+    const valvula = valvulas.find(v => v.elementoId === parseInt(elementoId));
     if (valvula) {
         valvula[campo] = valor;
         
         if (campo === 'caudalEmisor' || campo === 'numeroEmisores') {
             valvula.caudalTotal = valvula.caudalEmisor * valvula.numeroEmisores;
         }
+
+        if (campo === 'nombre') {
+            // Si cambia el nombre, actualizar el ícono
+            actualizarIconoElemento(elementoId, valor);
+        }
         
         const elementoGrafico = elementosGraficos.find(e => e.id === parseInt(elementoId));
         if (elementoGrafico && elementoGrafico.layer) {
+            // Actualizar el popup con el nuevo nombre
             elementoGrafico.layer.bindPopup(`<b>VÁLVULA ${valvula.nombre}</b><br>Caudal: ${valvula.caudalTotal} L/h<br>Tipo: ${valvula.tipo}<br>Arrastra para mover`);
+            
+            // Actualizar el nombre en el array de elementos gráficos
+            elementoGrafico.nombre = valvula.nombre;
         }
         
         if (elementoSeleccionado && elementoSeleccionado.id === parseInt(elementoId)) {
@@ -742,7 +835,7 @@ function actualizarValvula(elementoId, campo, valor) {
 }
 
 function actualizarCabezal(elementoId, campo, valor) {
-    const cabezal = cabezales.find(c => c.id === parseInt(elementoId));
+    const cabezal = cabezales.find(c => c.elementoId === parseInt(elementoId));
     if (cabezal) {
         cabezal[campo] = valor;
         
@@ -805,7 +898,7 @@ function iniciarModoElemento(tipoElemento) {
 }
 
 // ============================================
-// FUNCIONES DE TUBERÍAS (IGUAL AL ORIGINAL)
+// FUNCIONES DE TUBERÍAS
 // ============================================
 
 function iniciarModoTuberia(tipoTuberia) {
@@ -1671,7 +1764,7 @@ function actualizarResumenTuberias() {
 }
 
 // ============================================
-// FUNCIONES DE CONEXIÓN (IGUAL AL ORIGINAL)
+// FUNCIONES DE CONEXIÓN
 // ============================================
 
 function iniciarModoConexion(tipoTuberia) {
@@ -1876,7 +1969,7 @@ function quitarResaltadoPuntos() {
 }
 
 // ============================================
-// FUNCIONES DE RESULTADOS (IGUAL AL ORIGINAL)
+// FUNCIONES DE RESULTADOS
 // ============================================
 
 function actualizarResultados() {
@@ -2050,7 +2143,7 @@ function actualizarResultados() {
 }
 
 // ============================================
-// FUNCIONES DE CAPTURA Y PDF (IGUAL AL ORIGINAL)
+// FUNCIONES DE PDF (CON IMAGEN HD DEL DISEÑO AJUSTADA)
 // ============================================
 
 async function exportarPDF() {
@@ -2060,101 +2153,359 @@ async function exportarPDF() {
             return;
         }
         
-        mostrarMensaje('Generando PDF... Esto puede tomar unos segundos.', 3000);
+        mostrarMensaje('Generando PDF con imagen del diseño... Esto puede tomar unos segundos.', 5000);
         
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         
-        let currentY = 20;
-        
+        // TÍTULO
         doc.setFontSize(20);
         doc.setTextColor(0, 165, 83);
-        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, currentY, { align: 'center' });
+        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
         
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
-        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, currentY + 8, { align: 'center' });
-        doc.text('Fecha: ' + new Date().toLocaleDateString('es-MX'), 105, currentY + 15, { align: 'center' });
+        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+        doc.text('Fecha: ' + new Date().toLocaleDateString('es-MX'), 105, 28, { align: 'center' });
         
-        currentY += 25;
+        // CAPTURAR Y DIBUJAR MAPA CON ELEMENTOS PRECISOS
+        let currentY = 35;
         
-        if (capturaTomada && capturaMapaDataUrl) {
-            try {
-                doc.setFontSize(14);
-                doc.setTextColor(23, 114, 175);
-                doc.text('1. REPRESENTACIÓN DEL DISEÑO', 20, currentY);
-                currentY += 8;
+        try {
+            // Obtener el bounds del mapa actual
+            const mapBounds = map.getBounds();
+            const mapCenter = map.getCenter();
+            const mapZoom = map.getZoom();
+            
+            // Calcular dimensiones para la imagen en el PDF
+            const pdfWidth = 170; // mm en A4
+            const pdfHeight = 120; // mm
+            
+            // Coordenadas en el PDF
+            const pdfX = 20;
+            const pdfY = currentY;
+            
+            // Crear canvas para dibujar todo exactamente
+            const canvas = document.createElement('canvas');
+            const scaleFactor = 2; // Para mejor calidad
+            canvas.width = pdfWidth * 3.78 * scaleFactor; // Convertir mm a px (96 DPI)
+            canvas.height = pdfHeight * 3.78 * scaleFactor;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // Fondo blanco
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Coordenadas para conversión
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            // Función para convertir coordenadas geográficas a píxeles en el canvas
+            function latLngToCanvas(latlng) {
+                const point = map.project(latlng, mapZoom);
                 
-                const imgWidth = 170;
-                const imgHeight = 120;
+                // Calcular relación entre el mapa visible y el canvas
+                const mapPixelBounds = map.getPixelBounds();
+                const mapPixelSize = mapPixelBounds.getSize();
                 
-                const img = new Image();
-                await new Promise((resolve, reject) => {
-                    img.onload = function() {
-                        try {
-                            const tempCanvas = document.createElement('canvas');
-                            const tempCtx = tempCanvas.getContext('2d');
-                            tempCanvas.width = 800;
-                            tempCanvas.height = 600;
-                            tempCtx.drawImage(img, 0, 0, 800, 600);
-                            
-                            const optimizedDataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
-                            doc.addImage(optimizedDataUrl, 'JPEG', 20, currentY, imgWidth, imgHeight);
-                            currentY += imgHeight + 10;
-                            
-                            doc.setFontSize(8);
-                            doc.setTextColor(100, 100, 100);
-                            doc.text('Representación esquemática del sistema de riego', 20, currentY);
-                            currentY += 5;
-                            
-                            resolve();
-                        } catch (error) {
-                            console.error('Error procesando imagen:', error);
-                            currentY += 10;
-                            resolve();
-                        }
-                    };
-                    img.onerror = function() {
-                        console.error('Error cargando imagen');
-                        currentY += 10;
-                        resolve();
-                    };
-                    img.src = capturaMapaDataUrl;
-                });
+                // Posición relativa en el mapa
+                const relativeX = (point.x - mapPixelBounds.min.x) / mapPixelSize.x;
+                const relativeY = (point.y - mapPixelBounds.min.y) / mapPixelSize.y;
                 
-            } catch (imgError) {
-                console.error('Error con imagen:', imgError);
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('No se pudo incluir la representación gráfica del diseño.', 25, currentY);
-                currentY += 10;
+                // Escalar al tamaño del canvas
+                const canvasX = relativeX * canvasWidth;
+                const canvasY = relativeY * canvasHeight;
+                
+                return { x: canvasX, y: canvasY };
             }
-        } else {
-            doc.setFontSize(14);
-            doc.setTextColor(23, 114, 175);
-            doc.text('1. REPRESENTACIÓN DEL DISEÑO', 20, currentY);
+            
+            // 1. Dibujar polígonos del terreno
+            drawnItems.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    const canvasPoints = latlngs.map(latlng => latLngToCanvas(latlng));
+                    
+                    // Dibujar polígono
+                    ctx.beginPath();
+                    ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+                    for (let i = 1; i < canvasPoints.length; i++) {
+                        ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
+                    }
+                    ctx.closePath();
+                    
+                    // Estilo del polígono
+                    ctx.fillStyle = 'rgba(0, 165, 83, 0.3)'; // Verde transparente
+                    ctx.fill();
+                    
+                    ctx.lineWidth = 3 * scaleFactor;
+                    ctx.strokeStyle = '#008a45';
+                    ctx.stroke();
+                }
+            });
+            
+            // 2. Dibujar tuberías
+            tuberias.forEach(tuberia => {
+                if (tuberia.linea && tuberia.linea.getLatLngs) {
+                    const latlngs = tuberia.linea.getLatLngs();
+                    const canvasPoints = [];
+                    
+                    // Aplanar array de puntos si es necesario
+                    if (Array.isArray(latlngs)) {
+                        if (Array.isArray(latlngs[0]) && typeof latlngs[0][0] === 'object') {
+                            // Es un array de arrays (polilínea con segmentos)
+                            latlngs.forEach(segment => {
+                                if (Array.isArray(segment)) {
+                                    segment.forEach(point => {
+                                        canvasPoints.push(latLngToCanvas(point));
+                                    });
+                                }
+                            });
+                        } else if (latlngs[0].lat) {
+                            // Es un array simple de puntos
+                            latlngs.forEach(point => {
+                                canvasPoints.push(latLngToCanvas(point));
+                            });
+                        }
+                    }
+                    
+                    if (canvasPoints.length > 1) {
+                        // Dibujar línea
+                        ctx.beginPath();
+                        ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+                        
+                        for (let i = 1; i < canvasPoints.length; i++) {
+                            ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
+                        }
+                        
+                        // Estilo según tipo de tubería
+                        let color, width;
+                        switch(tuberia.tipo) {
+                            case 'principal':
+                                color = '#ff6b6b'; // Rojo
+                                width = 6 * scaleFactor;
+                                break;
+                            case 'secundaria':
+                                color = '#4ecdc4'; // Turquesa
+                                width = 4 * scaleFactor;
+                                break;
+                            case 'regante':
+                                color = '#45b7d1'; // Azul claro
+                                width = 3 * scaleFactor;
+                                break;
+                            default:
+                                color = '#000000';
+                                width = 2 * scaleFactor;
+                        }
+                        
+                        ctx.lineWidth = width;
+                        ctx.strokeStyle = color;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.stroke();
+                    }
+                }
+            });
+            
+            // 3. Dibujar elementos gráficos (válvulas, cabezales, etc.)
+            elementosGraficos.forEach(elemento => {
+                const canvasPoint = latLngToCanvas(elemento.posicion);
+                const radius = 12 * scaleFactor;
+                
+                // Color según tipo
+                let color;
+                let texto = '';
+                
+                switch(elemento.tipo) {
+                    case 'cabezal': 
+                        color = '#1772af'; 
+                        texto = 'C'; // 'C' para cabezal
+                        break;
+                    case 'valvula': 
+                        color = '#ff6b6b'; 
+                        // Obtener el nombre de la válvula usando elementoId
+                        const nombreValvula = obtenerNombreValvulaPorElementoId(elemento.id);
+                        texto = nombreValvula || 'V'; // Usar nombre si existe, o 'V' como fallback
+                        break;
+                    case 'purgaterminal': 
+                        color = '#ff9f43'; 
+                        texto = 'P'; // 'P' para purgaterminal
+                        break;
+                    case 'tomagua': 
+                        color = '#00a553'; 
+                        texto = 'T'; // 'T' para tomagua
+                        break;
+                    case 'filtro': 
+                        color = '#4ecdc4'; 
+                        texto = 'F'; // 'F' para filtro
+                        break;
+                    default: 
+                        color = '#000000';
+                        texto = elemento.tipo.charAt(0).toUpperCase();
+                }
+                
+                // Círculo del elemento
+                ctx.beginPath();
+                ctx.arc(canvasPoint.x, canvasPoint.y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // Borde blanco
+                ctx.lineWidth = 2 * scaleFactor;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+                
+                // Texto del elemento - ajustar tamaño según longitud del texto
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Si es válvula y el nombre es corto (hasta 2 caracteres), usar fuente más grande
+                if (elemento.tipo === 'valvula' && texto.length <= 2) {
+                    ctx.font = `bold ${10 * scaleFactor}px Arial`;
+                    ctx.fillText(texto, canvasPoint.x, canvasPoint.y);
+                } else {
+                    // Para otros elementos o nombres largos
+                    ctx.font = `${9 * scaleFactor}px Arial`;
+                    // Si el texto es muy largo, truncarlo
+                    const textoMostrar = texto.length > 3 ? texto.substring(0, 3) + '.' : texto;
+                    ctx.fillText(textoMostrar, canvasPoint.x, canvasPoint.y);
+                }
+            });
+            
+            // 4. Dibujar puntos de tuberías
+            puntosTuberias.forEach(punto => {
+                const canvasPoint = latLngToCanvas(punto.latlng);
+                const radius = 8 * scaleFactor;
+                
+                ctx.beginPath();
+                ctx.arc(canvasPoint.x, canvasPoint.y, radius, 0, Math.PI * 2);
+                
+                // Color según tipo de tubería
+                let color;
+                switch(punto.tipo) {
+                    case 'principal': color = '#ff6b6b'; break;
+                    case 'secundaria': color = '#4ecdc4'; break;
+                    case 'regante': color = '#45b7d1'; break;
+                    default: color = '#000000';
+                }
+                
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // Borde blanco
+                ctx.lineWidth = 2 * scaleFactor;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+            });
+            
+            // 5. Dibujar cuadrícula de referencia (opcional, ayuda a alinear)
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1 * scaleFactor;
+            ctx.setLineDash([5 * scaleFactor, 5 * scaleFactor]);
+            
+            // Líneas verticales y horizontales
+            for (let x = 0; x <= canvasWidth; x += canvasWidth / 10) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvasHeight);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= canvasHeight; y += canvasHeight / 10) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvasWidth, y);
+                ctx.stroke();
+            }
+            
+            ctx.setLineDash([]);
+            
+            // 6. Añadir leyenda
+            const legendX = 10 * scaleFactor;
+            const legendY = canvasHeight - 100 * scaleFactor;
+            const legendItemHeight = 20 * scaleFactor;
+            
+            // Fondo de leyenda
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(legendX, legendY, 150 * scaleFactor, 90 * scaleFactor);
+            
+            ctx.fillStyle = '#333333';
+            ctx.font = `${12 * scaleFactor}px Arial`;
+            ctx.textAlign = 'left';
+            ctx.fillText('LEYENDA', legendX + 10 * scaleFactor, legendY + 15 * scaleFactor);
+            
+            // Ítems de leyenda
+            const legendItems = [
+                { color: '#ff6b6b', text: 'Tubería Principal' },
+                { color: '#4ecdc4', text: 'Tubería Secundaria' },
+                { color: '#45b7d1', text: 'Tubería Regante' },
+                { color: '#1772af', text: 'Cabezal' },
+                { color: '#ff6b6b', text: 'Válvula' }
+            ];
+            
+            legendItems.forEach((item, index) => {
+                const y = legendY + 30 * scaleFactor + (index * legendItemHeight);
+                
+                // Círculo de color
+                ctx.beginPath();
+                ctx.arc(legendX + 15 * scaleFactor, y, 6 * scaleFactor, 0, Math.PI * 2);
+                ctx.fillStyle = item.color;
+                ctx.fill();
+                
+                // Texto
+                ctx.fillStyle = '#333333';
+                ctx.font = `${9 * scaleFactor}px Arial`;
+                ctx.fillText(item.text, legendX + 30 * scaleFactor, y + 3 * scaleFactor);
+            });
+            
+            // Convertir a imagen y agregar al PDF
+            const imageData = canvas.toDataURL('image/jpeg', 0.95);
+            
+            // Añadir imagen al PDF
+            doc.addImage(imageData, 'JPEG', pdfX, pdfY, pdfWidth, pdfHeight);
+            currentY += pdfHeight + 10;
+            
+            // Pie de foto
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Figura 1: Diseño del sistema de riego', 105, currentY, { align: 'center' });
             currentY += 8;
             
+            // Información de escala
+            doc.setFontSize(8);
+            doc.text(`Escala aproximada 1:${Math.round(10000 / Math.pow(2, mapZoom - 10))} | Zoom: ${mapZoom}`, 105, currentY, { align: 'center' });
+            currentY += 8;
+            
+        } catch (imageError) {
+            console.error('Error generando imagen del diseño:', imageError);
+            
+            // Continuar sin imagen si hay error
             doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            doc.text('Para incluir una representación gráfica del diseño, use la opción "Capturar Diseño Actual".', 25, currentY);
-            currentY += 6;
-            doc.text('La información técnica se presenta en las siguientes secciones.', 25, currentY);
+            doc.setTextColor(200, 0, 0);
+            doc.text('Nota: No se pudo generar la imagen del diseño.', 105, currentY, { align: 'center' });
+            currentY += 10;
+            
+            // Mostrar información de resumen en lugar de imagen
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Área del diseño: ${areaTotal > 0 ? areaTotal.toFixed(0) + ' m²' : 'No definida'}`, 20, currentY);
+            currentY += 7;
+            doc.text(`Tuberías: ${tuberias.length} (${tuberias.filter(t => t.tipo === 'principal').length} principal, ${tuberias.filter(t => t.tipo === 'secundaria').length} secundaria, ${tuberias.filter(t => t.tipo === 'regante').length} regante)`, 20, currentY);
+            currentY += 7;
+            doc.text(`Válvulas: ${valvulas.length}`, 20, currentY);
+            currentY += 7;
+            doc.text(`Elementos: ${elementosGraficos.length}`, 20, currentY);
             currentY += 10;
         }
         
-        if (currentY > 250) {
-            doc.addPage();
-            currentY = 20;
-        }
-        
+        // INFORMACIÓN GENERAL
         doc.setFontSize(14);
         doc.setTextColor(23, 114, 175);
-        doc.text('2. INFORMACIÓN GENERAL DEL PROYECTO', 20, currentY);
+        doc.text('1. INFORMACIÓN GENERAL DEL PROYECTO', 20, currentY);
         currentY += 8;
-        
-        doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
         
         const infoItems = [
             ['Área Total:', areaTotal > 0 ? `${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(3)} ha)` : 'No definida'],
@@ -2175,240 +2526,126 @@ async function exportarPDF() {
         
         currentY += 5;
         
+        // TABLA DE TUBERÍAS
         if (tuberias.length > 0) {
-            if (currentY > 200) {
-                doc.addPage();
-                currentY = 20;
-            }
-            
             doc.setFontSize(14);
             doc.setTextColor(23, 114, 175);
-            doc.text('3. RESUMEN DE TUBERÍAS POR DIÁMETRO', 20, currentY);
-            currentY += 10;
+            doc.text('2. TUBERÍAS POR DIÁMETRO', 20, currentY);
+            currentY += 8;
             
             const resumenTuberias = {};
-            tuberias.forEach(tuberia => {
-                const key = `${tuberia.tipo}-${tuberia.diametro}-${tuberia.tipoMaterial}`;
+            tuberias.forEach(t => {
+                const key = `${t.tipo}_${t.diametro}_${t.tipoMaterial}`;
                 if (!resumenTuberias[key]) {
                     resumenTuberias[key] = {
-                        tipo: tuberia.tipo,
-                        diametro: tuberia.diametro,
-                        material: tuberia.tipoMaterial,
-                        longitudTotal: 0,
-                        cantidad: 0
+                        tipo: t.tipo,
+                        diametro: t.diametro,
+                        tipoMaterial: t.tipoMaterial,
+                        longitudTotal: 0
                     };
                 }
-                resumenTuberias[key].longitudTotal += tuberia.longitud || 0;
-                resumenTuberias[key].cantidad += 1;
+                resumenTuberias[key].longitudTotal += t.longitud || 0;
             });
-            
-            const tablaTuberias = Object.values(resumenTuberias).map(item => [
-                item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1),
-                `${item.diametro}"`,
-                item.material,
-                item.cantidad.toString(),
-                `${item.longitudTotal.toFixed(2)} m`
-            ]);
-            
-            const totalGeneral = tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0);
-            
-            const startX = 25;
-            const colWidths = [30, 20, 30, 20, 30];
             
             doc.setFontSize(10);
             doc.setFont(undefined, 'bold');
-            doc.text('Tipo', startX, currentY);
-            doc.text('Diám.', startX + colWidths[0], currentY);
-            doc.text('Material', startX + colWidths[0] + colWidths[1], currentY);
-            doc.text('Cant.', startX + colWidths[0] + colWidths[1] + colWidths[2], currentY);
-            doc.text('Longitud', startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
+            doc.text('Tipo', 25, currentY);
+            doc.text('Diámetro', 60, currentY);
+            doc.text('Material', 85, currentY);
+            doc.text('Longitud (m)', 120, currentY, { align: 'right' });
+            currentY += 6;
             
-            currentY += 7;
-            
-            doc.setDrawColor(200, 200, 200);
-            doc.setLineWidth(0.2);
-            doc.line(startX, currentY, startX + 120, currentY);
-            currentY += 5;
-            
-            doc.setFontSize(9);
-            doc.setFont(undefined, 'normal');
-            
-            tablaTuberias.forEach((fila, index) => {
-                doc.text(fila[0], startX, currentY);
-                doc.text(fila[1], startX + colWidths[0], currentY);
-                doc.text(fila[2], startX + colWidths[0] + colWidths[1], currentY);
-                doc.text(fila[3], startX + colWidths[0] + colWidths[1] + colWidths[2], currentY);
-                doc.text(fila[4], startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
+            Object.values(resumenTuberias).forEach(item => {
+                doc.setFont(undefined, 'normal');
+                doc.text(item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1), 25, currentY);
+                doc.text(item.diametro + '"', 60, currentY);
+                doc.text(item.tipoMaterial, 85, currentY);
+                doc.text(item.longitudTotal.toFixed(2), 120, currentY, { align: 'right' });
                 currentY += 6;
             });
             
-            doc.setDrawColor(200, 200, 200);
-            doc.setLineWidth(0.2);
-            doc.line(startX, currentY, startX + 120, currentY);
-            currentY += 5;
-            
-            doc.setFontSize(10);
+            const totalTuberias = tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0);
             doc.setFont(undefined, 'bold');
-            doc.text('TOTAL GENERAL:', startX, currentY);
-            doc.text(`${totalGeneral.toFixed(2)} m`, startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], currentY);
-            
+            doc.text('Total General:', 25, currentY);
+            doc.text(totalTuberias.toFixed(2) + ' m', 120, currentY, { align: 'right' });
             currentY += 10;
         }
         
+        // TABLA DE VÁLVULAS
         if (valvulas.length > 0) {
-            if (currentY > 200) {
-                doc.addPage();
-                currentY = 20;
-            }
-            
             doc.setFontSize(14);
             doc.setTextColor(23, 114, 175);
-            doc.text('4. VÁLVULAS DE CONTROL DEL SISTEMA', 20, currentY);
-            currentY += 10;
-            
-            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
-            
-            const startX = 25;
+            doc.text('3. VÁLVULAS DE CONTROL', 20, currentY);
+            currentY += 8;
             
             doc.setFontSize(9);
             doc.setFont(undefined, 'bold');
-            doc.text('Nombre', startX, currentY);
-            doc.text('Tipo', startX + 25, currentY);
-            doc.text('Diám.', startX + 50, currentY);
-            doc.text('Presión', startX + 70, currentY);
-            doc.text('Emisores', startX + 90, currentY);
-            doc.text('Caudal', startX + 110, currentY);
-            
-            currentY += 6;
-            
-            doc.setDrawColor(200, 200, 200);
-            doc.setLineWidth(0.2);
-            doc.line(startX, currentY, startX + 140, currentY);
+            doc.text('Nombre', 25, currentY);
+            doc.text('Tipo', 45, currentY);
+            doc.text('Diámetro', 65, currentY);
+            doc.text('Presión', 80, currentY);
+            doc.text('Emisores', 95, currentY);
+            doc.text('Caudal Emisor', 115, currentY);
+            doc.text('Caudal Total', 145, currentY, { align: 'right' });
             currentY += 5;
             
-            doc.setFontSize(8);
-            doc.setFont(undefined, 'normal');
-            
             valvulas.forEach(valvula => {
-                doc.text(valvula.nombre, startX, currentY);
-                doc.text(valvula.tipo.substring(0, 8), startX + 25, currentY);
-                doc.text(valvula.diametro, startX + 50, currentY);
-                doc.text(`${valvula.presion} bar`, startX + 70, currentY);
-                doc.text(valvula.numeroEmisores.toString(), startX + 90, currentY);
-                doc.text(`${valvula.caudalTotal} L/h`, startX + 110, currentY);
+                doc.setFont(undefined, 'normal');
+                doc.text(valvula.nombre, 25, currentY);
+                doc.text(valvula.tipo, 45, currentY);
+                doc.text(valvula.diametro, 65, currentY);
+                doc.text(valvula.presion.toString(), 80, currentY);
+                doc.text(valvula.numeroEmisores.toString(), 95, currentY);
+                doc.text(valvula.caudalEmisor.toString(), 115, currentY);
+                doc.text(valvula.caudalTotal.toString(), 145, currentY, { align: 'right' });
                 currentY += 5;
             });
             
-            currentY += 3;
-            
-            doc.setFontSize(9);
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
             doc.setFont(undefined, 'bold');
-            doc.text('CAUDAL TOTAL DEL SISTEMA:', startX, currentY);
-            doc.text(`${caudalTotalSistema.toFixed(2)} L/h (${(caudalTotalSistema / 3600).toFixed(2)} L/s)`, startX + 80, currentY);
-            
+            doc.text('Caudal Total del Sistema:', 25, currentY);
+            doc.text(`${caudalTotalSistema.toFixed(2)} L/h (${(caudalTotalSistema / 3600).toFixed(2)} L/s)`, 145, currentY, { align: 'right' });
             currentY += 10;
         }
         
-        if (valvulas.length > 0) {
-            if (currentY > 180) {
-                doc.addPage();
-                currentY = 20;
-            }
-            
+        // CÁLCULOS HIDRÁULICOS
+        if (valvulas.length > 0 && areaTotal > 0) {
             doc.setFontSize(14);
             doc.setTextColor(23, 114, 175);
-            doc.text('5. CÁLCULOS HIDRÁULICOS', 20, currentY);
-            currentY += 10;
-            
-            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
-            const caudalLps = caudalTotalSistema / 3600;
+            doc.text('4. CÁLCULOS HIDRÁULICOS', 20, currentY);
+            currentY += 8;
             
             doc.setFontSize(10);
+            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            const caudalLps = caudalTotalSistema / 3600;
+            const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
+            const horasPara10mm = 10 / laminaPorHora;
             
-            const calculos = [
-                ['Caudal total requerido:', `${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(3)} L/s)`],
-                ['Número total de emisores:', valvulas.reduce((sum, v) => sum + v.numeroEmisores, 0).toString()],
-                ['Presión promedio:', `${(valvulas.reduce((sum, v) => sum + v.presion, 0) / valvulas.length).toFixed(1)} bar`]
-            ];
+            doc.text(`Caudal Total Requerido: ${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)`, 25, currentY);
+            currentY += 6;
+            doc.text(`Lámina de Riego por Hora: ${laminaPorHora.toFixed(3)} mm/h`, 25, currentY);
+            currentY += 6;
+            doc.text(`Tiempo para aplicar 10 mm de riego: ${horasPara10mm.toFixed(1)} horas`, 25, currentY);
+            currentY += 6;
             
             if (cabezales.length > 0) {
-                const cabezal = cabezales[0];
-                const caudalCabezal = cabezal.caudalBomba * 1000;
+                const cabezalPrincipal = cabezales[0];
+                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
                 const diferencia = caudalCabezal - caudalTotalSistema;
                 const porcentaje = (diferencia / caudalCabezal) * 100;
                 
-                calculos.push(
-                    ['Caudal disponible (cabezal):', `${cabezal.caudalBomba} L/s (${caudalCabezal.toFixed(0)} L/h)`],
-                    ['Balance del sistema:', `${diferencia >= 0 ? 'Sobrecapacidad' : 'Deficit'}`],
-                    ['Margen:', `${Math.abs(porcentaje).toFixed(1)}%`]
-                );
+                doc.text(`Caudal Disponible (Cabezal): ${caudalCabezal.toFixed(2)} L/h (${cabezalPrincipal.caudalBomba} L/s)`, 25, currentY);
+                currentY += 6;
+                doc.text(`Diferencia: ${diferencia.toFixed(2)} L/h (${(diferencia / 3600).toFixed(2)} L/s)`, 25, currentY);
+                currentY += 6;
+                doc.text(`Observación: ${diferencia >= 0 ? 'Sobrecapacidad del ' + porcentaje.toFixed(1) + '%' : 'Deficit del ' + Math.abs(porcentaje).toFixed(1) + '%'}`, 25, currentY);
+                currentY += 6;
             }
             
-            if (areaTotal > 0) {
-                const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
-                const horasPara10mm = 10 / laminaPorHora;
-                
-                calculos.push(
-                    ['Lámina de riego por hora:', `${laminaPorHora.toFixed(3)} mm/h`],
-                    ['Tiempo para 10 mm de riego:', `${horasPara10mm.toFixed(1)} horas`]
-                );
-            }
-            
-            calculos.forEach((item, index) => {
-                doc.setFont(undefined, 'bold');
-                doc.text(item[0], 25, currentY);
-                doc.setFont(undefined, 'normal');
-                doc.text(item[1], 90, currentY);
-                currentY += 7;
-            });
+            currentY += 5;
         }
         
-        if (currentY > 200) {
-            doc.addPage();
-            currentY = 20;
-        }
-        
-        doc.setFontSize(14);
-        doc.setTextColor(23, 114, 175);
-        doc.text('6. OBSERVACIONES Y APROBACIONES', 20, currentY);
-        currentY += 15;
-        
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Observaciones:', 25, currentY);
-        currentY += 15;
-        
-        doc.setLineWidth(0.5);
-        doc.line(25, currentY, 185, currentY);
-        currentY += 20;
-        doc.line(25, currentY, 185, currentY);
-        currentY += 10;
-        
-        doc.text('________________________________________', 105, currentY, { align: 'center' });
-        currentY += 7;
-        doc.text('Ing. Diseñador', 105, currentY, { align: 'center' });
-        currentY += 20;
-        
-        doc.text('________________________________________', 105, currentY, { align: 'center' });
-        currentY += 7;
-        doc.text('Cliente / Responsable', 105, currentY, { align: 'center' });
-        currentY += 20;
-        
-        doc.text('________________________________________', 105, currentY, { align: 'center' });
-        currentY += 7;
-        doc.text('Fecha de Aprobación', 105, currentY, { align: 'center' });
-        
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            
-            doc.setFontSize(8);
-            doc.setTextColor(100, 100, 100);
-            doc.text(`Página ${i} de ${totalPages}`, 20, 285);
-            doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 285, { align: 'center' });
-            doc.text('Los Mochis, Sinaloa, México | Tel: 668 123 4567', 105, 290, { align: 'center' });
-        }
-        
+        // GUARDAR PDF
         const fechaHora = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
         const nombreArchivo = `Memoria_Calculo_Riego_${fechaHora}.pdf`;
         
@@ -2420,676 +2657,6 @@ async function exportarPDF() {
         console.error('Error en exportarPDF:', error);
         alert(`Error al generar el PDF: ${error.message}\n\nPor favor, intente nuevamente.`);
     }
-}
-
-async function capturarDiseñoActual() {
-    try {
-        mostrarMensaje('Preparando captura del diseño...', 2000);
-        
-        const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
-        const originalText = btn ? btn.innerHTML : '';
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturando...';
-            btn.disabled = true;
-        }
-        
-        capturaMapaDataUrl = await crearRepresentacionVectorial();
-        
-        if (!capturaMapaDataUrl) {
-            throw new Error('No se pudo generar la representación del diseño');
-        }
-        
-        capturaTomada = true;
-        
-        mostrarVistaPreviaCaptura(capturaMapaDataUrl);
-        
-        actualizarEstadoCaptura(true, '¡Diseño preparado para PDF!');
-        
-        mostrarMensaje('Representación del diseño creada correctamente. Ahora puedes exportar el PDF.', 3000);
-        
-        return capturaMapaDataUrl;
-        
-    } catch (error) {
-        console.error('Error capturando diseño:', error);
-        actualizarEstadoCaptura(false, `Error: ${error.message}`);
-        mostrarMensaje(`Error: ${error.message}`, 5000);
-        throw error;
-    } finally {
-        const btn = document.querySelector('[onclick="capturarDiseñoActual()"]');
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
-}
-
-async function crearRepresentacionVectorial() {
-    return new Promise((resolve, reject) => {
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            const ancho = 800;
-            const alto = 600;
-            canvas.width = ancho;
-            canvas.height = alto;
-            
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, ancho, alto);
-            
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('DISEÑO DE SISTEMA DE RIEGO', ancho / 2, 40);
-            
-            ctx.font = '16px Arial';
-            ctx.fillText('Agrosistemas - Diseñador CAD', ancho / 2, 70);
-            ctx.fillText('Fecha: ' + new Date().toLocaleDateString('es-MX'), ancho / 2, 90);
-            
-            const marcoX = 50;
-            const marcoY = 120;
-            const marcoAncho = ancho - 100;
-            const marcoAlto = alto - 200;
-            
-            ctx.strokeStyle = '#ccc';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(marcoX, marcoY, marcoAncho, marcoAlto);
-            
-            let todosLosPuntos = [];
-            
-            tuberias.forEach(t => {
-                if (t.linea) {
-                    try {
-                        const latlngs = t.linea.getLatLngs();
-                        if (Array.isArray(latlngs) && latlngs.length > 0) {
-                            if (Array.isArray(latlngs[0]) && typeof latlngs[0][0] === 'object') {
-                                latlngs.forEach(segmento => {
-                                    if (Array.isArray(segmento)) {
-                                        segmento.forEach(punto => {
-                                            if (punto && punto.lat && punto.lng) {
-                                                todosLosPuntos.push(punto);
-                                            }
-                                        });
-                                    }
-                                });
-                            } else if (latlngs[0].lat) {
-                                latlngs.forEach(punto => {
-                                    if (punto && punto.lat && punto.lng) {
-                                        todosLosPuntos.push(punto);
-                                    }
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error obteniendo puntos de tubería:', error, t);
-                    }
-                }
-                
-                if (t.puntoInicio) todosLosPuntos.push(t.puntoInicio);
-                if (t.puntoFin) todosLosPuntos.push(t.puntoFin);
-            });
-    
-    elementosGraficos.forEach(e => {
-                todosLosPuntos.push(e.posicion);
-            });
-    
-    drawnItems.eachLayer(layer => {
-                if (layer instanceof L.Polygon) {
-                    const latlngs = layer.getLatLngs()[0];
-                    latlngs.forEach(latlng => todosLosPuntos.push(latlng));
-                }
-            });
-    
-    if (todosLosPuntos.length === 0) {
-                crearRepresentacionMinima(ctx, marcoX, marcoY, marcoAncho, marcoAlto);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                resolve(dataUrl);
-                return;
-            }
-    
-    let minLat = Infinity, maxLat = -Infinity;
-            let minLng = Infinity, maxLng = -Infinity;
-    
-    todosLosPuntos.forEach(point => {
-                if (point && point.lat && point.lng) {
-                    minLat = Math.min(minLat, point.lat);
-                    maxLat = Math.max(maxLat, point.lat);
-                    minLng = Math.min(minLng, point.lng);
-                    maxLng = Math.max(maxLng, point.lng);
-                }
-            });
-    
-    const latRange = maxLat - minLat;
-            const lngRange = maxLng - minLng;
-            const margin = 0.1;
-    
-    minLat -= latRange * margin;
-            maxLat += latRange * margin;
-            minLng -= lngRange * margin;
-            maxLng += lngRange * margin;
-    
-    const toCanvasCoords = (lat, lng) => {
-                const x = marcoX + ((lng - minLng) / (maxLng - minLng)) * marcoAncho;
-                const y = marcoY + marcoAlto - ((lat - minLat) / (maxLat - minLat)) * marcoAlto;
-                return { x, y };
-            };
-    
-    drawnItems.eachLayer(layer => {
-                if (layer instanceof L.Polygon) {
-                    const latlngs = layer.getLatLngs()[0];
-                    ctx.beginPath();
-    
-    latlngs.forEach((latlng, index) => {
-                        const coords = toCanvasCoords(latlng.lat, latlng.lng);
-                        if (index === 0) {
-                            ctx.moveTo(coords.x, coords.y);
-                        } else {
-                            ctx.lineTo(coords.x, coords.y);
-                        }
-                    });
-    
-    ctx.closePath();
-                    ctx.fillStyle = 'rgba(0, 165, 83, 0.2)';
-                    ctx.fill();
-                    ctx.strokeStyle = '#008a45';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-            });
-    
-    tuberias.forEach(t => {
-                try {
-                    let puntosTuberia = [];
-    
-    if (t.linea && t.linea.getLatLngs) {
-                        const latlngs = t.linea.getLatLngs();
-    
-    if (Array.isArray(latlngs) && latlngs.length > 0) {
-                            if (Array.isArray(latlngs[0]) && typeof latlngs[0][0] === 'object') {
-                                latlngs.forEach(segmento => {
-                                    if (Array.isArray(segmento)) {
-                                        segmento.forEach(punto => {
-                                            if (punto && punto.lat && punto.lng) {
-                                                puntosTuberia.push(punto);
-                                            }
-                                        });
-                                    }
-                                });
-                            } else if (latlngs[0].lat) {
-                                latlngs.forEach(punto => {
-                                    if (punto && punto.lat && punto.lng) {
-                                        puntosTuberia.push(punto);
-                                    }
-                                });
-                            }
-                        }
-                    }
-    
-    if (puntosTuberia.length === 0 && t.puntoInicio && t.puntoFin) {
-                        puntosTuberia = [t.puntoInicio, t.puntoFin];
-                    }
-    
-    if (puntosTuberia.length < 2) {
-                        console.warn('Tubería con menos de 2 puntos:', t);
-                        return;
-                    }
-    
-    let color, grosor;
-                    if (t.tipo === 'principal') {
-                        color = '#ff6b6b';
-                        grosor = t.grosor || 6;
-                    } else if (t.tipo === 'secundaria') {
-                        color = '#4ecdc4';
-                        grosor = t.grosor || 4;
-                    } else {
-                        color = '#45b7d1';
-                        grosor = t.grosor || 3;
-                    }
-    
-    ctx.beginPath();
-    
-    puntosTuberia.forEach((punto, index) => {
-                        const coords = toCanvasCoords(punto.lat, punto.lng);
-                        if (index === 0) {
-                            ctx.moveTo(coords.x, coords.y);
-                        } else {
-                            ctx.lineTo(coords.x, coords.y);
-                        }
-                    });
-    
-    ctx.strokeStyle = color;
-                    ctx.lineWidth = grosor;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.stroke();
-    
-    let longitudTotal = 0;
-                    for (let i = 0; i < puntosTuberia.length - 1; i++) {
-                        longitudTotal += puntosTuberia[i].distanceTo(puntosTuberia[i + 1]);
-                    }
-    
-    puntosTuberia.forEach((punto, index) => {
-                        const coords = toCanvasCoords(punto.lat, punto.lng);
-                        
-                        if (puntosTuberia.length > 2 && index > 0 && index < puntosTuberia.length - 1) {
-                            ctx.beginPath();
-                            ctx.arc(coords.x, coords.y, grosor/2, 0, Math.PI * 2);
-                            ctx.fillStyle = color;
-                            ctx.fill();
-                            ctx.strokeStyle = 'white';
-                            ctx.lineWidth = 1;
-                            ctx.stroke();
-                        }
-                    });
-    
-    let midPointIndex = Math.floor(puntosTuberia.length / 2);
-                    if (midPointIndex >= puntosTuberia.length) midPointIndex = puntosTuberia.length - 1;
-                    
-                    const puntoMedio = puntosTuberia[midPointIndex];
-                    const coordsMedio = toCanvasCoords(puntoMedio.lat, puntoMedio.lng);
-                    
-                    let nombreValvulaCercana = '';
-                    const tolerancia = 0.0001;
-                    
-                    if (puntosTuberia.length > 0) {
-                        const primerPunto = puntosTuberia[0];
-                        const ultimoPunto = puntosTuberia[puntosTuberia.length - 1];
-                        
-                        valvulas.forEach(v => {
-                            if (v.posicion) {
-                                const distanciaInicio = Math.abs(v.posicion.lat - primerPunto.lat) + 
-                                                      Math.abs(v.posicion.lng - primerPunto.lng);
-                                const distanciaFin = Math.abs(v.posicion.lat - ultimoPunto.lat) + 
-                                                    Math.abs(v.posicion.lng - ultimoPunto.lng);
-                                
-                                if (distanciaInicio < tolerancia || distanciaFin < tolerancia) {
-                                    nombreValvulaCercana = v.nombre;
-                                }
-                            }
-                        });
-                    }
-    
-    ctx.fillStyle = 'white';
-                    ctx.fillRect(coordsMedio.x - 40, coordsMedio.y - 10, 80, 20);
-    
-    ctx.fillStyle = '#333';
-                    ctx.font = 'bold 10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    
-                    let textoEtiqueta = `${longitudTotal.toFixed(1)}m`;
-                    if (t.diametro) {
-                        textoEtiqueta += ` ${t.diametro}"`;
-                    }
-                    if (nombreValvulaCercana) {
-                        textoEtiqueta += `\nVálv ${nombreValvulaCercana}`;
-                        ctx.font = 'bold 9px Arial';
-                    }
-                    
-                    const lineas = textoEtiqueta.split('\n');
-                    lineas.forEach((linea, index) => {
-                        ctx.fillText(linea, coordsMedio.x, coordsMedio.y + (index * 10) - 3);
-                    });
-                    
-                } catch (error) {
-                    console.error('Error dibujando tubería:', error, t);
-                }
-            });
-    
-    elementosGraficos.forEach(e => {
-                try {
-                    const coords = toCanvasCoords(e.posicion.lat, e.posicion.lng);
-                    
-                    let esValvula = false;
-                    let nombreValvula = '';
-                    let infoValvula = '';
-                    
-                    if (e.tipo === 'valvula') {
-                        const valvula = valvulas.find(v => v.elementoId === e.id);
-                        if (valvula) {
-                            esValvula = true;
-                            nombreValvula = valvula.nombre;
-                            infoValvula = `${valvula.caudalTotal} L/h`;
-                        }
-                    }
-                    
-                    let color, icono;
-                    switch(e.tipo) {
-                        case 'cabezal':
-                            color = '#1772af';
-                            icono = '⚙️';
-                            break;
-                        case 'valvula':
-                            color = '#ff6b6b';
-                            icono = '⚡';
-                            break;
-                        case 'tomagua':
-                            color = '#00a553';
-                            icono = '💧';
-                            break;
-                        case 'filtro':
-                            color = '#4ecdc4';
-                            icono = '🔍';
-                            break;
-                        case 'purgaterminal':
-                            color = '#ff9f43';
-                            icono = '🚰';
-                            break;
-                        default:
-                            color = '#666';
-                            icono = '📍';
-                    }
-    
-    ctx.beginPath();
-                    ctx.arc(coords.x, coords.y, 12, 0, Math.PI * 2);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-    
-    ctx.fillStyle = 'white';
-                    ctx.font = '14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(icono, coords.x, coords.y);
-    
-    ctx.fillStyle = '#333';
-                    ctx.font = 'bold 11px Arial';
-                    
-                    let textoEtiqueta = e.tipo.toUpperCase();
-                    if (esValvula) {
-                        textoEtiqueta = `VÁLV ${nombreValvula}`;
-                        
-                        ctx.font = '9px Arial';
-                        ctx.fillText(infoValvula, coords.x, coords.y + 25);
-                        ctx.font = 'bold 11px Arial';
-                    }
-    
-    ctx.fillText(textoEtiqueta, coords.x, coords.y + 40);
-                    
-                } catch (error) {
-                    console.error('Error dibujando elemento:', error, e);
-                }
-            });
-    
-    dibujarLeyendaMejorada(ctx, ancho, alto, valvulas);
-    
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            capturaCanvas = canvas;
-    
-    resolve(dataUrl);
-                    
-        } catch (error) {
-            console.error('Error en crearRepresentacionVectorial:', error);
-            const fallbackUrl = crearRepresentacionMinimaFallback();
-            resolve(fallbackUrl);
-        }
-    });
-}
-
-function dibujarLeyendaMejorada(ctx, ancho, alto, valvulas) {
-    const leyendaX = ancho - 220;
-    const leyendaY = 120;
-    const leyendaAncho = 200;
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.fillRect(leyendaX, leyendaY, leyendaAncho, 250);
-    
-    ctx.strokeStyle = '#ccc';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(leyendaX, leyendaY, leyendaAncho, 250);
-    
-    ctx.fillStyle = '#333';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('LEYENDA DEL DISEÑO', leyendaX + 10, leyendaY + 25);
-    
-    let y = leyendaY + 45;
-    
-    ctx.beginPath();
-    ctx.moveTo(leyendaX + 10, y);
-    ctx.lineTo(leyendaX + 40, y);
-    ctx.strokeStyle = '#ff6b6b';
-    ctx.lineWidth = 6;
-    ctx.stroke();
-    ctx.fillStyle = '#333';
-    ctx.font = '11px Arial';
-    ctx.fillText('Tubería Principal', leyendaX + 50, y + 4);
-    y += 25;
-    
-    ctx.beginPath();
-    ctx.moveTo(leyendaX + 10, y);
-    ctx.lineTo(leyendaX + 40, y);
-    ctx.strokeStyle = '#4ecdc4';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.fillText('Tubería Secundaria', leyendaX + 50, y + 4);
-    y += 25;
-    
-    ctx.beginPath();
-    ctx.moveTo(leyendaX + 10, y);
-    ctx.lineTo(leyendaX + 40, y);
-    ctx.strokeStyle = '#45b7d1';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillText('Tubería Regante', leyendaX + 50, y + 4);
-    y += 35;
-    
-    const elementos = [
-        {color: '#1772af', texto: 'Cabezal', icono: '⚙️'},
-        {color: '#ff6b6b', texto: 'Válvula', icono: '⚡'},
-        {color: '#00a553', texto: 'Toma de agua', icono: '💧'},
-        {color: '#4ecdc4', texto: 'Filtro', icono: '🔍'},
-        {color: '#ff9f43', texto: 'Purgas/Terminales', icono: '🚰'}
-    ];
-    
-    elementos.forEach(elem => {
-        ctx.beginPath();
-        ctx.arc(leyendaX + 15, y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = elem.color;
-        ctx.fill();
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        ctx.fillStyle = 'white';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(elem.icono, leyendaX + 15, y);
-        
-        ctx.fillStyle = '#333';
-        ctx.textAlign = 'left';
-        ctx.font = '10px Arial';
-        ctx.fillText(elem.texto, leyendaX + 30, y + 4);
-        y += 20;
-    });
-    
-    y += 5;
-    
-    if (valvulas && valvulas.length > 0) {
-        ctx.fillStyle = '#1772af';
-        ctx.font = 'bold 11px Arial';
-        ctx.fillText('VÁLVULAS:', leyendaX + 10, y);
-        y += 15;
-        
-        ctx.fillStyle = '#666';
-        ctx.font = '9px Arial';
-        
-        valvulas.forEach(valvula => {
-            if (y < leyendaY + 220) {
-                ctx.fillText(`• ${valvula.nombre}: ${valvula.caudalTotal} L/h`, leyendaX + 15, y);
-                y += 12;
-            }
-        });
-        
-        if (valvulas.length > 3) {
-            ctx.fillText(`+ ${valvulas.length - 3} más...`, leyendaX + 15, y);
-        }
-    }
-}
-
-function crearRepresentacionMinima(ctx, marcoX, marcoY, marcoAncho, marcoAlto) {
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(marcoX, marcoY, marcoAncho, marcoAlto);
-    
-    ctx.fillStyle = '#666';
-    ctx.font = 'italic 16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('No hay elementos en el diseño actual', marcoX + marcoAncho / 2, marcoY + marcoAlto / 2);
-    
-    ctx.fillText('Agrega tuberías y elementos desde el panel de diseño', marcoX + marcoAncho / 2, marcoY + marcoAlto / 2 + 30);
-}
-
-function crearRepresentacionMinimaFallback() {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    canvas.width = 800;
-    canvas.height = 600;
-    
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = '#333';
-    ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('INFORMACIÓN DEL DISEÑO', canvas.width / 2, 50);
-    
-    ctx.font = '14px Arial';
-    let y = 100;
-    
-    const info = [
-        `Área total: ${areaTotal > 0 ? areaTotal.toFixed(2) + ' m²' : 'No definida'}`,
-        `Tuberías: ${tuberias.length}`,
-        `Válvulas: ${valvulas.length}`,
-        `Elementos: ${elementosGraficos.length}`,
-        `Fecha: ${new Date().toLocaleDateString()}`
-    ];
-    
-    info.forEach(texto => {
-        ctx.textAlign = 'left';
-        ctx.fillText('• ' + texto, 100, y);
-        y += 30;
-    });
-    
-    if (valvulas.length > 0) {
-        y += 20;
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText('Válvulas del Sistema:', 100, y);
-        y += 25;
-        
-        ctx.font = '12px Arial';
-        let columnaY = y;
-        valvulas.forEach((valvula, index) => {
-            if (index < 8) {
-                ctx.fillText(`${valvula.nombre}: ${valvula.caudalTotal} L/h (${valvula.tipo})`, 
-                            100 + (index % 2) * 300, 
-                            columnaY + Math.floor(index / 2) * 20);
-            }
-        });
-        
-        if (valvulas.length > 8) {
-            ctx.fillText(`... y ${valvulas.length - 8} más`, 100, columnaY + 100);
-        }
-    }
-    
-    ctx.textAlign = 'center';
-    ctx.font = 'italic 12px Arial';
-    ctx.fillStyle = '#666';
-    ctx.fillText('Para ver el diseño completo interactivo, accede a la aplicación web.', canvas.width / 2, 550);
-    ctx.fillText('Esta imagen contiene la información esencial del diseño.', canvas.width / 2, 570);
-    
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    capturaCanvas = canvas;
-    
-    return dataUrl;
-}
-
-function actualizarEstadoCaptura(exito, mensaje) {
-    const statusDiv = document.getElementById('capturaStatus');
-    if (!statusDiv) return;
-    
-    if (exito) {
-        statusDiv.innerHTML = `
-            <div style="background: #e8f5e9; padding: 10px; border-radius: 5px; border-left: 4px solid #00a553;">
-                <strong><i class="fas fa-check-circle" style="color: #00a553;"></i> ${mensaje}</strong>
-                <br>
-                <small>Ahora puedes exportar el PDF con el diseño.</small>
-            </div>
-        `;
-    } else {
-        statusDiv.innerHTML = `
-            <div style="background: #ffeaea; padding: 10px; border-radius: 5px; border-left: 4px solid #ff6b6b;">
-                <strong><i class="fas fa-exclamation-circle" style="color: #ff6b6b;"></i> ${mensaje}</strong>
-                <br>
-                <button onclick="capturarDiseñoActual()" style="margin-top: 5px; padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 3px; font-size: 0.8rem;">
-                    <i class="fas fa-redo"></i> Intentar nuevamente
-                </button>
-            </div>
-        `;
-    }
-}
-
-function mostrarVistaPreviaCaptura(dataUrl) {
-    const previewExistente = document.querySelector('.modal-vista-previa');
-    if (previewExistente) {
-        previewExistente.remove();
-    }
-    
-    const modal = document.createElement('div');
-    modal.className = 'modal-vista-previa';
-    modal.innerHTML = `
-        <div class="modal-contenido">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: #333;">Vista Previa de la Captura</h3>
-                <button onclick="this.closest('.modal-vista-previa').remove()" 
-                        style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div style="overflow: auto; max-height: 70vh; text-align: center;">
-                <img src="${dataUrl}" 
-                     style="max-width: 100%; border: 1px solid #ddd; border-radius: 5px;"
-                     alt="Vista previa del diseño">
-            </div>
-            <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9rem;">
-                <p>Esta imagen se incluirá en el PDF. Contiene la información esencial del diseño.</p>
-                <button onclick="this.closest('.modal-vista-previa').remove()" 
-                        style="background: #00a553; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-                    <i class="fas fa-check"></i> Continuar
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-}
-
-function forzarRecaptura() {
-    capturaTomada = false;
-    capturaMapaDataUrl = null;
-    capturaCanvas = null;
-    
-    const statusDiv = document.getElementById('capturaStatus');
-    if (statusDiv) {
-        statusDiv.innerHTML = `
-            <div style="background: #fff3cd; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107;">
-                <strong><i class="fas fa-sync-alt" style="color: #ffc107;"></i> Listo para nueva captura</strong>
-                <br>
-                <small>Haz clic en "Capturar Diseño Actual" para generar una nueva imagen.</small>
-            </div>
-        `;
-    }
-    
-    mostrarMensaje('Listo para nueva captura. Ajusta la vista del mapa si es necesario.', 3000);
 }
 
 // ============================================
@@ -3139,7 +2706,7 @@ function buscarUbicacion() {
 }
 
 // ============================================
-// FUNCIONES DE GESTIÓN DE DISEÑOS
+// FUNCIONES DE GESTIÓN DE DISEÑOS (MEJORADAS)
 // ============================================
 
 function guardarDiseño(nombre = null) {
@@ -3275,6 +2842,7 @@ function guardarDiseño(nombre = null) {
         return longitud;
     }
     
+    // GUARDAR TODOS LOS DATOS DE LAS VÁLVULAS COMPLETAMENTE
     const diseño = {
         id: Date.now(),
         nombre: nombre,
@@ -3312,12 +2880,15 @@ function guardarDiseño(nombre = null) {
         elementos: elementosGraficos.filter(e => e.type === 'elemento').map(e => ({
             id: e.id,
             tipo: e.tipo,
-            posicion: [e.posicion.lat, e.posicion.lng]
+            posicion: [e.posicion.lat, e.posicion.lng],
+            // GUARDAMOS EL NOMBRE DE LA VÁLVULA EN LOS ELEMENTOS
+            nombre: e.nombre || ''
         })),
+        // GUARDAR VÁLVULAS CON TODOS LOS DATOS
         valvulas: valvulas.map(v => ({
             id: v.id,
-            nombre: v.nombre,
-            elementoId: v.elementoId,
+            nombre: v.nombre, // NOMBRE GUARDADO
+            elementoId: v.elementoId, // ID DEL ELEMENTO GRÁFICO
             posicion: v.posicion ? [v.posicion.lat, v.posicion.lng] : null,
             caudalEmisor: v.caudalEmisor,
             numeroEmisores: v.numeroEmisores,
@@ -3339,14 +2910,15 @@ function guardarDiseño(nombre = null) {
         })),
         miniatura: imagenDiseñoDataUrl,
         metadata: {
-            version: '1.1',
+            version: '1.3', // Incrementamos la versión para las mejoras
             software: 'Agrosistemas Diseñador CAD',
             fechaExportacion: new Date().toISOString(),
             totalElementos: tuberias.length + elementosGraficos.length + valvulas.length + cabezales.length,
             tuberiasConAristas: tuberias.filter(t => {
                 const puntos = extraerPuntosLinea(t.linea);
                 return puntos.length > 2;
-            }).length
+            }).length,
+            valvulasConNombre: valvulas.filter(v => v.nombre && v.nombre !== '').length
         }
     };
     
@@ -3393,6 +2965,7 @@ function importarDiseño(event) {
     reader.readAsText(file);
 }
 
+// FUNCIÓN MEJORADA PARA CARGAR DISEÑOS
 function cargarDiseño(diseño) {
     limpiarDiseño();
     
@@ -3538,29 +3111,251 @@ function cargarDiseño(diseño) {
         });
     }
     
+    // PRIMERO CARGAR ELEMENTOS GRÁFICOS
     if (diseño.elementos) {
+        elementosGraficos = [];
+        
         diseño.elementos.forEach(eData => {
-            agregarElementoGrafico(L.latLng(eData.posicion[0], eData.posicion[1]), eData.tipo);
+            try {
+                const latlng = L.latLng(eData.posicion[0], eData.posicion[1]);
+                const elementoId = eData.id || Date.now();
+                
+                // Crear el elemento gráfico
+                const iconos = {
+                    'cabezal': 'fa-gear',
+                    'purgaterminal': 'fa-faucet',
+                    'tomagua': 'fa-tint',
+                    'valvula': 'fa-toggle-on',
+                    'filtro': 'fa-filter'
+                };
+                
+                const colores = {
+                    'cabezal': '#1772af',
+                    'purgaterminal': '#ff9f43',
+                    'tomagua': '#00a553',
+                    'valvula': '#ff6b6b',
+                    'filtro': '#4ecdc4'
+                };
+                
+                const elemento = L.marker(latlng, {
+                    icon: L.divIcon({
+                        className: 'elemento-grafico',
+                        html: `<div style="background: ${colores[eData.tipo]}; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas ${iconos[eData.tipo]}"></i></div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    }),
+                    draggable: true
+                }).addTo(map);
+                
+                let popupContent = `<b>${eData.tipo.toUpperCase()}</b><br>Arrastra para mover`;
+                
+                // Agregar al array de elementos gráficos
+                elementosGraficos.push({
+                    id: elementoId,
+                    type: 'elemento',
+                    layer: elemento,
+                    tipo: eData.tipo,
+                    posicion: latlng,
+                    nombre: eData.nombre || eData.tipo
+                });
+                
+                // Configurar eventos del elemento
+                elemento.on('click', function(e) {
+                    if (e.originalEvent.ctrlKey) return;
+                    
+                    seleccionarElemento(elementoId, eData.tipo);
+                    e.originalEvent.stopPropagation();
+                });
+                
+                elemento.on('dragend', function(e) {
+                    const nuevaPos = e.target.getLatLng();
+                    const elementoIndex = elementosGraficos.findIndex(e => e.layer === elemento);
+                    if (elementoIndex !== -1) {
+                        elementosGraficos[elementoIndex].posicion = nuevaPos;
+                        
+                        // Actualizar posición en válvulas si corresponde
+                        if (eData.tipo === 'valvula') {
+                            const valvulaIndex = valvulas.findIndex(v => v.elementoId === elementoId);
+                            if (valvulaIndex !== -1) {
+                                valvulas[valvulaIndex].posicion = nuevaPos;
+                            }
+                        }
+                        
+                        // Actualizar posición en cabezales si corresponde
+                        if (eData.tipo === 'cabezal') {
+                            const cabezalIndex = cabezales.findIndex(c => c.elementoId === elementoId);
+                            if (cabezalIndex !== -1) {
+                                cabezales[cabezalIndex].posicion = nuevaPos;
+                            }
+                        }
+                    }
+                });
+                
+                elemento.bindPopup(popupContent);
+                
+            } catch (error) {
+                console.error('Error cargando elemento:', error, eData);
+            }
         });
     }
     
+    // LUEGO CARGAR VÁLVULAS CON SUS DATOS COMPLETOS
     if (diseño.valvulas) {
-        valvulas = diseño.valvulas.map(v => ({
-            ...v,
-            posicion: v.posicion ? L.latLng(v.posicion[0], v.posicion[1]) : null
-        }));
+        valvulas = [];
+        
+        diseño.valvulas.forEach(vData => {
+            try {
+                // Buscar el elemento gráfico correspondiente
+                const elementoExistente = elementosGraficos.find(e => e.id === vData.elementoId);
+                
+                // Si no existe el elemento, crearlo
+                if (!elementoExistente && vData.posicion) {
+                    const latlng = L.latLng(vData.posicion[0], vData.posicion[1]);
+                    const elementoId = vData.elementoId || Date.now();
+                    
+                    // Crear el elemento gráfico
+                    const elemento = L.marker(latlng, {
+                        icon: L.divIcon({
+                            className: 'elemento-grafico',
+                            html: `<div style="background: #ff6b6b; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-toggle-on"></i></div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        }),
+                        draggable: true
+                    }).addTo(map);
+                    
+                    elementosGraficos.push({
+                        id: elementoId,
+                        type: 'elemento',
+                        layer: elemento,
+                        tipo: 'valvula',
+                        posicion: latlng,
+                        nombre: vData.nombre || 'Válvula'
+                    });
+                    
+                    // Configurar eventos
+                    elemento.on('click', function(e) {
+                        if (e.originalEvent.ctrlKey) return;
+                        seleccionarElemento(elementoId, 'valvula');
+                        e.originalEvent.stopPropagation();
+                    });
+                    
+                    elemento.on('dragend', function(e) {
+                        const nuevaPos = e.target.getLatLng();
+                        const elementoIndex = elementosGraficos.findIndex(e => e.layer === elemento);
+                        if (elementoIndex !== -1) {
+                            elementosGraficos[elementoIndex].posicion = nuevaPos;
+                            const valvulaIndex = valvulas.findIndex(v => v.elementoId === elementoId);
+                            if (valvulaIndex !== -1) {
+                                valvulas[valvulaIndex].posicion = nuevaPos;
+                            }
+                        }
+                    });
+                    
+                    elemento.bindPopup(`<b>VÁLVULA ${vData.nombre || ''}</b><br>Arrastra para mover`);
+                }
+                
+                // Crear el objeto válvula completo
+                const valvula = {
+                    id: vData.id || Date.now(),
+                    nombre: vData.nombre || `V${valvulas.length + 1}`,
+                    elementoId: vData.elementoId || (elementoExistente ? elementoExistente.id : Date.now()),
+                    posicion: vData.posicion ? L.latLng(vData.posicion[0], vData.posicion[1]) : 
+                             (elementoExistente ? elementoExistente.posicion : null),
+                    caudalEmisor: vData.caudalEmisor || 4,
+                    numeroEmisores: vData.numeroEmisores || 100,
+                    tipo: vData.tipo || 'Manual',
+                    diametro: vData.diametro || '2"',
+                    presion: vData.presion || 3,
+                    caudalTotal: vData.caudalTotal || (vData.caudalEmisor || 4) * (vData.numeroEmisores || 100)
+                };
+                
+                valvulas.push(valvula);
+                
+                // Actualizar el elemento gráfico con el nombre de la válvula
+                const elemGrafico = elementosGraficos.find(e => e.id === valvula.elementoId);
+                if (elemGrafico) {
+                    elemGrafico.nombre = valvula.nombre;
+                    
+                    // Actualizar popup
+                    if (elemGrafico.layer) {
+                        elemGrafico.layer.bindPopup(`<b>VÁLVULA ${valvula.nombre}</b><br>Caudal: ${valvula.caudalTotal} L/h<br>Arrastra para mover`);
+                    }
+                    
+                    // Actualizar ícono con el nombre
+                    actualizarIconoElemento(valvula.elementoId, valvula.nombre);
+                }
+                
+            } catch (error) {
+                console.error('Error cargando válvula:', error, vData);
+            }
+        });
     }
     
+    // CARGAR CABEZALES
     if (diseño.cabezales) {
-        cabezales = diseño.cabezales.map(c => ({
-            ...c,
-            posicion: c.posicion ? L.latLng(c.posicion[0], c.posicion[1]) : null
-        }));
+        cabezales = [];
+        
+        diseño.cabezales.forEach(cData => {
+            try {
+                const cabezal = {
+                    id: cData.id || Date.now(),
+                    elementoId: cData.elementoId || Date.now(),
+                    posicion: cData.posicion ? L.latLng(cData.posicion[0], cData.posicion[1]) : null,
+                    caudalBomba: cData.caudalBomba || 50,
+                    diametroSuccion: cData.diametroSuccion || '4"',
+                    diametroDescarga: cData.diametroDescarga || '3"',
+                    numeroFiltros: cData.numeroFiltros || 2,
+                    tipoFiltros: cData.tipoFiltros || 'Anillas',
+                    notas: cData.notas || 'Cabezal principal del sistema'
+                };
+                
+                cabezales.push(cabezal);
+                
+                // Verificar si ya existe el elemento gráfico
+                const elemGrafico = elementosGraficos.find(e => e.id === cabezal.elementoId);
+                if (!elemGrafico && cabezal.posicion) {
+                    // Crear elemento gráfico si no existe
+                    const elemento = L.marker(cabezal.posicion, {
+                        icon: L.divIcon({
+                            className: 'elemento-grafico',
+                            html: `<div style="background: #1772af; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-gear"></i></div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        }),
+                        draggable: true
+                    }).addTo(map);
+                    
+                    elementosGraficos.push({
+                        id: cabezal.elementoId,
+                        type: 'elemento',
+                        layer: elemento,
+                        tipo: 'cabezal',
+                        posicion: cabezal.posicion,
+                        nombre: 'Cabezal'
+                    });
+                    
+                    elemento.on('click', function(e) {
+                        if (e.originalEvent.ctrlKey) return;
+                        seleccionarElemento(cabezal.elementoId, 'cabezal');
+                        e.originalEvent.stopPropagation();
+                    });
+                    
+                    elemento.bindPopup(`<b>CABEZAL PRINCIPAL</b><br>Caudal: ${cabezal.caudalBomba} L/s<br>Arrastra para mover`);
+                }
+                
+            } catch (error) {
+                console.error('Error cargando cabezal:', error, cData);
+            }
+        });
     }
     
     actualizarResumenTuberias();
     actualizarResultados();
-    mostrarMensaje(`Diseño "${diseño.nombre}" cargado correctamente. Tuberías con aristas: ${diseño.tuberias.filter(t => t.tieneAristas).length}`);
+    mostrarMensaje(`Diseño "${diseño.nombre}" cargado correctamente. Válvulas: ${valvulas.length}`);
 }
 
 function calcularCentroPolilinea(latlngs) {
@@ -3652,7 +3447,7 @@ function eliminarDiseño(diseñoId, event) {
 }
 
 // ============================================
-// FUNCIÓN DE LIMPIAR DISEÑO (IGUAL AL ORIGINAL)
+// FUNCIÓN DE LIMPIAR DISEÑO
 // ============================================
 
 function limpiarDiseño() {
