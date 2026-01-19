@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroTopo - Análisis LIDAR para Agricultura</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-sidebar-v2/css/leaflet-sidebar.min.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Panel lateral izquierdo -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-tractor"></i>
+                <div>
+                    <h1>AgroTopo</h1>
+                    <div class="logo-subtitle">Herramienta profesional de análisis topográfico para agricultores</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    <i class="fas fa-map-marked-alt"></i> Definir Lote Agrícola
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="analysisMode">Tipo de Lote</label>
+                        <select id="analysisMode">
+                            <option value="polygon">Polígono (Lote Irregular)</option>
+                            <option value="rectangle">Rectángulo (Lote Regular)</option>
+                            <option value="circle">Círculo (Pivote)</option>
+                        </select>
+                    </div>
+                    
+                    <button id="startDrawing" class="button success">
+                        <i class="fas fa-draw-polygon"></i> Dibujar Lote
+                    </button>
+                    <button id="clearPolygon" class="button secondary">
+                        <i class="fas fa-trash"></i> Limpiar
+                    </button>
+                    <button id="loadGPS" class="button">
+                        <i class="fas fa-satellite"></i> Cargar GPS
+                    </button>
+                </div>
+                
+                <div class="analysis-indicators" id="areaIndicators" style="display: none;">
+                    <div class="indicator">
+                        <i class="fas fa-vector-square"></i>
+                        <span>Área: <span id="areaSize">0</span> ha</span>
+                    </div>
+                    <div class="indicator">
+                        <i class="fas fa-ruler"></i>
+                        <span>Perímetro: <span id="perimeterSize">0</span> m</span>
+                    </div>
+                    <div class="indicator">
+                        <i class="fas fa-border-all"></i>
+                        <span>Puntos: <span id="pointCount">0</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    <i class="fas fa-layer-group"></i> Fuentes de Datos
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="elevationSource">Fuente de Elevación</label>
+                        <select id="elevationSource">
+                            <option value="copernicus">Copernicus DEM (5m)</option>
+                            <option value="aw3d">ALOS World 3D (5m)</option>
+                            <option value="srtm">SRTM (10m)</option>
+                            <option value="local">Datos Locales (1m)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="lidarModel">Precisión LIDAR</label>
+                        <select id="lidarModel">
+                            <option value="high">Alta (5-10 pts/m²)</option>
+                            <option value="medium">Media (2-5 pts/m²)</option>
+                            <option value="low">Baja (1 pt/m²)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="resolution">Resolución (metros)</label>
+                        <input type="range" id="resolution" min="1" max="50" value="5">
+                        <span id="resolutionValue">5 m</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    <i class="fas fa-cogs"></i> Análisis Agrícola
+                </div>
+                <div class="controls">
+                    <button id="runTopoAnalysis" class="button">
+                        <i class="fas fa-chart-line"></i> Topografía
+                    </button>
+                    <button id="runLidarAnalysis" class="button success">
+                        <i class="fas fa-satellite-dish"></i> LIDAR
+                    </button>
+                    <button id="runFullAnalysis" class="button pulse">
+                        <i class="fas fa-seedling"></i> Análisis Completo
+                    </button>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progressStatus">Listo</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mapa -->
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <!-- Capas overlay -->
+            <div class="map-controls">
+                <button id="toggle3D" class="map-btn">
+                    <i class="fas fa-cube"></i> 3D
+                </button>
+                <button id="toggleHeatmap" class="map-btn">
+                    <i class="fas fa-fire"></i> Calor
+                </button>
+                <button id="toggleContour" class="map-btn">
+                    <i class="fas fa-wave-square"></i> Curvas
+                </button>
+            </div>
+            
+            <!-- Información de coordenadas -->
+            <div class="coordinate-info">
+                <div class="coordinate-title">
+                    <i class="fas fa-crosshairs"></i> Información del Punto
+                </div>
+                <div class="coordinate-grid">
+                    <div class="coordinate-item">
+                        Latitud: <span id="latValue" class="coordinate-value">0.0000</span>
+                    </div>
+                    <div class="coordinate-item">
+                        Longitud: <span id="lngValue" class="coordinate-value">0.0000</span>
+                    </div>
+                    <div class="coordinate-item">
+                        Elevación: <span id="elevValue" class="coordinate-value">0 m</span>
+                    </div>
+                    <div class="coordinate-item">
+                        Pendiente: <span id="slopeValue" class="coordinate-value">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel de análisis -->
+        <div class="lidar-panel">
+            <div class="analysis-tabs">
+                <div class="tab active" data-tab="topography">Topografía</div>
+                <div class="tab" data-tab="lidar">Análisis LIDAR</div>
+                <div class="tab" data-tab="agriculture">Agricultura</div>
+                <div class="tab" data-tab="export">Exportar</div>
+            </div>
+            
+            <!-- Pestaña Topografía -->
+            <div class="tab-content active" id="tab-topography">
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-mountain"></i> Modelo 3D del Terreno
+                    </div>
+                    <div class="controls">
+                        <button id="generate3D" class="button success">
+                            <i class="fas fa-cube"></i> Generar Modelo 3D
+                        </button>
+                        <button id="view3D" class="button">
+                            <i class="fas fa-eye"></i> Visualizar 3D
+                        </button>
+                    </div>
+                    <div class="chart-container">
+                        <div id="elevation3D"></div>
+                    </div>
+                    
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-title">Punto más Alto</div>
+                            <div class="result-value" id="maxElevation">0<span class="result-unit">m</span></div>
+                            <div class="result-coords" id="maxElevationCoords"></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Punto más Bajo</div>
+                            <div class="result-value" id="minElevation">0<span class="result-unit">m</span></div>
+                            <div class="result-coords" id="minElevationCoords"></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Elevación Media</div>
+                            <div class="result-value" id="avgElevation">0<span class="result-unit">m</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Desnivel Total</div>
+                            <div class="result-value" id="elevationRange">0<span class="result-unit">m</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-sliders-h"></i> Pendientes
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="slopeChart"></canvas>
+                    </div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-title">Pendiente Media</div>
+                            <div class="result-value" id="avgSlope">0<span class="result-unit">%</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Pendiente Máx.</div>
+                            <div class="result-value" id="maxSlope">0<span class="result-unit">%</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Áreas Planas</div>
+                            <div class="result-value" id="flatAreas">0<span class="result-unit">%</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Áreas Inclinadas</div>
+                            <div class="result-value" id="steepAreas">0<span class="result-unit">%</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-water"></i> Drenaje
+                    </div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-title">Dirección Flujo</div>
+                            <div class="result-value" id="flowDirection">--</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Acumulación Agua</div>
+                            <div class="result-value" id="waterAccumulation">0<span class="result-unit">m³</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Zonas Húmedas</div>
+                            <div class="result-value" id="wetAreas">0<span class="result-unit">%</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Riesgo Erosión</div>
+                            <div class="result-value" id="erosionRisk">Bajo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña Análisis LIDAR -->
+            <div class="tab-content" id="tab-lidar">
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-wave-square"></i> Mapas de Calor
+                    </div>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="heatmapLayer">Tipo de Mapa</label>
+                            <select id="heatmapLayer">
+                                <option value="vegetation">Vegetación</option>
+                                <option value="height">Altura Plantas</option>
+                                <option value="density">Densidad</option>
+                                <option value="health">Salud Vegetal</option>
+                                <option value="biomass">Biomasa</option>
+                            </select>
+                        </div>
+                        
+                        <button id="generateHeatmap" class="button success">
+                            <i class="fas fa-fire"></i> Generar Mapa de Calor
+                        </button>
+                    </div>
+                    
+                    <div class="heatmap-container">
+                        <div class="heatmap-legend">
+                            <div class="legend-title">Intensidad de Vegetación</div>
+                            <div class="legend-gradient">
+                                <div class="gradient-bar"></div>
+                                <div class="gradient-labels">
+                                    <span>Baja</span>
+                                    <span>Media</span>
+                                    <span>Alta</span>
+                                </div>
+                            </div>
+                            <div class="legend-stats">
+                                <div class="legend-stat">
+                                    <span class="stat-label">Área Baja:</span>
+                                    <span class="stat-value" id="lowVegArea">0%</span>
+                                </div>
+                                <div class="legend-stat">
+                                    <span class="stat-label">Área Media:</span>
+                                    <span class="stat-value" id="mediumVegArea">0%</span>
+                                </div>
+                                <div class="legend-stat">
+                                    <span class="stat-label">Área Alta:</span>
+                                    <span class="stat-value" id="highVegArea">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="heatmapCanvas"></div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-chart-bar"></i> Análisis de Vegetación
+                    </div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-title">Altura Media</div>
+                            <div class="result-value" id="avgVegHeight">0<span class="result-unit">cm</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Densidad</div>
+                            <div class="result-value" id="vegDensity">0<span class="result-unit">%</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Área sin Vegetación</div>
+                            <div class="result-value" id="bareGround">0<span class="result-unit">%</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Biomasa Estimada</div>
+                            <div class="result-value" id="biomass">0<span class="result-unit">t/ha</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-tree"></i> Distribución de Alturas
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="heightDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña Agricultura -->
+            <div class="tab-content" id="tab-agriculture">
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-tractor"></i> Recomendaciones Agrícolas
+                    </div>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="cropType">Cultivo Principal</label>
+                            <select id="cropType">
+                                <option value="maiz">Maíz</option>
+                                <option value="soja">Soja</option>
+                                <option value="trigo">Trigo</option>
+                                <option value="girasol">Girasol</option>
+                                <option value="alfalfa">Alfalfa</option>
+                                <option value="hortalizas">Hortalizas</option>
+                            </select>
+                        </div>
+                        
+                        <button id="generateRecommendations" class="button success">
+                            <i class="fas fa-lightbulb"></i> Generar Recomendaciones
+                        </button>
+                    </div>
+                    
+                    <div class="recommendations-container">
+                        <div class="recommendation-card">
+                            <div class="rec-title">
+                                <i class="fas fa-seedling"></i> Preparación del Suelo
+                            </div>
+                            <div class="rec-content" id="soilPrepRec"></div>
+                        </div>
+                        
+                        <div class="recommendation-card">
+                            <div class="rec-title">
+                                <i class="fas fa-tint"></i> Riego y Drenaje
+                            </div>
+                            <div class="rec-content" id="irrigationRec"></div>
+                        </div>
+                        
+                        <div class="recommendation-card">
+                            <div class="rec-title">
+                                <i class="fas fa-sun"></i> Orientación
+                            </div>
+                            <div class="rec-content" id="orientationRec"></div>
+                        </div>
+                        
+                        <div class="recommendation-card">
+                            <div class="rec-title">
+                                <i class="fas fa-shield-alt"></i> Manejo de Riesgos
+                            </div>
+                            <div class="rec-content" id="riskRec"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-calculator"></i> Cálculos Agrícolas
+                    </div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-title">Rendimiento Estimado</div>
+                            <div class="result-value" id="estimatedYield">0<span class="result-unit">t/ha</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Agua Necesaria</div>
+                            <div class="result-value" id="waterNeeded">0<span class="result-unit">mm</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Fertilizante</div>
+                            <div class="result-value" id="fertilizerNeeded">0<span class="result-unit">kg/ha</span></div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-title">Costo Preparación</div>
+                            <div class="result-value" id="preparationCost">0<span class="result-unit">$/ha</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pestaña Exportar -->
+            <div class="tab-content" id="tab-export">
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-download"></i> Exportar Datos
+                    </div>
+                    <div class="export-grid">
+                        <button id="exportGeoTIFF" class="export-btn">
+                            <i class="fas fa-file-image"></i>
+                            <span>GeoTIFF</span>
+                            <small>Mapa de elevación</small>
+                        </button>
+                        <button id="exportLAS" class="export-btn">
+                            <i class="fas fa-file-code"></i>
+                            <span>Archivo LAS</span>
+                            <small>Puntos LIDAR</small>
+                        </button>
+                        <button id="exportCSV" class="export-btn">
+                            <i class="fas fa-file-csv"></i>
+                            <span>CSV</span>
+                            <small>Datos tabulares</small>
+                        </button>
+                        <button id="exportPDF" class="export-btn">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Reporte PDF</span>
+                            <small>Análisis completo</small>
+                        </button>
+                        <button id="exportKML" class="export-btn">
+                            <i class="fas fa-globe"></i>
+                            <span>KML</span>
+                            <small>Google Earth</small>
+                        </button>
+                        <button id="exportShapefile" class="export-btn">
+                            <i class="fas fa-map"></i>
+                            <span>Shapefile</span>
+                            <small>ArcGIS/QGIS</small>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-share-alt"></i> Compartir
+                    </div>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="shareLink">Enlace Compartible</label>
+                            <div class="share-input-group">
+                                <input type="text" id="shareLink" placeholder="Generar enlace..." readonly>
+                                <button id="copyLink" class="button small">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="share-buttons">
+                            <button id="saveProject" class="button success">
+                                <i class="fas fa-save"></i> Guardar Proyecto
+                            </button>
+                            <button id="loadProject" class="button secondary">
+                                <i class="fas fa-folder-open"></i> Cargar Proyecto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-print"></i> Imprimir
+                    </div>
+                    <div class="controls">
+                        <button id="printReport" class="button">
+                            <i class="fas fa-print"></i> Imprimir Reporte
+                        </button>
+                        <button id="printMap" class="button secondary">
+                            <i class="fas fa-map"></i> Imprimir Mapa
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para modelo 3D -->
+    <div class="modal" id="model3DModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-cube"></i> Modelo 3D del Terreno
+                </h2>
+                <button class="modal-close" id="close3DModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="threeDContainer"></div>
+                <div class="model-controls">
+                    <button id="rotateModel" class="button small">
+                        <i class="fas fa-sync-alt"></i> Rotar
+                    </button>
+                    <button id="zoomIn3D" class="button small">
+                        <i class="fas fa-search-plus"></i> Acercar
+                    </button>
+                    <button id="zoomOut3D" class="button small">
+                        <i class="fas fa-search-minus"></i> Alejar
+                    </button>
+                    <button id="export3D" class="button small success">
+                        <i class="fas fa-download"></i> Exportar 3D
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/terraformer@1.0.8/terraformer.js"></script>
+    <script src="https://unpkg.com/terraformer-arcgis-parser@1.0.5/terraformer-arcgis-parser.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
