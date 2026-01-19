@@ -254,7 +254,7 @@ nav ul li a:after {
 
 #map {
     width: 100%;
-    height: 100%;
+    height: 200%;
     touch-action: pan-x pan-y;
     cursor: grab;
 }
