@@ -2146,6 +2146,14 @@ function actualizarResultados() {
 // FUNCIONES DE PDF (CON IMAGEN HD DEL DISEÑO AJUSTADA)
 // ============================================
 
+// ============================================
+// FUNCIONES DE PDF (CON IMAGEN HD DEL DISEÑO AJUSTADA)
+// ============================================
+
+// ============================================
+// FUNCIONES DE PDF COMPLETAS CON MEDIDAS
+// ============================================
+
 async function exportarPDF() {
     try {
         if (typeof window.jspdf === 'undefined') {
@@ -2153,7 +2161,7 @@ async function exportarPDF() {
             return;
         }
         
-        mostrarMensaje('Generando PDF con imagen del diseño... Esto puede tomar unos segundos.', 5000);
+        mostrarMensaje('Generando PDF con imagen del diseño y mediciones... Esto puede tomar unos segundos.', 5000);
         
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
@@ -2178,11 +2186,11 @@ async function exportarPDF() {
             const mapZoom = map.getZoom();
             
             // Calcular dimensiones para la imagen en el PDF
-            const pdfWidth = 170; // mm en A4
-            const pdfHeight = 120; // mm
+            const pdfWidth = 140; // mm en A4
+            const pdfHeight = 140; // mm
             
             // Coordenadas en el PDF
-            const pdfX = 20;
+            const pdfX = (210 - pdfWidth) / 2;
             const pdfY = currentY;
             
             // Crear canvas para dibujar todo exactamente
@@ -2222,7 +2230,7 @@ async function exportarPDF() {
                 return { x: canvasX, y: canvasY };
             }
             
-            // 1. Dibujar polígonos del terreno
+            // 1. Dibujar polígonos del terreno CON MEDIDAS
             drawnItems.eachLayer(function(layer) {
                 if (layer instanceof L.Polygon) {
                     const latlngs = layer.getLatLngs()[0];
@@ -2243,10 +2251,118 @@ async function exportarPDF() {
                     ctx.lineWidth = 3 * scaleFactor;
                     ctx.strokeStyle = '#008a45';
                     ctx.stroke();
+                    
+                    // DIBUJAR MEDIDAS DE LOS LADOS DEL POLÍGONO
+                    for (let i = 0; i < canvasPoints.length; i++) {
+                        const start = canvasPoints[i];
+                        const end = canvasPoints[(i + 1) % canvasPoints.length];
+                        
+                        // Calcular punto medio del lado
+                        const midX = (start.x + end.x) / 2;
+                        const midY = (start.y + end.y) / 2;
+                        
+                        // Calcular distancia en píxeles
+                        const dx = end.x - start.x;
+                        const dy = end.y - start.y;
+                        const distanciaPixeles = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Calcular distancia real aproximada
+                        const punto1 = latlngs[i];
+                        const punto2 = latlngs[(i + 1) % latlngs.length];
+                        const distanciaReal = punto1.distanceTo(punto2);
+                        
+                        // Calcular ángulo para rotar el texto
+                        const angulo = Math.atan2(dy, dx);
+                        const anguloGrados = angulo * (180 / Math.PI);
+                        
+                        // Guardar estado del contexto
+                        ctx.save();
+                        
+                        // Mover al punto medio y rotar
+                        ctx.translate(midX, midY);
+                        ctx.rotate(angulo);
+                        
+                        // Fondo para la medida del lado
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        const textoAncho = 60 * scaleFactor;
+                        const textoAlto = 18 * scaleFactor;
+                        ctx.fillRect(-textoAncho/2, -textoAlto/2, textoAncho, textoAlto);
+                        
+                        // Borde
+                        ctx.strokeStyle = 'rgba(0, 138, 69, 0.5)';
+                        ctx.lineWidth = 1 * scaleFactor;
+                        ctx.strokeRect(-textoAncho/2, -textoAlto/2, textoAncho, textoAlto);
+                        
+                        // Texto de la medida
+                        ctx.fillStyle = '#008a45';
+                        ctx.font = `${8 * scaleFactor}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`${distanciaReal.toFixed(1)} m`, 0, 0);
+                        
+                        // Restaurar contexto
+                        ctx.restore();
+                        
+                        // Dibujar puntos en los vértices
+                        ctx.beginPath();
+                        ctx.arc(start.x, start.y, 4 * scaleFactor, 0, Math.PI * 2);
+                        ctx.fillStyle = '#008a45';
+                        ctx.fill();
+                        
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1 * scaleFactor;
+                        ctx.stroke();
+                        
+                        // Número del vértice
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = `${7 * scaleFactor}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText((i + 1).toString(), start.x, start.y);
+                    }
+                    
+                    // Calcular y mostrar área total del polígono
+                    let areaSum = 0;
+                    for (let i = 0; i < canvasPoints.length; i++) {
+                        const j = (i + 1) % canvasPoints.length;
+                        areaSum += canvasPoints[i].x * canvasPoints[j].y;
+                        areaSum -= canvasPoints[j].x * canvasPoints[i].y;
+                    }
+                    
+                    const areaPixeles = Math.abs(areaSum) / 2;
+                    
+                    // Calcular centro del polígono
+                    let centroX = 0, centroY = 0;
+                    canvasPoints.forEach(p => {
+                        centroX += p.x;
+                        centroY += p.y;
+                    });
+                    centroX /= canvasPoints.length;
+                    centroY /= canvasPoints.length;
+                    
+                    // Área real del polígono
+                    const areaReal = L.GeometryUtil.geodesicArea(latlngs);
+                    
+                    // Mostrar área en el centro del polígono
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    const areaAncho = 100 * scaleFactor;
+                    const areaAlto = 40 * scaleFactor;
+                    ctx.fillRect(centroX - areaAncho/2, centroY - areaAlto/2, areaAncho, areaAlto);
+                    
+                    ctx.strokeStyle = 'rgba(0, 138, 69, 0.5)';
+                    ctx.lineWidth = 2 * scaleFactor;
+                    ctx.strokeRect(centroX - areaAncho/2, centroY - areaAlto/2, areaAncho, areaAlto);
+                    
+                    ctx.fillStyle = '#008a45';
+                    ctx.font = `${9 * scaleFactor}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`Área: ${areaReal.toFixed(0)} m²`, centroX, centroY - 5 * scaleFactor);
+                    ctx.fillText(`${(areaReal / 10000).toFixed(2)} ha`, centroX, centroY + 5 * scaleFactor);
                 }
             });
             
-            // 2. Dibujar tuberías
+            // 2. Dibujar tuberías (código existente)
             tuberias.forEach(tuberia => {
                 if (tuberia.linea && tuberia.linea.getLatLngs) {
                     const latlngs = tuberia.linea.getLatLngs();
@@ -2305,9 +2421,123 @@ async function exportarPDF() {
                         ctx.lineCap = 'round';
                         ctx.lineJoin = 'round';
                         ctx.stroke();
+                        
+                        // AGREGAR MEDIDAS Y DIÁMETROS A LAS LÍNEAS
+                        if (canvasPoints.length === 2) {
+                            // Para líneas rectas simples
+                            const start = canvasPoints[0];
+                            const end = canvasPoints[1];
+                            const midX = (start.x + end.x) / 2;
+                            const midY = (start.y + end.y) / 2;
+                            
+                            // Calcular ángulo para posicionar el texto
+                            const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                            const textAngle = Math.abs(angle) > Math.PI/2 ? angle + Math.PI : angle;
+                            
+                            // Guardar estado del contexto
+                            ctx.save();
+                            
+                            // Mover al punto medio y rotar
+                            ctx.translate(midX, midY);
+                            ctx.rotate(textAngle);
+                            
+                            // Fondo para el texto
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                            ctx.fillRect(-30, -10, 60, 20);
+                            
+                            // Borde sutil
+                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                            ctx.lineWidth = 1 * scaleFactor;
+                            ctx.strokeRect(-30, -10, 60, 20);
+                            
+                            // Texto con medida y diámetro
+                            ctx.fillStyle = '#333333';
+                            ctx.font = `${8 * scaleFactor}px Arial`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            
+                            // Formato: "XX.Xm - YY"
+                            const distancia = tuberia.longitud || calcularDistancia(start, end) / (3.78 * scaleFactor);
+                            ctx.fillText(`${distancia.toFixed(1)}m - ${tuberia.diametro}"`, 0, 0);
+                            
+                            // Restaurar contexto
+                            ctx.restore();
+                        } else if (canvasPoints.length > 2) {
+                            // Para polilíneas con múltiples segmentos
+                            for (let i = 0; i < canvasPoints.length - 1; i++) {
+                                const start = canvasPoints[i];
+                                const end = canvasPoints[i + 1];
+                                const midX = (start.x + end.x) / 2;
+                                const midY = (start.y + end.y) / 2;
+                                
+                                // Calcular ángulo para posicionar el texto
+                                const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                                const textAngle = Math.abs(angle) > Math.PI/2 ? angle + Math.PI : angle;
+                                
+                                // Guardar estado del contexto
+                                ctx.save();
+                                
+                                // Mover al punto medio y rotar
+                                ctx.translate(midX, midY);
+                                ctx.rotate(textAngle);
+                                
+                                // Fondo para el texto
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                                ctx.fillRect(-25, -8, 50, 16);
+                                
+                                // Borde sutil
+                                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                                ctx.lineWidth = 1 * scaleFactor;
+                                ctx.strokeRect(-25, -8, 50, 16);
+                                
+                                // Texto con diámetro (solo diámetro para no saturar)
+                                ctx.fillStyle = '#333333';
+                                ctx.font = `${7 * scaleFactor}px Arial`;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(`${tuberia.diametro}"`, 0, 0);
+                                
+                                // Restaurar contexto
+                                ctx.restore();
+                            }
+                            
+                            // Mostrar longitud total al final de la polilínea
+                            if (canvasPoints.length > 1) {
+                                const lastPoint = canvasPoints[canvasPoints.length - 1];
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                                ctx.fillRect(lastPoint.x - 40, lastPoint.y - 10, 80, 20);
+                                
+                                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                                ctx.lineWidth = 1 * scaleFactor;
+                                ctx.strokeRect(lastPoint.x - 40, lastPoint.y - 10, 80, 20);
+                                
+                                ctx.fillStyle = '#333333';
+                                ctx.font = `${8 * scaleFactor}px Arial`;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                const totalLength = tuberia.longitud || calcularLongitudPolilineaCanvas(canvasPoints) / (3.78 * scaleFactor);
+                                ctx.fillText(`${totalLength.toFixed(1)}m total`, lastPoint.x, lastPoint.y);
+                            }
+                        }
                     }
                 }
             });
+            
+            // Función auxiliar para calcular distancia entre puntos canvas
+            function calcularDistancia(p1, p2) {
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                return Math.sqrt(dx*dx + dy*dy);
+            }
+            
+            // Función auxiliar para calcular longitud total de polilínea en canvas
+            function calcularLongitudPolilineaCanvas(puntos) {
+                let longitud = 0;
+                for (let i = 0; i < puntos.length - 1; i++) {
+                    longitud += calcularDistancia(puntos[i], puntos[i+1]);
+                }
+                return longitud;
+            }
             
             // 3. Dibujar elementos gráficos (válvulas, cabezales, etc.)
             elementosGraficos.forEach(elemento => {
@@ -2321,25 +2551,24 @@ async function exportarPDF() {
                 switch(elemento.tipo) {
                     case 'cabezal': 
                         color = '#1772af'; 
-                        texto = 'C'; // 'C' para cabezal
+                        texto = 'C';
                         break;
                     case 'valvula': 
                         color = '#ff6b6b'; 
-                        // Obtener el nombre de la válvula usando elementoId
                         const nombreValvula = obtenerNombreValvulaPorElementoId(elemento.id);
-                        texto = nombreValvula || 'V'; // Usar nombre si existe, o 'V' como fallback
+                        texto = nombreValvula || 'V';
                         break;
                     case 'purgaterminal': 
                         color = '#ff9f43'; 
-                        texto = 'P'; // 'P' para purgaterminal
+                        texto = 'P';
                         break;
                     case 'tomagua': 
                         color = '#00a553'; 
-                        texto = 'T'; // 'T' para tomagua
+                        texto = 'T';
                         break;
                     case 'filtro': 
                         color = '#4ecdc4'; 
-                        texto = 'F'; // 'F' para filtro
+                        texto = 'F';
                         break;
                     default: 
                         color = '#000000';
@@ -2357,19 +2586,16 @@ async function exportarPDF() {
                 ctx.strokeStyle = '#ffffff';
                 ctx.stroke();
                 
-                // Texto del elemento - ajustar tamaño según longitud del texto
+                // Texto del elemento
                 ctx.fillStyle = '#ffffff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
-                // Si es válvula y el nombre es corto (hasta 2 caracteres), usar fuente más grande
                 if (elemento.tipo === 'valvula' && texto.length <= 2) {
                     ctx.font = `bold ${10 * scaleFactor}px Arial`;
                     ctx.fillText(texto, canvasPoint.x, canvasPoint.y);
                 } else {
-                    // Para otros elementos o nombres largos
                     ctx.font = `${9 * scaleFactor}px Arial`;
-                    // Si el texto es muy largo, truncarlo
                     const textoMostrar = texto.length > 3 ? texto.substring(0, 3) + '.' : texto;
                     ctx.fillText(textoMostrar, canvasPoint.x, canvasPoint.y);
                 }
@@ -2401,36 +2627,63 @@ async function exportarPDF() {
                 ctx.stroke();
             });
             
-            // 5. Dibujar cuadrícula de referencia (opcional, ayuda a alinear)
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            // 5. DIBUJAR FLECHA DEL NORTE
+            const norteX = 40 * scaleFactor;
+            const norteY = 40 * scaleFactor;
+            
+            // Círculo de fondo
+            ctx.beginPath();
+            ctx.arc(norteX, norteY, 20 * scaleFactor, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 2 * scaleFactor;
+            ctx.stroke();
+            
+            // Flecha del norte
+            ctx.beginPath();
+            ctx.moveTo(norteX, norteY - 15 * scaleFactor);
+            ctx.lineTo(norteX - 5 * scaleFactor, norteY - 5 * scaleFactor);
+            ctx.lineTo(norteX + 5 * scaleFactor, norteY - 5 * scaleFactor);
+            ctx.closePath();
+            ctx.fillStyle = '#ff0000';
+            ctx.fill();
+            
+            // Cuerpo de la flecha
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(norteX - 3 * scaleFactor, norteY - 5 * scaleFactor, 6 * scaleFactor, 12 * scaleFactor);
+            
+            // Letra "N"
+            ctx.fillStyle = '#000000';
+            ctx.font = `bold ${12 * scaleFactor}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('N', norteX, norteY + 10 * scaleFactor);
+            
+            // Línea de referencia
+            ctx.beginPath();
+            ctx.moveTo(norteX, norteY + 20 * scaleFactor);
+            ctx.lineTo(norteX, norteY + 25 * scaleFactor);
+            ctx.strokeStyle = '#000000';
             ctx.lineWidth = 1 * scaleFactor;
-            ctx.setLineDash([5 * scaleFactor, 5 * scaleFactor]);
+            ctx.stroke();
             
-            // Líneas verticales y horizontales
-            for (let x = 0; x <= canvasWidth; x += canvasWidth / 10) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvasHeight);
-                ctx.stroke();
-            }
-            
-            for (let y = 0; y <= canvasHeight; y += canvasHeight / 10) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvasWidth, y);
-                ctx.stroke();
-            }
-            
-            ctx.setLineDash([]);
+            // Texto "Norte"
+            ctx.fillStyle = '#333333';
+            ctx.font = `${9 * scaleFactor}px Arial`;
+            ctx.fillText('Norte', norteX, norteY + 35 * scaleFactor);
             
             // 6. Añadir leyenda
             const legendX = 10 * scaleFactor;
-            const legendY = canvasHeight - 100 * scaleFactor;
+            const legendY = canvasHeight - 120 * scaleFactor;
             const legendItemHeight = 20 * scaleFactor;
             
             // Fondo de leyenda
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(legendX, legendY, 150 * scaleFactor, 90 * scaleFactor);
+            ctx.fillRect(legendX, legendY, 160 * scaleFactor, 110 * scaleFactor);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1 * scaleFactor;
+            ctx.strokeRect(legendX, legendY, 160 * scaleFactor, 110 * scaleFactor);
             
             ctx.fillStyle = '#333333';
             ctx.font = `${12 * scaleFactor}px Arial`;
@@ -2439,6 +2692,7 @@ async function exportarPDF() {
             
             // Ítems de leyenda
             const legendItems = [
+                { color: '#008a45', text: 'Terreno (Polígono)' },
                 { color: '#ff6b6b', text: 'Tubería Principal' },
                 { color: '#4ecdc4', text: 'Tubería Secundaria' },
                 { color: '#45b7d1', text: 'Tubería Regante' },
@@ -2461,6 +2715,44 @@ async function exportarPDF() {
                 ctx.fillText(item.text, legendX + 30 * scaleFactor, y + 3 * scaleFactor);
             });
             
+            // 7. Añadir escala gráfica
+            const scaleX = canvasWidth - 120 * scaleFactor;
+            const scaleY = canvasHeight - 40 * scaleFactor;
+            
+            // Fondo de escala
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(scaleX - 10, scaleY - 15, 130 * scaleFactor, 30 * scaleFactor);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1 * scaleFactor;
+            ctx.strokeRect(scaleX - 10, scaleY - 15, 130 * scaleFactor, 30 * scaleFactor);
+            
+            // Línea de escala (100m aproximados)
+            ctx.beginPath();
+            ctx.moveTo(scaleX, scaleY);
+            ctx.lineTo(scaleX + 80 * scaleFactor, scaleY);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2 * scaleFactor;
+            ctx.stroke();
+            
+            // Marcas de escala
+            ctx.beginPath();
+            ctx.moveTo(scaleX, scaleY - 5);
+            ctx.lineTo(scaleX, scaleY + 5);
+            ctx.moveTo(scaleX + 40 * scaleFactor, scaleY - 5);
+            ctx.lineTo(scaleX + 40 * scaleFactor, scaleY + 5);
+            ctx.moveTo(scaleX + 80 * scaleFactor, scaleY - 5);
+            ctx.lineTo(scaleX + 80 * scaleFactor, scaleY + 5);
+            ctx.stroke();
+            
+            // Texto de escala
+            ctx.fillStyle = '#333333';
+            ctx.font = `${8 * scaleFactor}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('0', scaleX, scaleY + 15);
+            ctx.fillText('50', scaleX + 40 * scaleFactor, scaleY + 15);
+            ctx.fillText('100 m', scaleX + 80 * scaleFactor, scaleY + 15);
+            ctx.fillText('ESCALA APROX.', scaleX + 40 * scaleFactor, scaleY - 10);
+            
             // Convertir a imagen y agregar al PDF
             const imageData = canvas.toDataURL('image/jpeg', 0.95);
             
@@ -2471,13 +2763,13 @@ async function exportarPDF() {
             // Pie de foto
             doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
-            doc.text('Figura 1: Diseño del sistema de riego', 105, currentY, { align: 'center' });
+            doc.text('Figura 1: Diseño del sistema de riego con mediciones', 105, currentY, { align: 'center' });
             currentY += 8;
             
             // Información de escala
             doc.setFontSize(8);
             doc.text(`Escala aproximada 1:${Math.round(10000 / Math.pow(2, mapZoom - 10))} | Zoom: ${mapZoom}`, 105, currentY, { align: 'center' });
-            currentY += 8;
+            currentY += 10;
             
         } catch (imageError) {
             console.error('Error generando imagen del diseño:', imageError);
@@ -2488,12 +2780,41 @@ async function exportarPDF() {
             doc.text('Nota: No se pudo generar la imagen del diseño.', 105, currentY, { align: 'center' });
             currentY += 10;
             
-            // Mostrar información de resumen en lugar de imagen
+            // Mostrar información de resumen
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0);
-            doc.text(`Área del diseño: ${areaTotal > 0 ? areaTotal.toFixed(0) + ' m²' : 'No definida'}`, 20, currentY);
-            currentY += 7;
-            doc.text(`Tuberías: ${tuberias.length} (${tuberias.filter(t => t.tipo === 'principal').length} principal, ${tuberias.filter(t => t.tipo === 'secundaria').length} secundaria, ${tuberias.filter(t => t.tipo === 'regante').length} regante)`, 20, currentY);
+            
+            // Calcular total de polígonos
+            let areaTotalPoligonos = 0;
+            let perimetroTotal = 0;
+            let numPoligonos = 0;
+            
+            drawnItems.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    const area = L.GeometryUtil.geodesicArea(latlngs);
+                    areaTotalPoligonos += area;
+                    numPoligonos++;
+                    
+                    // Calcular perímetro
+                    for (let i = 0; i < latlngs.length; i++) {
+                        const puntoActual = latlngs[i];
+                        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                        perimetroTotal += puntoActual.distanceTo(puntoSiguiente);
+                    }
+                }
+            });
+            
+            if (numPoligonos > 0) {
+                doc.text(`Área del terreno: ${areaTotalPoligonos.toFixed(0)} m² (${(areaTotalPoligonos / 10000).toFixed(2)} ha)`, 20, currentY);
+                currentY += 7;
+                doc.text(`Perímetro total: ${perimetroTotal.toFixed(0)} m`, 20, currentY);
+                currentY += 7;
+                doc.text(`Polígonos: ${numPoligonos}`, 20, currentY);
+                currentY += 7;
+            }
+            
+            doc.text(`Tuberías: ${tuberias.length}`, 20, currentY);
             currentY += 7;
             doc.text(`Válvulas: ${valvulas.length}`, 20, currentY);
             currentY += 7;
@@ -2501,39 +2822,270 @@ async function exportarPDF() {
             currentY += 10;
         }
         
-        // INFORMACIÓN GENERAL
-        doc.setFontSize(14);
-        doc.setTextColor(23, 114, 175);
-        doc.text('1. INFORMACIÓN GENERAL DEL PROYECTO', 20, currentY);
+        // ====================================================================
+        // SECCIÓN 1: INFORMACIÓN GENERAL Y MEDIDAS DEL TERRENO
+        // ====================================================================
+        
+        doc.setFontSize(16);
+        doc.setTextColor(0, 138, 69); // Verde oscuro para sección terreno
+        doc.text('1. MEDIDAS DEL TERRENO', 20, currentY);
         currentY += 8;
         
-        const infoItems = [
-            ['Área Total:', areaTotal > 0 ? `${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(3)} ha)` : 'No definida'],
-            ['Fecha de Diseño:', new Date().toLocaleDateString('es-MX')],
-            ['Número de Válvulas:', valvulas.length.toString()],
-            ['Longitud Total Tuberías:', `${tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0).toFixed(2)} m`],
-            ['Número de Elementos:', elementosGraficos.length.toString()]
-        ];
+        // Calcular total de áreas de todos los polígonos
+        let areaTotalPoligonos = 0;
+        let perimetroTotal = 0;
+        let numPoligonos = 0;
+        const poligonosDetalles = [];
         
-        infoItems.forEach((item, index) => {
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'bold');
-            doc.text(item[0], 25, currentY);
-            doc.setFont(undefined, 'normal');
-            doc.text(item[1], 70, currentY);
-            currentY += 7;
+        drawnItems.eachLayer(function(layer) {
+            if (layer instanceof L.Polygon) {
+                const latlngs = layer.getLatLngs()[0];
+                const area = L.GeometryUtil.geodesicArea(latlngs);
+                const medidasLados = [];
+                let perimetroPoligono = 0;
+                
+                // Calcular medidas de cada lado
+                for (let i = 0; i < latlngs.length; i++) {
+                    const puntoActual = latlngs[i];
+                    const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                    const distancia = puntoActual.distanceTo(puntoSiguiente);
+                    medidasLados.push(distancia);
+                    perimetroPoligono += distancia;
+                }
+                
+                areaTotalPoligonos += area;
+                perimetroTotal += perimetroPoligono;
+                numPoligonos++;
+                
+                poligonosDetalles.push({
+                    numero: numPoligonos,
+                    area: area,
+                    perimetro: perimetroPoligono,
+                    lados: latlngs.length,
+                    medidasLados: medidasLados
+                });
+            }
         });
         
-        currentY += 5;
+        // Mostrar resumen general del terreno
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
         
-        // TABLA DE TUBERÍAS
+        if (numPoligonos > 0) {
+            doc.setFont(undefined, 'bold');
+            doc.text('RESUMEN GENERAL:', 25, currentY);
+            currentY += 7;
+            
+            doc.setFont(undefined, 'normal');
+            
+            const infoGeneral = [
+                ['Área Total:', `${areaTotalPoligonos.toFixed(2)} m² (${(areaTotalPoligonos / 10000).toFixed(3)} ha)`],
+                ['Perímetro Total:', `${perimetroTotal.toFixed(2)} m`],
+                ['Número de Polígonos:', numPoligonos.toString()],
+                ['Coordenadas Centro:', map.getCenter().lat.toFixed(6) + ', ' + map.getCenter().lng.toFixed(6)]
+            ];
+            
+            infoGeneral.forEach((item, index) => {
+                doc.setFont(undefined, 'bold');
+                doc.text(item[0], 25, currentY);
+                doc.setFont(undefined, 'normal');
+                doc.text(item[1], 70, currentY);
+                currentY += 7;
+            });
+            
+            currentY += 5;
+            
+            // Detalle de cada polígono
+            if (numPoligonos > 1) {
+                doc.setFontSize(12);
+                doc.setTextColor(0, 138, 69);
+                doc.text('1.1. DETALLE POR POLÍGONO', 20, currentY);
+                currentY += 8;
+                
+                poligonosDetalles.forEach((poligono, index) => {
+                    // Verificar si hay espacio en la página
+                    if (currentY > 250) {
+                        doc.addPage();
+                        currentY = 20;
+                        
+                        // Encabezado de página
+                        doc.setFontSize(20);
+                        doc.setTextColor(0, 165, 83);
+                        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+                        
+                        doc.setFontSize(10);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+                        doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+                        
+                        currentY = 35;
+                    }
+                    
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`Polígono ${poligono.numero}:`, 25, currentY);
+                    currentY += 6;
+                    
+                    // Información básica del polígono
+                    const infoPoligono = [
+                        ['Área:', `${poligono.area.toFixed(2)} m² (${(poligono.area / 10000).toFixed(3)} ha)`],
+                        ['Perímetro:', `${poligono.perimetro.toFixed(2)} m`],
+                        ['Número de lados:', poligono.lados.toString()]
+                    ];
+                    
+                    infoPoligono.forEach((item, index) => {
+                        doc.setFont(undefined, 'bold');
+                        doc.text(item[0], 30, currentY);
+                        doc.setFont(undefined, 'normal');
+                        doc.text(item[1], 60, currentY);
+                        currentY += 6;
+                    });
+                    
+                    // Tabla de medidas de lados
+                    if (poligono.lados <= 10) { // Solo mostrar si tiene 10 lados o menos
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Medidas de lados:', 30, currentY);
+                        currentY += 6;
+                        
+                        // Crear tabla de lados
+                        const columnas = 2;
+                        const anchoColumna = 80;
+                        const altoFila = 6;
+                        
+                        for (let i = 0; i < poligono.lados; i++) {
+                            const columna = i % columnas;
+                            const fila = Math.floor(i / columnas);
+                            
+                            const x = 30 + (columna * anchoColumna);
+                            const y = currentY + (fila * altoFila);
+                            
+                            doc.setFont(undefined, 'normal');
+                            doc.text(`Lado ${i + 1}: ${poligono.medidasLados[i].toFixed(2)} m`, x, y);
+                            
+                            // Si es la última fila de esta columna, actualizar currentY
+                            if (i === poligono.lados - 1 || (i % columnas === columnas - 1)) {
+                                const maxFila = Math.ceil((i + 1) / columnas);
+                                if ((fila + 1) * altoFila > currentY) {
+                                    currentY += (fila + 1) * altoFila;
+                                }
+                            }
+                        }
+                    } else {
+                        doc.setFont(undefined, 'normal');
+                        doc.text(`(Polígono de ${poligono.lados} lados - medidas disponibles en el plano)`, 30, currentY);
+                        currentY += 6;
+                    }
+                    
+                    currentY += 10;
+                });
+            } else if (numPoligonos === 1) {
+                // Mostrar detalle completo para un solo polígono
+                const poligono = poligonosDetalles[0];
+                
+                doc.setFontSize(12);
+                doc.setTextColor(0, 138, 69);
+                doc.text('1.1. MEDIDAS DETALLADAS DEL POLÍGONO', 20, currentY);
+                currentY += 8;
+                
+                // Crear tabla de medidas
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                
+                // Encabezado de la tabla
+                doc.text('Lado', 25, currentY);
+                doc.text('Longitud (m)', 80, currentY);
+                doc.text('Acumulado (m)', 140, currentY, { align: 'right' });
+                currentY += 6;
+                
+                // Dibujar línea separadora
+                doc.setDrawColor(200, 200, 200);
+                doc.line(20, currentY, 190, currentY);
+                currentY += 3;
+                
+                doc.setFont(undefined, 'normal');
+                
+                let acumulado = 0;
+                for (let i = 0; i < poligono.lados; i++) {
+                    const longitud = poligono.medidasLados[i];
+                    acumulado += longitud;
+                    
+                    doc.text(`Lado ${i + 1}`, 25, currentY);
+                    doc.text(longitud.toFixed(2), 80, currentY);
+                    doc.text(acumulado.toFixed(2), 140, currentY, { align: 'right' });
+                    currentY += 6;
+                    
+                    // Verificar espacio en página
+                    if (currentY > 250 && i < poligono.lados - 1) {
+                        doc.addPage();
+                        currentY = 20;
+                        
+                        // Encabezado de página
+                        doc.setFontSize(20);
+                        doc.setTextColor(0, 165, 83);
+                        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+                        
+                        doc.setFontSize(10);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+                        doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+                        
+                        currentY = 35;
+                        
+                        // Reimprimir encabezado de tabla
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Lado', 25, currentY);
+                        doc.text('Longitud (m)', 80, currentY);
+                        doc.text('Acumulado (m)', 140, currentY, { align: 'right' });
+                        currentY += 6;
+                        
+                        doc.setDrawColor(200, 200, 200);
+                        doc.line(20, currentY, 190, currentY);
+                        currentY += 3;
+                        
+                        doc.setFont(undefined, 'normal');
+                    }
+                }
+                
+                // Línea separadora final
+                doc.setDrawColor(200, 200, 200);
+                doc.line(20, currentY, 190, currentY);
+                currentY += 3;
+                
+                // Totales
+                doc.setFont(undefined, 'bold');
+                doc.text('PERÍMETRO TOTAL:', 25, currentY);
+                doc.text(poligono.perimetro.toFixed(2) + ' m', 140, currentY, { align: 'right' });
+                currentY += 7;
+                
+                doc.text('ÁREA TOTAL:', 25, currentY);
+                doc.text(poligono.area.toFixed(2) + ' m²', 140, currentY, { align: 'right' });
+                currentY += 7;
+                
+                doc.text('HECTÁREAS:', 25, currentY);
+                doc.text((poligono.area / 10000).toFixed(3) + ' ha', 140, currentY, { align: 'right' });
+                currentY += 10;
+            }
+        } else {
+            doc.setFont(undefined, 'normal');
+            doc.text('No se han definido polígonos de terreno.', 25, currentY);
+            currentY += 10;
+        }
+        
+        // ====================================================================
+        // SECCIÓN 2: TUBERÍAS POR DIÁMETRO
+        // ====================================================================
+        
         if (tuberias.length > 0) {
-            doc.setFontSize(14);
-            doc.setTextColor(23, 114, 175);
+            doc.setFontSize(16);
+            doc.setTextColor(23, 114, 175); // Azul para sección tuberías
             doc.text('2. TUBERÍAS POR DIÁMETRO', 20, currentY);
             currentY += 8;
             
             const resumenTuberias = {};
+            let longitudTotalTuberias = 0;
+            
+            // Agrupar tuberías por tipo y diámetro
             tuberias.forEach(t => {
                 const key = `${t.tipo}_${t.diametro}_${t.tipoMaterial}`;
                 if (!resumenTuberias[key]) {
@@ -2541,108 +3093,505 @@ async function exportarPDF() {
                         tipo: t.tipo,
                         diametro: t.diametro,
                         tipoMaterial: t.tipoMaterial,
-                        longitudTotal: 0
+                        longitudTotal: 0,
+                        cantidad: 0
                     };
                 }
                 resumenTuberias[key].longitudTotal += t.longitud || 0;
+                resumenTuberias[key].cantidad += 1;
+                longitudTotalTuberias += t.longitud || 0;
             });
             
+            // Crear tabla de resumen
             doc.setFontSize(10);
             doc.setFont(undefined, 'bold');
+            
+            // Encabezado de la tabla
             doc.text('Tipo', 25, currentY);
             doc.text('Diámetro', 60, currentY);
             doc.text('Material', 85, currentY);
-            doc.text('Longitud (m)', 120, currentY, { align: 'right' });
+            doc.text('Cantidad', 115, currentY);
+            doc.text('Longitud (m)', 145, currentY, { align: 'right' });
             currentY += 6;
             
+            // Dibujar línea separadora
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, currentY, 190, currentY);
+            currentY += 3;
+            
+            doc.setFont(undefined, 'normal');
+            
+            // Ordenar por tipo: principal, secundaria, regante
+            const tiposOrdenados = ['principal', 'secundaria', 'regante'];
+            const itemsOrdenados = [];
+            
+            tiposOrdenados.forEach(tipo => {
+                const itemsTipo = Object.values(resumenTuberias).filter(item => item.tipo === tipo);
+                itemsOrdenados.push(...itemsTipo);
+            });
+            
+            // Agregar cualquier otro tipo que no esté en la lista ordenada
             Object.values(resumenTuberias).forEach(item => {
-                doc.setFont(undefined, 'normal');
+                if (!tiposOrdenados.includes(item.tipo)) {
+                    itemsOrdenados.push(item);
+                }
+            });
+            
+            itemsOrdenados.forEach(item => {
                 doc.text(item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1), 25, currentY);
                 doc.text(item.diametro + '"', 60, currentY);
                 doc.text(item.tipoMaterial, 85, currentY);
-                doc.text(item.longitudTotal.toFixed(2), 120, currentY, { align: 'right' });
+                doc.text(item.cantidad.toString(), 115, currentY);
+                doc.text(item.longitudTotal.toFixed(2), 145, currentY, { align: 'right' });
                 currentY += 6;
             });
             
-            const totalTuberias = tuberias.reduce((sum, t) => sum + (t.longitud || 0), 0);
+            // Línea separadora final
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, currentY, 190, currentY);
+            currentY += 3;
+            
+            // Totales
             doc.setFont(undefined, 'bold');
-            doc.text('Total General:', 25, currentY);
-            doc.text(totalTuberias.toFixed(2) + ' m', 120, currentY, { align: 'right' });
+            doc.text('LONGITUD TOTAL DE TUBERÍAS:', 25, currentY);
+            doc.text(longitudTotalTuberias.toFixed(2) + ' m', 145, currentY, { align: 'right' });
             currentY += 10;
         }
         
-        // TABLA DE VÁLVULAS
+        // ====================================================================
+        // SECCIÓN 3: VÁLVULAS DE CONTROL
+        // ====================================================================
+        
         if (valvulas.length > 0) {
-            doc.setFontSize(14);
-            doc.setTextColor(23, 114, 175);
+            // Verificar si necesitamos nueva página
+            if (currentY > 180) {
+                doc.addPage();
+                currentY = 20;
+                
+                // Encabezado de página
+                doc.setFontSize(20);
+                doc.setTextColor(0, 165, 83);
+                doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+                
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+                doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+                
+                currentY = 35;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(255, 107, 107); // Rojo para sección válvulas
             doc.text('3. VÁLVULAS DE CONTROL', 20, currentY);
             currentY += 8;
             
             doc.setFontSize(9);
             doc.setFont(undefined, 'bold');
+            
+            // Encabezado de la tabla
             doc.text('Nombre', 25, currentY);
             doc.text('Tipo', 45, currentY);
             doc.text('Diámetro', 65, currentY);
             doc.text('Presión', 80, currentY);
             doc.text('Emisores', 95, currentY);
-            doc.text('Caudal Emisor', 115, currentY);
-            doc.text('Caudal Total', 145, currentY, { align: 'right' });
+            doc.text('Caudal E.', 115, currentY);
+            doc.text('Caudal T.', 145, currentY, { align: 'right' });
             currentY += 5;
             
+            // Dibujar línea separadora
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, currentY, 190, currentY);
+            currentY += 3;
+            
+            doc.setFont(undefined, 'normal');
+            
+            let caudalTotalSistema = 0;
             valvulas.forEach(valvula => {
-                doc.setFont(undefined, 'normal');
+                // Verificar si necesitamos nueva página para esta fila
+                if (currentY > 250) {
+                    doc.addPage();
+                    currentY = 20;
+                    
+                    // Encabezado de página
+                    doc.setFontSize(20);
+                    doc.setTextColor(0, 165, 83);
+                    doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+                    
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+                    doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+                    
+                    currentY = 35;
+                    
+                    // Reimprimir encabezado de tabla
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Nombre', 25, currentY);
+                    doc.text('Tipo', 45, currentY);
+                    doc.text('Diámetro', 65, currentY);
+                    doc.text('Presión', 80, currentY);
+                    doc.text('Emisores', 95, currentY);
+                    doc.text('Caudal E.', 115, currentY);
+                    doc.text('Caudal T.', 145, currentY, { align: 'right' });
+                    currentY += 5;
+                    
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(20, currentY, 190, currentY);
+                    currentY += 3;
+                    
+                    doc.setFont(undefined, 'normal');
+                }
+                
                 doc.text(valvula.nombre, 25, currentY);
                 doc.text(valvula.tipo, 45, currentY);
                 doc.text(valvula.diametro, 65, currentY);
-                doc.text(valvula.presion.toString(), 80, currentY);
+                doc.text(valvula.presion.toString() + ' bar', 80, currentY);
                 doc.text(valvula.numeroEmisores.toString(), 95, currentY);
-                doc.text(valvula.caudalEmisor.toString(), 115, currentY);
-                doc.text(valvula.caudalTotal.toString(), 145, currentY, { align: 'right' });
+                doc.text(valvula.caudalEmisor.toString() + ' L/h', 115, currentY);
+                doc.text(valvula.caudalTotal.toString() + ' L/h', 145, currentY, { align: 'right' });
                 currentY += 5;
+                
+                caudalTotalSistema += valvula.caudalTotal;
             });
             
-            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+            // Línea separadora final
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, currentY, 190, currentY);
+            currentY += 3;
+            
+            // Totales
             doc.setFont(undefined, 'bold');
-            doc.text('Caudal Total del Sistema:', 25, currentY);
+            doc.text('CAUDAL TOTAL DEL SISTEMA:', 25, currentY);
             doc.text(`${caudalTotalSistema.toFixed(2)} L/h (${(caudalTotalSistema / 3600).toFixed(2)} L/s)`, 145, currentY, { align: 'right' });
             currentY += 10;
         }
         
-        // CÁLCULOS HIDRÁULICOS
-        if (valvulas.length > 0 && areaTotal > 0) {
-            doc.setFontSize(14);
-            doc.setTextColor(23, 114, 175);
-            doc.text('4. CÁLCULOS HIDRÁULICOS', 20, currentY);
+        // ====================================================================
+        // SECCIÓN 4: CABEZAL DE BOMBEO Y FILTRACIÓN
+        // ====================================================================
+        
+        if (cabezales.length > 0) {
+            // Verificar espacio en página
+            if (currentY > 200) {
+                doc.addPage();
+                currentY = 20;
+                
+                // Encabezado de página
+                doc.setFontSize(20);
+                doc.setTextColor(0, 165, 83);
+                doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+                
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+                doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+                
+                currentY = 35;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(23, 114, 175); // Azul para sección cabezal
+            doc.text('4. CABEZAL DE BOMBEO Y FILTRACIÓN', 20, currentY);
+            currentY += 8;
+            
+            cabezales.forEach((cabezal, index) => {
+                doc.setFontSize(10);
+                
+                if (index > 0) {
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`Cabezal ${index + 1}:`, 25, currentY);
+                    currentY += 7;
+                }
+                
+                // Información del cabezal
+                const infoCabezal = [
+                    ['Caudal de Bomba:', `${cabezal.caudalBomba} L/s (${(cabezal.caudalBomba * 3600).toFixed(0)} L/h)`],
+                    ['Diámetro Succión:', cabezal.diametroSuccion],
+                    ['Diámetro Descarga:', cabezal.diametroDescarga],
+                    ['Número de Filtros:', cabezal.numeroFiltros.toString()],
+                    ['Tipo de Filtros:', cabezal.tipoFiltros]
+                ];
+                
+                infoCabezal.forEach((item, idx) => {
+                    doc.setFont(undefined, 'bold');
+                    doc.text(item[0], 25, currentY);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(item[1], 75, currentY);
+                    currentY += 7;
+                });
+                
+                if (cabezal.notas && cabezal.notas.trim() !== '') {
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Notas:', 25, currentY);
+                    currentY += 7;
+                    
+                    doc.setFont(undefined, 'normal');
+                    const lineasNotas = doc.splitTextToSize(cabezal.notas, 150);
+                    lineasNotas.forEach(linea => {
+                        doc.text(linea, 30, currentY);
+                        currentY += 6;
+                    });
+                }
+                
+                currentY += 10;
+            });
+        }
+        
+        // ====================================================================
+        // SECCIÓN 5: CÁLCULOS HIDRÁULICOS
+        // ====================================================================
+        
+        if (valvulas.length > 0 && numPoligonos > 0) {
+            // Verificar espacio en página
+            if (currentY > 190) {
+                doc.addPage();
+                currentY = 20;
+                
+                // Encabezado de página
+                doc.setFontSize(20);
+                doc.setTextColor(0, 165, 83);
+                doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+                
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+                doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+                
+                currentY = 35;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 138, 69); // Verde para cálculos
+            doc.text('5. CÁLCULOS HIDRÁULICOS', 20, currentY);
             currentY += 8;
             
             doc.setFontSize(10);
+            
             const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
             const caudalLps = caudalTotalSistema / 3600;
-            const laminaPorHora = caudalTotalSistema / (areaTotal * 1000);
-            const horasPara10mm = 10 / laminaPorHora;
             
-            doc.text(`Caudal Total Requerido: ${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)`, 25, currentY);
-            currentY += 6;
-            doc.text(`Lámina de Riego por Hora: ${laminaPorHora.toFixed(3)} mm/h`, 25, currentY);
-            currentY += 6;
-            doc.text(`Tiempo para aplicar 10 mm de riego: ${horasPara10mm.toFixed(1)} horas`, 25, currentY);
-            currentY += 6;
+            // Información general de cálculos
+            const infoCalculos = [
+                ['Caudal Total Requerido:', `${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)`],
+                ['Área Total de Riego:', `${areaTotalPoligonos.toFixed(2)} m² (${(areaTotalPoligonos / 10000).toFixed(3)} ha)`]
+            ];
+            
+            infoCalculos.forEach((item, idx) => {
+                doc.setFont(undefined, 'bold');
+                doc.text(item[0], 25, currentY);
+                doc.setFont(undefined, 'normal');
+                doc.text(item[1], 85, currentY);
+                currentY += 7;
+            });
+            
+            currentY += 5;
+            
+            // Cálculo de lámina de riego
+            const laminaPorHora = caudalTotalSistema / (areaTotalPoligonos * 1000);
+            const horasPara10mm = 10 / laminaPorHora;
+            const horasPara20mm = 20 / laminaPorHora;
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Lámina de Riego:', 25, currentY);
+            currentY += 7;
+            
+            const calculosLamina = [
+                ['Por hora:', `${laminaPorHora.toFixed(3)} mm/h`],
+                ['Tiempo para 10 mm:', `${horasPara10mm.toFixed(1)} horas`],
+                ['Tiempo para 20 mm:', `${horasPara20mm.toFixed(1)} horas`]
+            ];
+            
+            calculosLamina.forEach((item, idx) => {
+                doc.setFont(undefined, 'bold');
+                doc.text(item[0], 30, currentY);
+                doc.setFont(undefined, 'normal');
+                doc.text(item[1], 85, currentY);
+                currentY += 7;
+            });
+            
+            currentY += 5;
+            
+            // Comparación con cabezal si existe
+            if (cabezales.length > 0) {
+                const cabezalPrincipal = cabezales[0];
+                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000; // Convertir L/s a L/h
+                const diferencia = caudalCabezal - caudalTotalSistema;
+                const porcentaje = (diferencia / caudalCabezal) * 100;
+                
+                doc.setFont(undefined, 'bold');
+                doc.text('Comparación con Cabezal:', 25, currentY);
+                currentY += 7;
+                
+                const comparaciones = [
+                    ['Caudal Disponible:', `${caudalCabezal.toFixed(2)} L/h (${cabezalPrincipal.caudalBomba} L/s)`],
+                    ['Caudal Requerido:', `${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)`],
+                    ['Diferencia:', `${diferencia.toFixed(2)} L/h (${(diferencia / 3600).toFixed(2)} L/s)`]
+                ];
+                
+                comparaciones.forEach((item, idx) => {
+                    doc.setFont(undefined, 'bold');
+                    doc.text(item[0], 30, currentY);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(item[1], 85, currentY);
+                    currentY += 7;
+                });
+                
+                doc.setFont(undefined, 'bold');
+                doc.text('Estado del Sistema:', 25, currentY);
+                doc.setFont(undefined, 'normal');
+                
+                if (diferencia >= 0) {
+                    doc.setTextColor(0, 138, 69); // Verde
+                    doc.text(`Sobrecapacidad del ${Math.abs(porcentaje).toFixed(1)}% - SISTEMA ADECUADO`, 85, currentY);
+                } else {
+                    doc.setTextColor(255, 107, 107); // Rojo
+                    doc.text(`Déficit del ${Math.abs(porcentaje).toFixed(1)}% - SISTEMA INSUFICIENTE`, 85, currentY);
+                }
+                
+                doc.setTextColor(0, 0, 0);
+                currentY += 10;
+            }
+            
+            currentY += 5;
+            
+            // Recomendaciones según el cálculo
+            doc.setFont(undefined, 'bold');
+            doc.text('RECOMENDACIONES:', 25, currentY);
+            currentY += 7;
+            
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(9);
+            
+            const recomendaciones = [];
+            
+            if (laminaPorHora > 2) {
+                recomendaciones.push('• Lámina de riego alta (>2 mm/h). Considerar reducir tiempo de riego.');
+            } else if (laminaPorHora < 0.5) {
+                recomendaciones.push('• Lámina de riego baja (<0.5 mm/h). Considerar aumentar tiempo de riego.');
+            } else {
+                recomendaciones.push('• Lámina de riego adecuada para la mayoría de cultivos.');
+            }
             
             if (cabezales.length > 0) {
                 const cabezalPrincipal = cabezales[0];
                 const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
                 const diferencia = caudalCabezal - caudalTotalSistema;
-                const porcentaje = (diferencia / caudalCabezal) * 100;
                 
-                doc.text(`Caudal Disponible (Cabezal): ${caudalCabezal.toFixed(2)} L/h (${cabezalPrincipal.caudalBomba} L/s)`, 25, currentY);
-                currentY += 6;
-                doc.text(`Diferencia: ${diferencia.toFixed(2)} L/h (${(diferencia / 3600).toFixed(2)} L/s)`, 25, currentY);
-                currentY += 6;
-                doc.text(`Observación: ${diferencia >= 0 ? 'Sobrecapacidad del ' + porcentaje.toFixed(1) + '%' : 'Deficit del ' + Math.abs(porcentaje).toFixed(1) + '%'}`, 25, currentY);
-                currentY += 6;
+                if (diferencia < 0) {
+                    recomendaciones.push(`• El cabezal tiene insuficiente capacidad. Se requiere aumentar en ${Math.abs(diferencia).toFixed(0)} L/h.`);
+                } else if (diferencia > caudalTotalSistema * 0.5) {
+                    recomendaciones.push(`• El cabezal tiene excesiva capacidad. Considerar reducir tamaño para ahorro energético.`);
+                } else {
+                    recomendaciones.push('• El cabezal está correctamente dimensionado para el sistema.');
+                }
             }
             
-            currentY += 5;
+            if (valvulas.length < 3 && areaTotalPoligonos > 5000) {
+                recomendaciones.push('• Pocas válvulas para el área. Considerar dividir en más sectores.');
+            }
+            
+            if (recomendaciones.length === 0) {
+                recomendaciones.push('• El sistema está bien dimensionado. No se requieren ajustes importantes.');
+            }
+            
+            recomendaciones.forEach((recomendacion, idx) => {
+                const lineas = doc.splitTextToSize(recomendacion, 150);
+                lineas.forEach(linea => {
+                    doc.text(linea, 30, currentY);
+                    currentY += 6;
+                });
+            });
+            
+            currentY += 10;
+        }
+        
+        // ====================================================================
+        // SECCIÓN 6: FIRMAS Y OBSERVACIONES
+        // ====================================================================
+        
+        // Verificar espacio para firma
+        if (currentY > 230) {
+            doc.addPage();
+            currentY = 20;
+            
+            // Encabezado de página
+            doc.setFontSize(20);
+            doc.setTextColor(0, 165, 83);
+            doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
+            doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+            
+            currentY = 35;
+        }
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100, 100, 100);
+        doc.text('6. FIRMAS Y OBSERVACIONES', 20, currentY);
+        currentY += 8;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        
+        // Línea para firma del diseñador
+        doc.text('Diseñador:', 25, currentY);
+        doc.setDrawColor(200, 200, 200);
+        doc.line(60, currentY, 150, currentY);
+        currentY += 15;
+        
+        doc.text('Firma:', 25, currentY);
+        doc.line(60, currentY, 150, currentY);
+        currentY += 20;
+        
+        // Línea para firma del cliente
+        doc.text('Cliente:', 25, currentY);
+        doc.line(60, currentY, 150, currentY);
+        currentY += 15;
+        
+        doc.text('Firma:', 25, currentY);
+        doc.line(60, currentY, 150, currentY);
+        currentY += 20;
+        
+        // Observaciones finales
+        doc.setFont(undefined, 'bold');
+        doc.text('Observaciones finales:', 25, currentY);
+        currentY += 8;
+        
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+        
+        const observaciones = [
+            '1. Las mediciones mostradas son aproximadas. Para mediciones exactas, utilice herramientas profesionales de topografía.',
+            '2. Los cálculos hidráulicos son estimaciones basadas en los datos proporcionados.',
+            '3. Se recomienda realizar pruebas de campo para verificar el funcionamiento del sistema.',
+            '4. Considere factores como pendiente del terreno, tipo de suelo y cultivo para ajustes finales.',
+            '5. Este documento es una memoria técnica preliminar. Consulte con un ingeniero especializado para el diseño final.'
+        ];
+        
+        observaciones.forEach((obs, idx) => {
+            const lineas = doc.splitTextToSize(obs, 160);
+            lineas.forEach(linea => {
+                doc.text(linea, 30, currentY);
+                currentY += 5;
+            });
+            currentY += 2;
+        });
+        
+        // ====================================================================
+        // PIE DE PÁGINA FINAL
+        // ====================================================================
+        
+        const totalPaginas = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPaginas; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Documento técnico generado por Agrosistemas - Página ${i} de ${totalPaginas}`, 105, 290, { align: 'center' });
+            doc.text('www.agrosistemas.com.mx | contacto@agrosistemas.com.mx | Tel: 668 123 4567', 105, 295, { align: 'center' });
         }
         
         // GUARDAR PDF
@@ -2658,6 +3607,191 @@ async function exportarPDF() {
         alert(`Error al generar el PDF: ${error.message}\n\nPor favor, intente nuevamente.`);
     }
 }
+
+// ============================================
+// FUNCIONES DE UTILIDAD (MODIFICADAS)
+// ============================================
+
+function calcularAreaPoligono(polygon) {
+    const latlngs = polygon.getLatLngs()[0];
+    areaTotal = L.GeometryUtil.geodesicArea(latlngs);
+    
+    // Calcular perímetro
+    let perimetro = 0;
+    for (let i = 0; i < latlngs.length; i++) {
+        const puntoActual = latlngs[i];
+        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+        perimetro += puntoActual.distanceTo(puntoSiguiente);
+    }
+    
+    // Calcular centro para la etiqueta
+    const centro = calcularCentroPoligono(latlngs);
+    
+    // Crear o actualizar etiqueta del polígono
+    if (!polygon.etiquetaArea) {
+        polygon.etiquetaArea = L.marker(centro, {
+            icon: L.divIcon({
+                className: 'etiqueta-poligono',
+                html: crearHTMLMedidasPoligono(areaTotal, perimetro),
+                iconSize: [200, 80],
+                iconAnchor: [100, 40]
+            }),
+            interactive: false
+        }).addTo(map);
+    } else {
+        polygon.etiquetaArea.setLatLng(centro);
+        polygon.etiquetaArea.setIcon(L.divIcon({
+            className: 'etiqueta-poligono',
+            html: crearHTMLMedidasPoligono(areaTotal, perimetro),
+            iconSize: [200, 80],
+            iconAnchor: [100, 40]
+        }));
+    }
+    
+    // Calcular medidas de cada lado y agregar etiquetas
+    actualizarEtiquetasLados(polygon, latlngs);
+    
+    // Actualizar display principal
+    document.getElementById('areaDisplay').textContent = 
+        `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha) | Perímetro: ${perimetro.toFixed(2)} m`;
+    
+    ocultarControlesMapa();
+    actualizarResultados();
+    
+    return { area: areaTotal, perimetro: perimetro };
+}
+
+function calcularCentroPoligono(latlngs) {
+    let latSum = 0, lngSum = 0;
+    latlngs.forEach(punto => {
+        latSum += punto.lat;
+        lngSum += punto.lng;
+    });
+    return L.latLng(latSum / latlngs.length, lngSum / latlngs.length);
+}
+
+function crearHTMLMedidasPoligono(area, perimetro) {
+    return `
+        <div style="background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 8px; border: 2px solid #008a45; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center; min-width: 180px;">
+            <div style="font-weight: bold; color: #008a45; font-size: 12px; margin-bottom: 5px;">MEDIDAS DEL TERRENO</div>
+            <div style="font-size: 11px; color: #333;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>Área:</span>
+                    <span style="font-weight: bold;">${area.toFixed(1)} m²</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>Hectáreas:</span>
+                    <span style="font-weight: bold;">${(area / 10000).toFixed(3)} ha</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Perímetro:</span>
+                    <span style="font-weight: bold;">${perimetro.toFixed(1)} m</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function actualizarEtiquetasLados(polygon, latlngs) {
+    // Eliminar etiquetas anteriores si existen
+    if (polygon.etiquetasLados) {
+        polygon.etiquetasLados.forEach(etiqueta => {
+            if (etiqueta && etiqueta.remove) {
+                map.removeLayer(etiqueta);
+            }
+        });
+    }
+    
+    polygon.etiquetasLados = [];
+    
+    // Crear etiquetas para cada lado
+    for (let i = 0; i < latlngs.length; i++) {
+        const puntoActual = latlngs[i];
+        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+        
+        const distancia = puntoActual.distanceTo(puntoSiguiente);
+        const centro = L.latLng(
+            (puntoActual.lat + puntoSiguiente.lat) / 2,
+            (puntoActual.lng + puntoSiguiente.lng) / 2
+        );
+        
+        // Calcular ángulo para orientar la etiqueta
+        const angulo = calcularAngulo(puntoActual, puntoSiguiente);
+        
+        // Desplazar la etiqueta para que no se superponga con el polígono
+        const desplazamiento = 0.00002; // Ajustar según zoom
+        const anguloRadianes = (90 - angulo) * Math.PI / 180;
+        const centroDesplazado = L.latLng(
+            centro.lat + Math.cos(anguloRadianes) * desplazamiento,
+            centro.lng + Math.sin(anguloRadianes) * desplazamiento
+        );
+        
+        const etiqueta = L.marker(centroDesplazado, {
+            icon: L.divIcon({
+                className: 'etiqueta-lado',
+                html: `
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 4px 8px; border-radius: 4px; 
+                           border: 1px solid #008a45; font-size: 10px; font-weight: bold; color: #333; 
+                           transform: rotate(${angulo}deg); transform-origin: center;">
+                        ${distancia.toFixed(1)} m
+                    </div>`,
+                iconSize: [70, 25],
+                iconAnchor: [35, 12.5]
+            }),
+            rotationAngle: angulo,
+            interactive: false
+        }).addTo(map);
+        
+        polygon.etiquetasLados.push(etiqueta);
+    }
+}
+
+// Modificar el evento de edición para actualizar medidas
+map.on(L.Draw.Event.EDITED, function(event) {
+    const layers = event.layers;
+    layers.eachLayer(function(layer) {
+        if (layer instanceof L.Polygon) {
+            // Actualizar área y medidas
+            const medidas = calcularAreaPoligono(layer);
+            
+            // Actualizar etiquetas de lados
+            const latlngs = layer.getLatLngs()[0];
+            actualizarEtiquetasLados(layer, latlngs);
+            
+            // Actualizar display general
+            const areaDisplay = document.getElementById('areaDisplay');
+            areaDisplay.textContent = 
+                `Área: ${medidas.area.toFixed(2)} m² (${(medidas.area / 10000).toFixed(2)} ha) | Perímetro: ${medidas.perimetro.toFixed(2)} m`;
+        } else if (layer instanceof L.Polyline) {
+            calcularLongitudPolilinea(layer);
+        }
+    });
+});
+
+// Modificar el evento de eliminación para limpiar etiquetas
+map.on(L.Draw.Event.DELETED, function(event) {
+    const layers = event.layers;
+    layers.eachLayer(function(layer) {
+        if (layer instanceof L.Polygon) {
+            // Eliminar etiquetas del polígono
+            if (layer.etiquetaArea) {
+                map.removeLayer(layer.etiquetaArea);
+            }
+            if (layer.etiquetasLados) {
+                layer.etiquetasLados.forEach(etiqueta => {
+                    if (etiqueta && etiqueta.remove) {
+                        map.removeLayer(etiqueta);
+                    }
+                });
+            }
+            
+            areaTotal = 0;
+            document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
+            actualizarResultados();
+            mostrarControlesMapa();
+        }
+    });
+});
 
 // ============================================
 // FUNCIONES DE CONTROLES DEL MAPA
