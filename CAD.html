@@ -8,16 +8,616 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Reset para fullscreen */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            color: #333;
+            background-color: #FFFFFF;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Contenedor principal fullscreen */
+        .cad-fullscreen-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Marca de agua */
+        .watermark {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 10000;
+            background-color: #FFFFFF;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .watermark-logo {
+            height: 25px;
+            width: auto;
+        }
+
+        .watermark-text {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .watermark-text a {
+            color: #1772af;
+            text-decoration: none;
+        }
+
+        /* Header minimalista */
+        #mainHeader {
+            background-color: #FFFFFF;
+            position: relative;
+            width: 100%;
+            z-index: 1000;
+            border-bottom: 1px solid #e0e0e0;
+            height: 60px;
+            min-height: 60px;
+        }
+
+        .main-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            padding: 0 15px;
+        }
+
+        .logo {
+            height: 50px;
+        }
+
+        .logo img {
+            height: 50px;
+            width: auto;
+        }
+
+        .mobile-menu-btn {
+            display: block;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #111;
+            background: none;
+            border: none;
+            padding: 10px;
+            z-index: 1002;
+        }
+
+        /* Navegación compacta */
+        #mainNav {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            height: 100vh;
+            background-color: #FFFFFF;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+            transition: right 0.3s ease-in-out;
+            z-index: 1001;
+            padding: 80px 30px 30px;
+            overflow-y: auto;
+        }
+
+        #mainNav.active {
+            right: 0;
+        }
+
+        #mainNav ul {
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #mainNav ul li a {
+            font-weight: 600;
+            color: #111;
+            font-size: 1rem;
+            display: block;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        #mainNav ul li a.current-page {
+            color: #00a553;
+            border-bottom: 2px solid #00a553;
+        }
+
+        /* Área principal de trabajo - REDISEÑADA PERO MANTENIENDO ESTRUCTURA */
+        .disenador-riego {
+            flex: 1;
+            padding: 0;
+            background-color: #f8f9fa;
+            overflow: hidden;
+            height: calc(100vh - 60px);
+        }
+
+        .disenador-riego .container {
+            width: 100%;
+            height: 100%;
+            max-width: none;
+            padding: 0;
+        }
+
+        .section-title, .disenador-intro {
+            display: none; /* Ocultamos estos elementos en modo CAD */
+        }
+
+        /* Grid principal fullscreen */
+        .disenador-grid {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            flex-direction: row;
+            gap: 0;
+        }
+
+        /* Panel del Mapa - 70% del ancho */
+        .mapa-panel {
+            flex: 3;
+            background-color: white;
+            height: 100%;
+            border-radius: 0;
+            box-shadow: none;
+            position: relative;
+            min-width: 0;
+        }
+
+        .mapa-header {
+            padding: 10px 15px;
+            background-color: #1772af;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+
+        .mapa-header h3 {
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .mapa-container {
+            height: calc(100% - 50px);
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Controles del mapa - reposicionados */
+        .mapa-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background-color: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-container {
+            display: none; /* Ocultamos la búsqueda para simplificar */
+        }
+
+        .mapa-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mapa-btn {
+            background-color: #00a553;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 36px;
+        }
+
+        .mapa-btn.secondary {
+            background-color: #1772af;
+        }
+
+        /* Ocultamos botones adicionales */
+        #hideControlsBtn, #showControlsBtn {
+            display: none !important;
+        }
+
+        /* Panel CAD - 30% del ancho */
+        .cad-panel {
+            flex: 1;
+            background-color: white;
+            height: 100%;
+            border-radius: 0;
+            box-shadow: none;
+            border-left: 1px solid #e0e0e0;
+            min-width: 350px;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cad-header {
+            padding: 10px 15px;
+            background-color: #00a553;
+            color: white;
+            height: 70px;
+        }
+
+        .cad-header h3 {
+            font-size: 1.1rem;
+            margin: 0 0 5px 0;
+        }
+
+        .cad-header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .cad-tabs {
+            display: flex;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            height: 40px;
+            min-height: 40px;
+        }
+
+        .cad-tab {
+            flex: 1;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cad-tab.active {
+            background-color: white;
+            color: #00a553;
+            border-bottom: 3px solid #00a553;
+        }
+
+        .cad-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Ajustes para los controles dentro del panel CAD */
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .control-group h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .control-label {
+            width: 80px;
+            font-size: 0.85rem;
+            color: #666;
+            min-width: 80px;
+        }
+
+        select {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            min-height: 36px;
+            background-color: white;
+        }
+
+        /* Botones de tubería */
+        .tuberia-btn {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            width: 100%;
+            min-height: 40px;
+            margin-top: 8px;
+        }
+
+        .tuberia-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .tuberia-btn.activo {
+            background-color: #00a553;
+            color: white;
+            border-color: #00a553;
+        }
+
+        .tuberia-btn.conexion-btn {
+            background-color: #ff9f43;
+            border-color: #ff9f43;
+            color: white;
+        }
+
+        /* Elementos */
+        .elementos-lista {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .elemento-btn {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .elemento-btn.active {
+            background-color: #00a553;
+            color: white;
+            border-color: #00a553;
+        }
+
+        /* Ocultamos secciones que no necesitamos en modo CAD */
+        .page-hero, .contacto, footer {
+            display: none;
+        }
+
+        /* Botón About flotante */
+        .about-btn {
+            position: absolute;
+            top: 15px;
+            right: 70px;
+            background-color: #1772af;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Modal About */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            color: #111;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+            .disenador-grid {
+                flex-direction: column;
+            }
+            
+            .mapa-panel {
+                flex: 2;
+                min-height: 50vh;
+            }
+            
+            .cad-panel {
+                flex: 1;
+                min-width: 100%;
+                max-width: 100%;
+                border-left: none;
+                border-top: 1px solid #e0e0e0;
+            }
+            
+            .mapa-controls {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                justify-content: center;
+            }
+            
+            .mapa-buttons {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .mapa-btn {
+                flex: 1;
+                min-width: 120px;
+                justify-content: center;
+            }
+            
+            .watermark {
+                bottom: 10px;
+                right: 10px;
+                padding: 6px 10px;
+            }
+            
+            .watermark-logo {
+                height: 20px;
+            }
+            
+            .watermark-text {
+                font-size: 0.7rem;
+            }
+            
+            .about-btn {
+                top: 10px;
+                right: 60px;
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Landscape en móviles */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .disenador-grid {
+                flex-direction: row;
+            }
+            
+            .mapa-panel {
+                min-height: 100vh;
+            }
+            
+            .cad-panel {
+                min-width: 300px;
+                max-width: 350px;
+                border-top: none;
+                border-left: 1px solid #e0e0e0;
+            }
+        }
+
+        /* Desktop grande */
+        @media (min-width: 1200px) {
+            .cad-panel {
+                min-width: 400px;
+                max-width: 450px;
+            }
+        }
+
+        /* Scrollbar personalizado */
+        .cad-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .cad-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .cad-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        /* Ocultar el hero y contacto originales */
+        .page-hero, .contacto, footer {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-    <!-- Header -->
+    <!-- Header minimalista -->
     <header id="mainHeader">
         <div class="main-header">
             <div class="container">
                 <div class="logo">
                     <img src="logo.png" alt="Agrosistemas Logo">
                 </div>
+                <button class="about-btn" id="aboutBtn">
+                    <i class="fas fa-info-circle"></i> About
+                </button>
                 <button class="mobile-menu-btn" id="mobileMenuBtn">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -28,361 +628,328 @@
                         <li><a href="sistemaDeRiego.html">Sistemas de Riego</a></li>
                         <li><a href="energiaSolar.html">Energía Solar</a></li>
                         <li><a href="equipamientoAgricola.html">Equipamiento</a></li>
-                        <li><a href="#contacto">Contacto</a></li>
                     </ul>
                 </nav>
             </div>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="page-hero">
-        <div class="container">
-            <h1 class="fade-in">Diseña tu Sistema de Riego.</h1>
-            <p class="fade-in delay-1">Con nuestra solución de Computer Assisted Drawing para hacer tus proyectos.</p>
-            <a href="#contacto" class="btn fade-in delay-2">Solicitar Asesoría</a>
-        </div>
-    </section>
-
-    <!-- Diseñador de Riego CAD -->
-    <section class="disenador-riego" id="disenador-riego">
-        <div class="container">
-            <h2 class="section-title">Diseñador de Sistemas de Riego</h2>
-            <p class="disenador-intro fade-in">Diseña tu sistema de riego de manera interactiva. Ubica tu predio en el mapa, delimita las secciones y configura tuberías, emisores y elementos del sistema.</p>
-            
-            <div class="disenador-grid">
-                <!-- Panel del Mapa -->
-                <div class="mapa-panel fade-in">
-                    <div class="mapa-header">
-                        <h3>Ubicación del Predio</h3>
-                        <div class="area-display" id="areaDisplay">Área: 0 m²</div>
-                    </div>
-                    <div class="mapa-container">
-                        <div id="map"></div>
-                        <div class="mapa-controls" id="mapaControls">
-                            <div class="search-container">
-                                <input type="text" id="location-search" placeholder="Buscar ubicación...">
-                                <button id="searchBtn" class="mapa-btn" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8rem;">
-                                    <i class="fas fa-search"></i> Buscar
-                                </button>
-                            </div>
-                            <div class="mapa-buttons">
-                                <button class="mapa-btn" id="drawPolygonBtn">
-                                    <i class="fas fa-draw-polygon"></i> Delimitar Terreno
-                                </button>
-                                <button class="mapa-btn secondary" id="measureBtn">
-                                    <i class="fas fa-ruler"></i> Medir
-                                </button>
-                                <button class="mapa-btn secondary" id="clearBtn">
-                                    <i class="fas fa-trash"></i> Limpiar
-                                </button>
-                                <button class="mapa-btn secondary" id="hideControlsBtn" style="display: none;">
-                                    <i class="fas fa-eye-slash"></i> Ocultar Controles
-                                </button>
-                                <button class="mapa-btn secondary" id="showControlsBtn" style="display: none;">
-                                    <i class="fas fa-eye"></i> Mostrar Controles
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Contenedor principal fullscreen -->
+    <div class="cad-fullscreen-wrapper">
+        <!-- Diseñador de Riego CAD - ESTRUCTURA ORIGINAL PERO REDISEÑADA VISUALMENTE -->
+        <section class="disenador-riego" id="disenador-riego">
+            <div class="container">
+                <h2 class="section-title">Diseñador de Sistemas de Riego</h2>
+                <p class="disenador-intro fade-in">Diseña tu sistema de riego de manera interactiva. Ubica tu predio en el mapa, delimita las secciones y configura tuberías, emisores y elementos del sistema.</p>
                 
-                <!-- Panel de Diseño CAD -->
-                <div class="cad-panel fade-in delay-1">
-                    <div class="cad-header">
-                        <h3>Diseño del Sistema de Riego</h3>
-                        <p>Configura tuberías, emisores y elementos del sistema</p>
+                <div class="disenador-grid">
+                    <!-- Panel del Mapa - MANTENIENDO TODOS LOS IDs ORIGINALES -->
+                    <div class="mapa-panel fade-in">
+                        <div class="mapa-header">
+                            <h3>Ubicación del Predio</h3>
+                            <div class="area-display" id="areaDisplay">Área: 0 m²</div>
+                        </div>
+                        <div class="mapa-container">
+                            <div id="map"></div>
+                            <div class="mapa-controls" id="mapaControls">
+                                <div class="search-container">
+                                    <input type="text" id="location-search" placeholder="Buscar ubicación...">
+                                    <button id="searchBtn" class="mapa-btn" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8rem;">
+                                        <i class="fas fa-search"></i> Buscar
+                                    </button>
+                                </div>
+                                <div class="mapa-buttons">
+                                    <button class="mapa-btn" id="drawPolygonBtn">
+                                        <i class="fas fa-draw-polygon"></i> Delimitar Terreno
+                                    </button>
+                                    <button class="mapa-btn secondary" id="measureBtn">
+                                        <i class="fas fa-ruler"></i> Medir
+                                    </button>
+                                    <button class="mapa-btn secondary" id="clearBtn">
+                                        <i class="fas fa-trash"></i> Limpiar
+                                    </button>
+                                    <button class="mapa-btn secondary" id="hideControlsBtn" style="display: none;">
+                                        <i class="fas fa-eye-slash"></i> Ocultar Controles
+                                    </button>
+                                    <button class="mapa-btn secondary" id="showControlsBtn" style="display: none;">
+                                        <i class="fas fa-eye"></i> Mostrar Controles
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="cad-tabs">
-                        <div class="cad-tab active" data-tab="tuberias">Tuberías</div>
-                        <div class="cad-tab" data-tab="elementos">Elementos</div>
-                        <div class="cad-tab" data-tab="resultados">Resultados</div>
-                        <div class="cad-tab" data-tab="galeria">Galería</div>
-                    </div>
-                    
-                    <div class="cad-content">
-                        <!-- Pestaña de Tuberías -->
-                        <div class="cad-tab-content active" id="tuberias-tab">
-                            <div class="control-group">
-                                <h4>Tubería Principal</h4>
-                                <div class="control-row">
-                                    <div class="control-label">Color:</div>
-                                    <div class="color-indicator color-principal"></div>
-                                    <div>Rojo (Grosor: 8px)</div>
-                                </div>
-                                <div class="control-row">
-                                    <div class="control-label">Diámetro:</div>
-                                    <select id="diametroPrincipal">
-                                        <option value="2">2"</option>
-                                        <option value="3">3"</option>
-                                        <option value="4">4"</option>
-                                        <option value="6">6"</option>
-                                        <option value="8">8"</option>
-                                        <option value="10">10"</option>
-                                        <option value="12">12"</option>
-                                        <option value="14">14"</option>
-                                        <option value="16">16"</option>
-                                        <option value="18">18"</option>
-                                        <option value="20">20"</option>
-                                    </select>
-                                </div>
-                                <div class="control-row">
-                                    <div class="control-label">Tipo:</div>
-                                    <select id="tipoPrincipal">
-                                        <option value="pvc">PVC</option>
-                                        <option value="manguera">Manguera</option>
-                                    </select>
-                                </div>
-                                <button class="tuberia-btn" onclick="iniciarModoTuberia('principal')" id="btnTuberiaPrincipal">
-                                    <i class="fas fa-pencil-alt"></i> Dibujar Tubería Principal
-                                </button>
-                                <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('principal')" id="btnConectarPrincipal" style="margin-top: 5px;">
-                                    <i class="fas fa-link"></i> Conectar Tuberías
-                                </button>
-                                <div class="instrucciones-tuberia" id="instruccionesPrincipal" style="display: none;">
-                                    Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
-                                </div>
-                            </div>
-                            
-                            <div class="control-group">
-                                <h4>Tubería Secundaria</h4>
-                                <div class="control-row">
-                                    <div class="control-label">Color:</div>
-                                    <div class="color-indicator color-secundaria"></div>
-                                    <div>Turquesa (Grosor: 6px)</div>
-                                </div>
-                                <div class="control-row">
-                                    <div class="control-label">Diámetro:</div>
-                                    <select id="diametroSecundaria">
-                                        <option value="1">1"</option>
-                                        <option value="1.5">1.5"</option>
-                                        <option value="2">2"</option>
-                                        <option value="3">3"</option>
-                                        <option value="4">4"</option>
-                                    </select>
-                                </div>
-                                <div class="control-row">
-                                    <div class="control-label">Tipo:</div>
-                                    <select id="tipoSecundaria">
-                                        <option value="pvc">PVC</option>
-                                        <option value="manguera">Manguera</option>
-                                    </select>
-                                </div>
-                                <button class="tuberia-btn" onclick="iniciarModoTuberia('secundaria')" id="btnTuberiaSecundaria">
-                                    <i class="fas fa-pencil-alt"></i> Dibujar Tubería Secundaria
-                                </button>
-                                <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('secundaria')" id="btnConectarSecundaria" style="margin-top: 5px;">
-                                    <i class="fas fa-link"></i> Conectar Tuberías
-                                </button>
-                                <div class="instrucciones-tuberia" id="instruccionesSecundaria" style="display: none;">
-                                    Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
-                                </div>
-                            </div>
-                            
-                            <div class="control-group">
-                                <h4>Tubería Regante</h4>
-                                <div class="control-row">
-                                    <div class="control-label">Color:</div>
-                                    <div class="color-indicator color-regante"></div>
-                                    <div>Azul (Grosor: 4px)</div>
-                                </div>
-                                <div class="control-row">
-                                    <div class="control-label">Diámetro:</div>
-                                    <select id="diametroRegante">
-                                        <option value="0.5">1/2"</option>
-                                        <option value="0.75">3/4"</option>
-                                        <option value="1">1"</option>
-                                    </select>
-                                </div>
-                                <div class="control-row">
-                                    <div class="control-label">Tipo:</div>
-                                    <select id="tipoRegante">
-                                        <option value="pvc">PVC</option>
-                                        <option value="manguera">Manguera</option>
-                                    </select>
-                                </div>
-                                <button class="tuberia-btn" onclick="iniciarModoTuberia('regante')" id="btnTuberiaRegante">
-                                    <i class="fas fa-pencil-alt"></i> Dibujar Tubería Regante
-                                </button>
-                                <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('regante')" id="btnConectarRegante" style="margin-top: 5px;">
-                                    <i class="fas fa-link"></i> Conectar Tuberías
-                                </button>
-                                <div class="instrucciones-tuberia" id="instruccionesRegante" style="display: none;">
-                                    Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
-                                </div>
-                            </div>
-                            
-                            <div class="cad-resumen">
-                                <h4>Resumen de Tuberías</h4>
-                                <div id="resumenTuberiasDetallado">
-                                    <!-- Aquí se mostrará el resumen detallado por diámetros -->
-                                </div>
-                            </div>
+                    <!-- Panel de Diseño CAD - MANTENIENDO TODOS LOS IDs ORIGINALES -->
+                    <div class="cad-panel fade-in delay-1">
+                        <div class="cad-header">
+                            <h3>Diseño del Sistema de Riego</h3>
+                            <p>Configura tuberías, emisores y elementos del sistema</p>
                         </div>
                         
-                        <!-- Pestaña de Elementos -->
-                        <div class="cad-tab-content" id="elementos-tab">
-                            <div class="control-group">
-                                <h4>Agregar Elementos al Diseño</h4>
-                                <div class="elementos-lista">
-                                    <div class="elemento-btn active" data-elemento="cabezal" onclick="iniciarModoElemento('cabezal')">
-                                        <i class="fas fa-gear"></i> Cabezal
-                                    </div>
-                                    <div class="elemento-btn" data-elemento="purgaterminal" onclick="iniciarModoElemento('purgaterminal')">
-                                        <i class="fas fa-faucet"></i> Purgas/Terminales
-                                    </div>
-                                    <div class="elemento-btn" data-elemento="tomagua" onclick="iniciarModoElemento('tomagua')">
-                                        <i class="fas fa-tint"></i> Toma de Agua
-                                    </div>
-                                    <div class="elemento-btn" data-elemento="valvula" onclick="iniciarModoElemento('valvula')">
-                                        <i class="fas fa-toggle-on"></i> Válvula
-                                    </div>
-                                    <div class="elemento-btn" data-elemento="filtro" onclick="iniciarModoElemento('filtro')">
-                                        <i class="fas fa-filter"></i> Filtro
-                                    </div>
-                                </div>
-                                <div class="instrucciones-tuberia" id="instruccionesElementos" style="display: none;">
-                                    Haz clic en el mapa para colocar el elemento seleccionado.
-                                </div>
-                            </div>
-                            
-                            <div class="control-group">
-                                <h4>Configuración del Elemento</h4>
-                                <div id="elementoConfig">
-                                    <p>Selecciona un elemento para configurarlo</p>
-                                </div>
-                            </div>
+                        <div class="cad-tabs">
+                            <div class="cad-tab active" data-tab="tuberias">Tuberías</div>
+                            <div class="cad-tab" data-tab="elementos">Elementos</div>
+                            <div class="cad-tab" data-tab="resultados">Resultados</div>
+                            <div class="cad-tab" data-tab="galeria">Galería</div>
                         </div>
                         
-                        <!-- Pestaña de Resultados -->
-                        <div class="cad-tab-content resultados-tab" id="resultados-tab">
-                            <div class="control-group">
-                                <h4>Resultados del Diseño</h4>
-                                <div id="resultadosCalculos">
-                                    <!-- Aquí se mostrarán todos los cálculos -->
-                                </div>
-                                <button class="btn btn-export-pdf" onclick="exportarPDF()">
-                                    <i class="fas fa-file-pdf"></i> Exportar a PDF
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Pestaña de Galería -->
-                        <div class="cad-tab-content" id="galeria-tab">
-                            <div class="control-group">
-                                <h4>Diseños Guardados</h4>
-                                <div class="galeria-acciones">
-                                    <button class="btn" onclick="guardarDiseño()" style="margin-right: 10px;">
-                                        <i class="fas fa-save"></i> Guardar Actual
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="exportarDiseño()">
-                                        <i class="fas fa-download"></i> Exportar JSON
-                                    </button>
-                                    <label class="btn btn-secondary" style="display: inline-block; cursor: pointer;">
-                                        <i class="fas fa-upload"></i> Importar JSON
-                                        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importarDiseño(event)">
-                                    </label>
-                                </div>
+                        <div class="cad-content">
+                            <!-- Pestaña de Tuberías - MANTENIENDO ESTRUCTURA ORIGINAL -->
+                            <div class="cad-tab-content active" id="tuberias-tab">
                                 <div class="control-group">
-                                    <h4>Captura para PDF</h4>
-                                    <div class="galeria-acciones">
-                                        <button class="btn" onclick="capturarDiseñoActual()">
-                                            <i class="fas fa-camera"></i> Capturar Diseño Actual
-                                        </button>
-                                        <button class="btn" onclick="forzarRecaptura()" style="background-color: #ff9f43;">
-                                            <i class="fas fa-sync-alt"></i> Nueva Captura
-                                        </button>
+                                    <h4>Tubería Principal</h4>
+                                    <div class="control-row">
+                                        <div class="control-label">Color:</div>
+                                        <div class="color-indicator color-principal"></div>
+                                        <div>Rojo (Grosor: 8px)</div>
                                     </div>
-                                    <div id="capturaStatus" style="margin-top: 10px; min-height: 60px;">
-                                        <!-- Estado de la captura aparecerá aquí -->
+                                    <div class="control-row">
+                                        <div class="control-label">Diámetro:</div>
+                                        <select id="diametroPrincipal">
+                                            <option value="2">2"</option>
+                                            <option value="3">3"</option>
+                                            <option value="4">4"</option>
+                                            <option value="6">6"</option>
+                                            <option value="8">8"</option>
+                                            <option value="10">10"</option>
+                                            <option value="12">12"</option>
+                                            <option value="14">14"</option>
+                                            <option value="16">16"</option>
+                                            <option value="18">18"</option>
+                                            <option value="20">20"</option>
+                                        </select>
+                                    </div>
+                                    <div class="control-row">
+                                        <div class="control-label">Tipo:</div>
+                                        <select id="tipoPrincipal">
+                                            <option value="pvc">PVC</option>
+                                            <option value="manguera">Manguera</option>
+                                        </select>
+                                    </div>
+                                    <button class="tuberia-btn" onclick="iniciarModoTuberia('principal')" id="btnTuberiaPrincipal">
+                                        <i class="fas fa-pencil-alt"></i> Dibujar Tubería Principal
+                                    </button>
+                                    <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('principal')" id="btnConectarPrincipal" style="margin-top: 5px;">
+                                        <i class="fas fa-link"></i> Conectar Tuberías
+                                    </button>
+                                    <div class="instrucciones-tuberia" id="instruccionesPrincipal" style="display: none;">
+                                        Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
                                     </div>
                                 </div>
                                 
-                                <div class="galeria-diseños" id="galeriaDiseños" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
-                                    <!-- Diseños se cargarán aquí -->
+                                <div class="control-group">
+                                    <h4>Tubería Secundaria</h4>
+                                    <div class="control-row">
+                                        <div class="control-label">Color:</div>
+                                        <div class="color-indicator color-secundaria"></div>
+                                        <div>Turquesa (Grosor: 6px)</div>
+                                    </div>
+                                    <div class="control-row">
+                                        <div class="control-label">Diámetro:</div>
+                                        <select id="diametroSecundaria">
+                                            <option value="1">1"</option>
+                                            <option value="1.5">1.5"</option>
+                                            <option value="2">2"</option>
+                                            <option value="3">3"</option>
+                                            <option value="4">4"</option>
+                                        </select>
+                                    </div>
+                                    <div class="control-row">
+                                        <div class="control-label">Tipo:</div>
+                                        <select id="tipoSecundaria">
+                                            <option value="pvc">PVC</option>
+                                            <option value="manguera">Manguera</option>
+                                        </select>
+                                    </div>
+                                    <button class="tuberia-btn" onclick="iniciarModoTuberia('secundaria')" id="btnTuberiaSecundaria">
+                                        <i class="fas fa-pencil-alt"></i> Dibujar Tubería Secundaria
+                                    </button>
+                                    <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('secundaria')" id="btnConectarSecundaria" style="margin-top: 5px;">
+                                        <i class="fas fa-link"></i> Conectar Tuberías
+                                    </button>
+                                    <div class="instrucciones-tuberia" id="instruccionesSecundaria" style="display: none;">
+                                        Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
+                                    </div>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <h4>Tubería Regante</h4>
+                                    <div class="control-row">
+                                        <div class="control-label">Color:</div>
+                                        <div class="color-indicator color-regante"></div>
+                                        <div>Azul (Grosor: 4px)</div>
+                                    </div>
+                                    <div class="control-row">
+                                        <div class="control-label">Diámetro:</div>
+                                        <select id="diametroRegante">
+                                            <option value="0.5">1/2"</option>
+                                            <option value="0.75">3/4"</option>
+                                            <option value="1">1"</option>
+                                        </select>
+                                    </div>
+                                    <div class="control-row">
+                                        <div class="control-label">Tipo:</div>
+                                        <select id="tipoRegante">
+                                            <option value="pvc">PVC</option>
+                                            <option value="manguera">Manguera</option>
+                                        </select>
+                                    </div>
+                                    <button class="tuberia-btn" onclick="iniciarModoTuberia('regante')" id="btnTuberiaRegante">
+                                        <i class="fas fa-pencil-alt"></i> Dibujar Tubería Regante
+                                    </button>
+                                    <button class="tuberia-btn conexion-btn" onclick="iniciarModoConexion('regante')" id="btnConectarRegante" style="margin-top: 5px;">
+                                        <i class="fas fa-link"></i> Conectar Tuberías
+                                    </button>
+                                    <div class="instrucciones-tuberia" id="instruccionesRegante" style="display: none;">
+                                        Haz clic en el mapa para iniciar la tubería. Click para agregar puntos. Doble click para finalizar.
+                                    </div>
+                                </div>
+                                
+                                <div class="cad-resumen">
+                                    <h4>Resumen de Tuberías</h4>
+                                    <div id="resumenTuberiasDetallado">
+                                        <!-- Aquí se mostrará el resumen detallado por diámetros -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Pestaña de Elementos - MANTENIENDO ESTRUCTURA ORIGINAL -->
+                            <div class="cad-tab-content" id="elementos-tab">
+                                <div class="control-group">
+                                    <h4>Agregar Elementos al Diseño</h4>
+                                    <div class="elementos-lista">
+                                        <div class="elemento-btn active" data-elemento="cabezal" onclick="iniciarModoElemento('cabezal')">
+                                            <i class="fas fa-gear"></i> Cabezal
+                                        </div>
+                                        <div class="elemento-btn" data-elemento="purgaterminal" onclick="iniciarModoElemento('purgaterminal')">
+                                            <i class="fas fa-faucet"></i> Purgas/Terminales
+                                        </div>
+                                        <div class="elemento-btn" data-elemento="tomagua" onclick="iniciarModoElemento('tomagua')">
+                                            <i class="fas fa-tint"></i> Toma de Agua
+                                        </div>
+                                        <div class="elemento-btn" data-elemento="valvula" onclick="iniciarModoElemento('valvula')">
+                                            <i class="fas fa-toggle-on"></i> Válvula
+                                        </div>
+                                        <div class="elemento-btn" data-elemento="filtro" onclick="iniciarModoElemento('filtro')">
+                                            <i class="fas fa-filter"></i> Filtro
+                                        </div>
+                                    </div>
+                                    <div class="instrucciones-tuberia" id="instruccionesElementos" style="display: none;">
+                                        Haz clic en el mapa para colocar el elemento seleccionado.
+                                    </div>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <h4>Configuración del Elemento</h4>
+                                    <div id="elementoConfig">
+                                        <p>Selecciona un elemento para configurarlo</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Pestaña de Resultados - MANTENIENDO ESTRUCTURA ORIGINAL -->
+                            <div class="cad-tab-content resultados-tab" id="resultados-tab">
+                                <div class="control-group">
+                                    <h4>Resultados del Diseño</h4>
+                                    <div id="resultadosCalculos">
+                                        <!-- Aquí se mostrarán todos los cálculos -->
+                                    </div>
+                                    <button class="btn btn-export-pdf" onclick="exportarPDF()">
+                                        <i class="fas fa-file-pdf"></i> Exportar a PDF
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Pestaña de Galería - MANTENIENDO ESTRUCTURA ORIGINAL -->
+                            <div class="cad-tab-content" id="galeria-tab">
+                                <div class="control-group">
+                                    <h4>Diseños Guardados</h4>
+                                    <div class="galeria-acciones">
+                                        <button class="btn" onclick="guardarDiseño()" style="margin-right: 10px;">
+                                            <i class="fas fa-save"></i> Guardar Actual
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="exportarDiseño()">
+                                            <i class="fas fa-download"></i> Exportar JSON
+                                        </button>
+                                        <label class="btn btn-secondary" style="display: inline-block; cursor: pointer;">
+                                            <i class="fas fa-upload"></i> Importar JSON
+                                            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importarDiseño(event)">
+                                        </label>
+                                    </div>
+                                    <div class="control-group">
+                                        <h4>Captura para PDF</h4>
+                                        <div class="galeria-acciones">
+                                            <button class="btn" onclick="capturarDiseñoActual()">
+                                                <i class="fas fa-camera"></i> Capturar Diseño Actual
+                                            </button>
+                                            <button class="btn" onclick="forzarRecaptura()" style="background-color: #ff9f43;">
+                                                <i class="fas fa-sync-alt"></i> Nueva Captura
+                                            </button>
+                                        </div>
+                                        <div id="capturaStatus" style="margin-top: 10px; min-height: 60px;">
+                                            <!-- Estado de la captura aparecerá aquí -->
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="galeria-diseños" id="galeriaDiseños" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
+                                        <!-- Diseños se cargarán aquí -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Contacto -->
-    <section class="contacto" id="contacto">
-        <div class="container">
-            <h2 class="section-title">Contacto</h2>
-            <div class="contacto-grid">
-                <div class="contact-info-card fade-in">
-                    <h3>Información de Contacto</h3>
-                    
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="contact-text">
-                            <h4>Dirección</h4>
-                            <p>Los Mochis, Sinaloa, México</p>
-                        </div>
-                    </div>
-                    
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-phone"></i>
-                        </div>
-                        <div class="contact-text">
-                            <h4>Teléfono</h4>
-                            <a href="tel:+526681234567">+52 668 123 4567</a>
-                        </div>
-                    </div>
-                    
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div class="contact-text">
-                            <h4>Email</h4>
-                            <a href="mailto:info@agrosistemas.com">info@agrosistemas.com</a>
-                        </div>
-                    </div>
-                    
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="contact-text">
-                            <h4>Horario de Atención</h4>
-                            <p>Lunes a Viernes: 8:00 - 18:00<br>Sábados: 9:00 - 13:00</p>
-                        </div>
-                    </div>
+        <!-- Marca de agua -->
+        <div class="watermark">
+            <img src="logo.png" alt="Logo" class="watermark-logo">
+            <div class="watermark-text">
+                <a href="https://github.com/gm-nelson" target="_blank">@gm-nelson</a>
+            </div>
+        </div>
+
+        <!-- Modal About -->
+        <div class="modal-overlay" id="aboutModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Acerca del Diseñador CAD</div>
+                    <button class="close-modal" onclick="closeAboutModal()">&times;</button>
                 </div>
-                
-                <div class="fade-in delay-1">
-                    <h3 style="margin-bottom: 20px; color: #111;">Ubicación</h3>
-                    <div class="map-container">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d115260.94825251572!2d-109.02480815!3d25.813333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86c7a5f40b6e008d%3A0x9a3f37c0e13f2cf6!2sLos%20Mochis%2C%20Sin.!5e0!3m2!1ses-419!2smx!4v1689690161688!5m2!1ses-419!2smx" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <div class="modal-body">
+                    <h4 style="margin-bottom: 15px; color: #00a553;">Herramienta de Diseño de Sistemas de Riego</h4>
+                    <p style="margin-bottom: 15px;">
+                        Esta herramienta CAD permite diseñar sistemas de riego de manera interactiva sobre mapas reales. 
+                        Puedes delimitar terrenos, diseñar tuberías y agregar elementos del sistema.
+                    </p>
+                    
+                    <h5 style="margin: 20px 0 10px; color: #1772af;">Características:</h5>
+                    <ul style="margin-bottom: 20px; padding-left: 20px;">
+                        <li style="margin-bottom: 8px;">Diseño de tuberías principales, secundarias y regantes</li>
+                        <li style="margin-bottom: 8px;">Inserción de elementos del sistema (cabezales, válvulas, filtros)</li>
+                        <li style="margin-bottom: 8px;">Cálculos automáticos de áreas y materiales</li>
+                        <li style="margin-bottom: 8px;">Exportación a PDF con planos y especificaciones</li>
+                        <li style="margin-bottom: 8px;">Guardado y carga de diseños</li>
+                    </ul>
+                    
+                    <h5 style="margin: 20px 0 10px; color: #1772af;">Información de Contacto:</h5>
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px;">
+                        <p style="margin-bottom: 8px;"><strong>Ubicación:</strong> Los Mochis, Sinaloa, México</p>
+                        <p style="margin-bottom: 8px;"><strong>Teléfono:</strong> <a href="tel:+526681234567" style="color: #1772af;">+52 668 123 4567</a></p>
+                        <p style="margin-bottom: 8px;"><strong>Email:</strong> <a href="mailto:info@agrosistemas.com" style="color: #1772af;">info@agrosistemas.com</a></p>
+                        <p><strong>Horario:</strong> Lunes a Viernes: 8:00 - 18:00</p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="tuberia-btn" onclick="closeAboutModal()" style="width: 100%;">
+                            <i class="fas fa-check"></i> Entendido
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-logo">
-                    <img src="logo.png" alt="Agrosistemas Logo">
-                </div>
-                <p class="footer-text">Especialistas en soluciones agrícolas integrales. Optimizamos tu producción con tecnología de punta y asesoría técnica especializada.</p>
-                <div class="copyright">
-                    &copy; 2024 Agrosistemas. Todos los derechos reservados.
-                </div>
-            </div>
-        </div>
-    </footer>
+    </div>
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -391,5 +958,70 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="script.js"></script>
+    
+    <script>
+        // Script para manejar la nueva interfaz SIN ROMPER el JS existente
+        document.addEventListener('DOMContentLoaded', function() {
+            // Botón About
+            document.getElementById('aboutBtn').addEventListener('click', function() {
+                document.getElementById('aboutModal').classList.add('active');
+            });
+            
+            // Menú móvil (manteniendo funcionalidad original)
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mainNav = document.getElementById('mainNav');
+            
+            if (mobileMenuBtn && mainNav) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    mainNav.classList.toggle('active');
+                });
+                
+                // Cerrar menú al hacer clic en un enlace
+                mainNav.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        mainNav.classList.remove('active');
+                    });
+                });
+            }
+            
+            // Cerrar modal al hacer clic fuera
+            document.getElementById('aboutModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAboutModal();
+                }
+            });
+            
+            // Ajustar el mapa después de que se cargue
+            setTimeout(() => {
+                if (window.map) {
+                    window.map.invalidateSize();
+                }
+            }, 100);
+        });
+        
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        
+        // Redimensionar mapa cuando cambia el tamaño de ventana
+        window.addEventListener('resize', function() {
+            if (window.map) {
+                setTimeout(() => {
+                    window.map.invalidateSize();
+                }, 100);
+            }
+        });
+        
+        // Asegurar que el mapa se ajuste cuando se cambian pestañas
+        document.querySelectorAll('.cad-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                setTimeout(() => {
+                    if (window.map) {
+                        window.map.invalidateSize();
+                    }
+                }, 50);
+            });
+        });
+    </script>
 </body>
 </html>
