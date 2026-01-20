@@ -21,6 +21,10 @@ let puntoOrigenConexion = null;
 let puntosTuberias = [];
 let cabezales = [];
 let elementoSeleccionado = null;
+let etiquetasPoligonos = []; // Nuevo: para gestionar etiquetas de polígonos
+let etiquetasTuberias = []; // Nuevo: para gestionar etiquetas de tuberías
+let ultimoScrollY = 0; // Para el menú móvil
+let menuVisible = true; // Para el menú móvil
 
 // Función para obtener el nombre de una válvula por su elementoId
 function obtenerNombreValvulaPorElementoId(elementoId) {
@@ -39,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarDiseñosGuardados();
     setupEventListeners();
     setupTouchEvents();
+    setupScrollHideMenu(); // Nuevo: configurar ocultar menú al scroll
 });
 
 function setupEventListeners() {
@@ -70,6 +75,35 @@ function setupEventListeners() {
     document.getElementById('location-search')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             buscarUbicacion();
+        }
+    });
+}
+
+// NUEVO: Configurar ocultar menú al scroll en móvil
+function setupScrollHideMenu() {
+    const topMenu = document.getElementById('topMenu');
+    if (!topMenu) return;
+    
+    window.addEventListener('scroll', function() {
+        if (window.innerWidth <= 768) { // Solo en móvil
+            const currentScrollY = window.scrollY;
+            
+            if (currentScrollY > ultimoScrollY && currentScrollY > 100) {
+                // Scroll hacia abajo, ocultar menú
+                if (menuVisible) {
+                    topMenu.style.transform = 'translateY(-100%)';
+                    topMenu.style.transition = 'transform 0.3s ease';
+                    menuVisible = false;
+                }
+            } else if (currentScrollY < ultimoScrollY || currentScrollY <= 50) {
+                // Scroll hacia arriba o en la parte superior, mostrar menú
+                if (!menuVisible) {
+                    topMenu.style.transform = 'translateY(0)';
+                    menuVisible = true;
+                }
+            }
+            
+            ultimoScrollY = currentScrollY;
         }
     });
 }
@@ -167,6 +201,10 @@ function initMap() {
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     
+    // Inicializar arrays de etiquetas
+    etiquetasPoligonos = [];
+    etiquetasTuberias = [];
+    
     // Configurar controles de dibujo
     drawControl = new L.Control.Draw({
         position: 'topright',
@@ -253,6 +291,9 @@ function initMap() {
         const layers = event.layers;
         layers.eachLayer(function(layer) {
             if (layer instanceof L.Polygon) {
+                // Eliminar etiquetas asociadas al polígono
+                eliminarEtiquetasPoligono(layer);
+                
                 areaTotal = 0;
                 document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
                 actualizarResultados();
@@ -260,6 +301,28 @@ function initMap() {
             }
         });
     });
+}
+
+// NUEVA FUNCIÓN: Eliminar etiquetas de polígono
+function eliminarEtiquetasPoligono(polygon) {
+    if (polygon.etiquetaArea) {
+        map.removeLayer(polygon.etiquetaArea);
+        polygon.etiquetaArea = null;
+    }
+    
+    if (polygon.etiquetasLados) {
+        polygon.etiquetasLados.forEach(etiqueta => {
+            if (etiqueta && etiqueta.remove) {
+                map.removeLayer(etiqueta);
+            }
+        });
+        polygon.etiquetasLados = [];
+    }
+    
+    // Eliminar del array global
+    etiquetasPoligonos = etiquetasPoligonos.filter(etiqueta => 
+        etiqueta.polygonId !== polygon._leaflet_id
+    );
 }
 
 // ============================================
@@ -285,23 +348,144 @@ function getGrosorTuberia(tipo, diametro) {
     }
 }
 
+// MODIFICADO: Cambiar colores de tuberías
 function getColorTuberia(tipo) {
     const colores = {
-        'principal': '#ff6b6b',
-        'secundaria': '#4ecdc4',
-        'regante': '#45b7d1'
+        'principal': '#ff0000', // ROJO
+        'secundaria': '#0000ff', // AZUL
+        'regante': '#00ff00' // VERDE
     };
     return colores[tipo] || '#000000';
 }
 
 function calcularAreaPoligono(polygon) {
-    areaTotal = L.GeometryUtil.geodesicArea(polygon.getLatLngs()[0]);
+    const latlngs = polygon.getLatLngs()[0];
+    areaTotal = L.GeometryUtil.geodesicArea(latlngs);
     
+    // Calcular perímetro
+    let perimetro = 0;
+    for (let i = 0; i < latlngs.length; i++) {
+        const puntoActual = latlngs[i];
+        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+        perimetro += puntoActual.distanceTo(puntoSiguiente);
+    }
+    
+    // Calcular centro para la etiqueta
+    const centro = calcularCentroPoligono(latlngs);
+    
+    // Crear o actualizar etiqueta del polígono (con controles)
+    if (!polygon.etiquetaArea) {
+        polygon.etiquetaArea = crearEtiquetaPoligono(centro, areaTotal, perimetro, polygon);
+        polygon.etiquetaArea.addTo(map);
+    } else {
+        polygon.etiquetaArea.setLatLng(centro);
+        actualizarContenidoEtiquetaPoligono(polygon.etiquetaArea, areaTotal, perimetro);
+    }
+    
+    // Calcular medidas de cada lado y agregar etiquetas (con controles)
+    actualizarEtiquetasLados(polygon, latlngs);
+    
+    // Actualizar display principal
     document.getElementById('areaDisplay').textContent = 
-        `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha)`;
+        `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha) | Perímetro: ${perimetro.toFixed(2)} m`;
     
     ocultarControlesMapa();
     actualizarResultados();
+    
+    return { area: areaTotal, perimetro: perimetro };
+}
+
+// NUEVA FUNCIÓN: Crear etiqueta de polígono con controles
+function crearEtiquetaPoligono(centro, area, perimetro, polygon) {
+    const polygonId = polygon._leaflet_id || Date.now();
+    
+    const etiqueta = L.marker(centro, {
+        icon: L.divIcon({
+            className: 'etiqueta-poligono interactiva',
+            html: crearHTMLMedidasPoligono(area, perimetro, polygonId),
+            iconSize: [200, 80],
+            iconAnchor: [100, 40]
+        }),
+        draggable: true,
+        interactive: true
+    });
+    
+    // Almacenar referencia
+    etiqueta.polygonId = polygonId;
+    etiqueta.type = 'polygon-label';
+    
+    // Guardar en array global
+    etiquetasPoligonos.push({
+        id: polygonId,
+        marker: etiqueta,
+        polygon: polygon,
+        visible: true,
+        fontSize: 11,
+        rotation: 0
+    });
+    
+    // Configurar eventos de arrastre
+    etiqueta.on('dragend', function(e) {
+        const nuevaPos = e.target.getLatLng();
+        // Actualizar posición en el array
+        const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === polygonId);
+        if (etiquetaIndex !== -1) {
+            etiquetasPoligonos[etiquetaIndex].position = nuevaPos;
+        }
+    });
+    
+    // Configurar clic derecho para menú contextual
+    etiqueta.on('contextmenu', function(e) {
+        e.originalEvent.preventDefault();
+        mostrarMenuContextualEtiqueta(e.latlng, polygonId, 'polygon');
+    });
+    
+    return etiqueta;
+}
+
+// NUEVA FUNCIÓN: Actualizar contenido de etiqueta de polígono
+function actualizarContenidoEtiquetaPoligono(etiquetaMarker, area, perimetro) {
+    const etiquetaData = etiquetasPoligonos.find(e => e.marker === etiquetaMarker);
+    if (!etiquetaData) return;
+    
+    etiquetaMarker.setIcon(L.divIcon({
+        className: 'etiqueta-poligono interactiva',
+        html: crearHTMLMedidasPoligono(area, perimetro, etiquetaData.id),
+        iconSize: [200, 80],
+        iconAnchor: [100, 40]
+    }));
+}
+
+// NUEVA FUNCIÓN: HTML para etiquetas de polígono con ID
+function crearHTMLMedidasPoligono(area, perimetro, polygonId) {
+    const etiquetaData = etiquetasPoligonos.find(e => e.id === polygonId);
+    const fontSize = etiquetaData ? etiquetaData.fontSize : 11;
+    const rotation = etiquetaData ? etiquetaData.rotation : 0;
+    
+    return `
+        <div id="etiqueta-polygon-${polygonId}" 
+             style="background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 8px; 
+                    border: 2px solid #008a45; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+                    text-align: center; min-width: 180px; cursor: move;
+                    font-size: ${fontSize}px; transform: rotate(${rotation}deg);
+                    transform-origin: center;">
+            <div style="font-weight: bold; color: #008a45; margin-bottom: 5px;">MEDIDAS DEL TERRENO</div>
+            <div style="color: #333;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>Área:</span>
+                    <span style="font-weight: bold;">${area.toFixed(1)} m²</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>Hectáreas:</span>
+                    <span style="font-weight: bold;">${(area / 10000).toFixed(3)} ha</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Perímetro:</span>
+                    <span style="font-weight: bold;">${perimetro.toFixed(1)} m</span>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function calcularLongitudPolilinea(polyline) {
@@ -1035,15 +1219,9 @@ function establecerPuntoFinal(latlng, tipoTuberia, diametro, tipoMaterial) {
         (tuberiaActual.puntoInicio.lng + tuberiaActual.puntoFin.lng) / 2
     );
     
-    const etiqueta = L.marker(centro, {
-        icon: L.divIcon({
-            className: 'tuberia-label',
-            html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                   ${longitud.toFixed(1)}m - ${diametro}"</div>`,
-            iconSize: [80, 20],
-            iconAnchor: [40, 10]
-        })
-    }).addTo(map);
+    // Crear etiqueta de tubería con controles
+    const etiqueta = crearEtiquetaTuberia(centro, longitud, diametro, tipoTuberia, tuberiaActual.id);
+    etiqueta.addTo(map);
     
     tuberiaActual.etiquetaLongitud = etiqueta;
     
@@ -1083,6 +1261,85 @@ function establecerPuntoFinal(latlng, tipoTuberia, diametro, tipoMaterial) {
     document.getElementById(botonId).classList.remove('activo');
     
     mostrarMensaje(`Tubería ${tipoTuberia} (${diametro}") creada. Longitud: ${longitud.toFixed(1)} metros`);
+}
+
+// NUEVA FUNCIÓN: Crear etiqueta de tubería con controles
+function crearEtiquetaTuberia(centro, longitud, diametro, tipoTuberia, tuberiaId) {
+    const etiqueta = L.marker(centro, {
+        icon: L.divIcon({
+            className: 'tuberia-label interactiva',
+            html: crearHTMLMedidasTuberia(longitud, diametro, tipoTuberia, tuberiaId),
+            iconSize: [100, 30],
+            iconAnchor: [50, 15]
+        }),
+        draggable: true,
+        interactive: true
+    });
+    
+    // Almacenar referencia
+    etiqueta.tuberiaId = tuberiaId;
+    etiqueta.type = 'tuberia-label';
+    
+    // Guardar en array global
+    etiquetasTuberias.push({
+        id: tuberiaId,
+        marker: etiqueta,
+        longitud: longitud,
+        diametro: diametro,
+        tipoTuberia: tipoTuberia,
+        visible: true,
+        fontSize: 9,
+        rotation: 0,
+        position: centro
+    });
+    
+    // Configurar eventos de arrastre
+    etiqueta.on('dragend', function(e) {
+        const nuevaPos = e.target.getLatLng();
+        // Actualizar posición en el array
+        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === tuberiaId);
+        if (etiquetaIndex !== -1) {
+            etiquetasTuberias[etiquetaIndex].position = nuevaPos;
+        }
+    });
+    
+    // Configurar clic derecho para menú contextual
+    etiqueta.on('contextmenu', function(e) {
+        e.originalEvent.preventDefault();
+        mostrarMenuContextualEtiqueta(e.latlng, tuberiaId, 'tuberia');
+    });
+    
+    return etiqueta;
+}
+
+// NUEVA FUNCIÓN: HTML para etiquetas de tubería con controles
+function crearHTMLMedidasTuberia(longitud, diametro, tipoTuberia, tuberiaId) {
+    const etiquetaData = etiquetasTuberias.find(e => e.id === tuberiaId);
+    const fontSize = etiquetaData ? etiquetaData.fontSize : 9;
+    const rotation = etiquetaData ? etiquetaData.rotation : 0;
+    
+    return `
+        <div id="etiqueta-tuberia-${tuberiaId}" 
+             style="background: white; padding: 3px 8px; border: 1px solid #ccc; 
+                    border-radius: 3px; font-weight: bold; text-align: center; 
+                    line-height: 1.2; cursor: move; font-size: ${fontSize}px;
+                    transform: rotate(${rotation}deg); transform-origin: center;">
+            ${longitud.toFixed(1)}m - ${diametro}"
+        </div>
+    `;
+}
+
+// NUEVA FUNCIÓN: Actualizar contenido de etiqueta de tubería
+function actualizarContenidoEtiquetaTuberia(etiquetaMarker, longitud, diametro) {
+    const etiquetaData = etiquetasTuberias.find(e => e.marker === etiquetaMarker);
+    if (!etiquetaData) return;
+    
+    etiquetaMarker.setIcon(L.divIcon({
+        className: 'tuberia-label interactiva',
+        html: crearHTMLMedidasTuberia(longitud, diametro, etiquetaData.tipoTuberia, etiquetaData.id),
+        iconSize: [100, 30],
+        iconAnchor: [50, 15]
+    }));
 }
 
 function restaurarEventoClickMapa() {
@@ -1169,19 +1426,7 @@ function dibujarLineaTuberia(puntoInicio, puntoFin, tipoTuberia, diametro) {
         (puntoInicio.lng + puntoFin.lng) / 2
     );
     
-    const etiqueta = L.marker(centro, {
-        icon: L.divIcon({
-            className: 'tuberia-label',
-            html: `<div style="background: white; padding: 3px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold; text-align: center; line-height: 1.2;">
-                   ${distancia.toFixed(1)}m - ${diametro}"<br>
-                   <small style="color: #666;">${angulo.toFixed(1)}°</small>
-                   </div>`,
-            iconSize: [80, 30],
-            iconAnchor: [40, 15]
-        })
-    }).addTo(map);
-    
-    linea.etiquetas = [etiqueta];
+
     
     linea.on('edit', function(e) {
         const latlngs = e.target.getLatLngs();
@@ -1222,13 +1467,7 @@ function dibujarLineaTuberia(puntoInicio, puntoFin, tipoTuberia, diametro) {
             tuberiaEnArray.puntosIntermedios = latlngs.slice(1, -1);
             
             if (tuberiaEnArray.etiquetaLongitud) {
-                tuberiaEnArray.etiquetaLongitud.setIcon(L.divIcon({
-                    className: 'tuberia-label',
-                    html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                           ${longitudTotal.toFixed(1)}m - ${diametro}"</div>`,
-                    iconSize: [80, 20],
-                    iconAnchor: [40, 10]
-                }));
+                actualizarContenidoEtiquetaTuberia(tuberiaEnArray.etiquetaLongitud, longitudTotal, tuberiaEnArray.diametro);
             }
             
             actualizarResumenTuberias();
@@ -1468,6 +1707,9 @@ function eliminarTuberia(tuberiaId) {
     }
     if (tuberia.etiquetaLongitud) map.removeLayer(tuberia.etiquetaLongitud);
     
+    // Eliminar etiqueta del array global
+    etiquetasTuberias = etiquetasTuberias.filter(e => e.id !== tuberia.id);
+    
     puntosTuberias = puntosTuberias.filter(p => p.tuberiaId !== tuberia.id);
     
     tuberias.splice(tuberiaIndex, 1);
@@ -1603,13 +1845,13 @@ function confirmarEdicionTuberia(tuberiaId) {
     }
     
     if (tuberia.etiquetaLongitud) {
-        tuberia.etiquetaLongitud.setIcon(L.divIcon({
-            className: 'tuberia-label',
-            html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                   ${tuberia.longitud.toFixed(1)}m - ${nuevoDiámetro}"</div>`,
-            iconSize: [80, 20],
-            iconAnchor: [40, 10]
-        }));
+        actualizarContenidoEtiquetaTuberia(tuberia.etiquetaLongitud, tuberia.longitud, nuevoDiámetro);
+        
+        // Actualizar en array global
+        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === tuberia.id);
+        if (etiquetaIndex !== -1) {
+            etiquetasTuberias[etiquetaIndex].diametro = nuevoDiámetro;
+        }
     }
     
     if (tuberia.linea) {
@@ -1658,13 +1900,14 @@ function actualizarTuberiasConPunto(viejoLatLng, nuevoLatLng) {
                 
                 const nuevaLongitud = nuevoLatLng.distanceTo(tuberia.puntoFin);
                 tuberia.longitud = nuevaLongitud;
-                tuberia.etiquetaLongitud.setIcon(L.divIcon({
-                    className: 'tuberia-label',
-                    html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                           ${nuevaLongitud.toFixed(1)}m - ${tuberia.diametro}"</div>`,
-                    iconSize: [80, 20],
-                    iconAnchor: [40, 10]
-                }));
+                actualizarContenidoEtiquetaTuberia(tuberia.etiquetaLongitud, nuevaLongitud, tuberia.diametro);
+                
+                // Actualizar en array global
+                const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === tuberia.id);
+                if (etiquetaIndex !== -1) {
+                    etiquetasTuberias[etiquetaIndex].longitud = nuevaLongitud;
+                    etiquetasTuberias[etiquetaIndex].position = centro;
+                }
             }
         }
         
@@ -1687,13 +1930,14 @@ function actualizarTuberiasConPunto(viejoLatLng, nuevoLatLng) {
                 
                 const nuevaLongitud = tuberia.puntoInicio.distanceTo(nuevoLatLng);
                 tuberia.longitud = nuevaLongitud;
-                tuberia.etiquetaLongitud.setIcon(L.divIcon({
-                    className: 'tuberia-label',
-                    html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                           ${nuevaLongitud.toFixed(1)}m - ${tuberia.diametro}"</div>`,
-                    iconSize: [80, 20],
-                    iconAnchor: [40, 10]
-                }));
+                actualizarContenidoEtiquetaTuberia(tuberia.etiquetaLongitud, nuevaLongitud, tuberia.diametro);
+                
+                // Actualizar en array global
+                const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === tuberia.id);
+                if (etiquetaIndex !== -1) {
+                    etiquetasTuberias[etiquetaIndex].longitud = nuevaLongitud;
+                    etiquetasTuberias[etiquetaIndex].position = centro;
+                }
             }
         }
     });
@@ -1873,15 +2117,9 @@ function manejarClicConexion(latlng, tipoTuberia, diametro, tipoMaterial) {
             (nuevaTuberia.puntoInicio.lng + nuevaTuberia.puntoFin.lng) / 2
         );
         
-        const etiqueta = L.marker(centro, {
-            icon: L.divIcon({
-                className: 'tuberia-label',
-                html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                       ${nuevaTuberia.longitud.toFixed(1)}m - ${diametro}"</div>`,
-                iconSize: [80, 20],
-                iconAnchor: [40, 10]
-            })
-        }).addTo(map);
+        // Crear etiqueta de tubería con controles
+        const etiqueta = crearEtiquetaTuberia(centro, nuevaTuberia.longitud, diametro, tipoTuberia, nuevaTuberia.id);
+        etiqueta.addTo(map);
         
         nuevaTuberia.etiquetaLongitud = etiqueta;
         
@@ -2143,12 +2381,430 @@ function actualizarResultados() {
 }
 
 // ============================================
-// FUNCIONES DE PDF (CON IMAGEN HD DEL DISEÑO AJUSTADA)
+// FUNCIONES DE ETIQUETAS (ROTAR, CAMBIAR TAMAÑO, OCULTAR, MOVER)
 // ============================================
 
-// ============================================
-// FUNCIONES DE PDF (CON IMAGEN HD DEL DISEÑO AJUSTADA)
-// ============================================
+// NUEVA FUNCIÓN: Mostrar menú contextual para etiquetas
+function mostrarMenuContextualEtiqueta(posicion, etiquetaId, tipo) {
+    // Crear menú contextual
+    const menuDiv = document.createElement('div');
+    menuDiv.id = 'menu-contextual-etiqueta';
+    menuDiv.style.cssText = `
+        position: absolute;
+        top: ${posicion.lat}px;
+        left: ${posicion.lng}px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        z-index: 10000;
+        min-width: 180px;
+    `;
+    
+    let etiquetaData;
+    if (tipo === 'polygon') {
+        etiquetaData = etiquetasPoligonos.find(e => e.id === etiquetaId);
+    } else {
+        etiquetaData = etiquetasTuberias.find(e => e.id === etiquetaId);
+    }
+    
+    if (!etiquetaData) return;
+    
+    const fontSize = etiquetaData.fontSize || (tipo === 'polygon' ? 11 : 9);
+    const rotation = etiquetaData.rotation || 0;
+    const visible = etiquetaData.visible !== false;
+    
+    menuDiv.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
+            ${tipo === 'polygon' ? 'Etiqueta de Terreno' : 'Etiqueta de Tubería'}
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <label style="display: block; margin-bottom: 3px; font-size: 0.9rem;">Tamaño de fuente:</label>
+            <input type="range" id="slider-tamano" min="8" max="20" value="${fontSize}" 
+                   style="width: 100%;" onchange="cambiarTamanoEtiqueta('${etiquetaId}', '${tipo}', this.value)">
+            <div style="text-align: center; font-size: 0.8rem;">${fontSize}px</div>
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <label style="display: block; margin-bottom: 3px; font-size: 0.9rem;">Rotación:</label>
+            <input type="range" id="slider-rotacion" min="0" max="360" value="${rotation}" 
+                   style="width: 100%;" onchange="rotarEtiqueta('${etiquetaId}', '${tipo}', this.value)">
+            <div style="text-align: center; font-size: 0.8rem;">${rotation}°</div>
+        </div>
+        
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button onclick="toggleVisibilidadEtiqueta('${etiquetaId}', '${tipo}')" 
+                    style="flex: 1; padding: 5px; background: ${visible ? '#4ecdc4' : '#ff6b6b'}; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                ${visible ? 'Ocultar' : 'Mostrar'}
+            </button>
+            <button onclick="eliminarEtiqueta('${etiquetaId}', '${tipo}')" 
+                    style="flex: 1; padding: 5px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Eliminar
+            </button>
+        </div>
+        
+        <button onclick="document.getElementById('menu-contextual-etiqueta').remove()" 
+                style="width: 100%; padding: 5px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+            Cerrar
+        </button>
+    `;
+    
+    // Eliminar menú anterior si existe
+    const menuAnterior = document.getElementById('menu-contextual-etiqueta');
+    if (menuAnterior) menuAnterior.remove();
+    
+    document.body.appendChild(menuDiv);
+    
+    // Cerrar menú al hacer clic fuera
+    setTimeout(() => {
+        const cerrarMenu = function(e) {
+            if (!menuDiv.contains(e.target)) {
+                menuDiv.remove();
+                document.removeEventListener('click', cerrarMenu);
+            }
+        };
+        document.addEventListener('click', cerrarMenu);
+    }, 10);
+}
+
+// NUEVA FUNCIÓN: Cambiar tamaño de etiqueta
+function cambiarTamanoEtiqueta(etiquetaId, tipo, nuevoTamano) {
+    if (tipo === 'polygon') {
+        const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            etiquetasPoligonos[etiquetaIndex].fontSize = parseInt(nuevoTamano);
+            
+            // Actualizar visualmente
+            const etiqueta = etiquetasPoligonos[etiquetaIndex];
+            if (etiqueta.marker && etiqueta.marker.setIcon) {
+                const polygon = etiqueta.polygon;
+                if (polygon) {
+                    const latlngs = polygon.getLatLngs()[0];
+                    const area = L.GeometryUtil.geodesicArea(latlngs);
+                    let perimetro = 0;
+                    for (let i = 0; i < latlngs.length; i++) {
+                        const puntoActual = latlngs[i];
+                        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                        perimetro += puntoActual.distanceTo(puntoSiguiente);
+                    }
+                    
+                    etiqueta.marker.setIcon(L.divIcon({
+                        className: 'etiqueta-poligono interactiva',
+                        html: crearHTMLMedidasPoligono(area, perimetro, etiquetaId),
+                        iconSize: [200, 80],
+                        iconAnchor: [100, 40]
+                    }));
+                }
+            }
+            
+            // Actualizar slider value
+            const slider = document.getElementById('slider-tamano');
+            if (slider) {
+                const valueDisplay = slider.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${nuevoTamano}px`;
+                }
+            }
+        }
+    } else {
+        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            etiquetasTuberias[etiquetaIndex].fontSize = parseInt(nuevoTamano);
+            
+            // Actualizar visualmente
+            const etiqueta = etiquetasTuberias[etiquetaIndex];
+            if (etiqueta.marker && etiqueta.marker.setIcon) {
+                etiqueta.marker.setIcon(L.divIcon({
+                    className: 'tuberia-label interactiva',
+                    html: crearHTMLMedidasTuberia(etiqueta.longitud, etiqueta.diametro, etiqueta.tipoTuberia, etiquetaId),
+                    iconSize: [100, 30],
+                    iconAnchor: [50, 15]
+                }));
+            }
+            
+            // Actualizar slider value
+            const slider = document.getElementById('slider-tamano');
+            if (slider) {
+                const valueDisplay = slider.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${nuevoTamano}px`;
+                }
+            }
+        }
+    }
+}
+
+// NUEVA FUNCIÓN: Rotar etiqueta
+function rotarEtiqueta(etiquetaId, tipo, nuevaRotacion) {
+    if (tipo === 'polygon') {
+        const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            etiquetasPoligonos[etiquetaIndex].rotation = parseInt(nuevaRotacion);
+            
+            // Actualizar visualmente
+            const etiqueta = etiquetasPoligonos[etiquetaIndex];
+            if (etiqueta.marker && etiqueta.marker.setIcon) {
+                const polygon = etiqueta.polygon;
+                if (polygon) {
+                    const latlngs = polygon.getLatLngs()[0];
+                    const area = L.GeometryUtil.geodesicArea(latlngs);
+                    let perimetro = 0;
+                    for (let i = 0; i < latlngs.length; i++) {
+                        const puntoActual = latlngs[i];
+                        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                        perimetro += puntoActual.distanceTo(puntoSiguiente);
+                    }
+                    
+                    etiqueta.marker.setIcon(L.divIcon({
+                        className: 'etiqueta-poligono interactiva',
+                        html: crearHTMLMedidasPoligono(area, perimetro, etiquetaId),
+                        iconSize: [200, 80],
+                        iconAnchor: [100, 40]
+                    }));
+                }
+            }
+            
+            // Actualizar slider value
+            const slider = document.getElementById('slider-rotacion');
+            if (slider) {
+                const valueDisplay = slider.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${nuevaRotacion}°`;
+                }
+            }
+        }
+    } else {
+        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            etiquetasTuberias[etiquetaIndex].rotation = parseInt(nuevaRotacion);
+            
+            // Actualizar visualmente
+            const etiqueta = etiquetasTuberias[etiquetaIndex];
+            if (etiqueta.marker && etiqueta.marker.setIcon) {
+                etiqueta.marker.setIcon(L.divIcon({
+                    className: 'tuberia-label interactiva',
+                    html: crearHTMLMedidasTuberia(etiqueta.longitud, etiqueta.diametro, etiqueta.tipoTuberia, etiquetaId),
+                    iconSize: [100, 30],
+                    iconAnchor: [50, 15]
+                }));
+            }
+            
+            // Actualizar slider value
+            const slider = document.getElementById('slider-rotacion');
+            if (slider) {
+                const valueDisplay = slider.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${nuevaRotacion}°`;
+                }
+            }
+        }
+    }
+}
+
+// NUEVA FUNCIÓN: Alternar visibilidad de etiqueta
+function toggleVisibilidadEtiqueta(etiquetaId, tipo) {
+    if (tipo === 'polygon') {
+        const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            const etiqueta = etiquetasPoligonos[etiquetaIndex];
+            etiqueta.visible = !etiqueta.visible;
+            
+            if (etiqueta.visible) {
+                if (etiqueta.marker && !map.hasLayer(etiqueta.marker)) {
+                    etiqueta.marker.addTo(map);
+                }
+            } else {
+                if (etiqueta.marker && map.hasLayer(etiqueta.marker)) {
+                    map.removeLayer(etiqueta.marker);
+                }
+            }
+            
+            // Cerrar menú contextual
+            const menu = document.getElementById('menu-contextual-etiqueta');
+            if (menu) menu.remove();
+        }
+    } else {
+        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            const etiqueta = etiquetasTuberias[etiquetaIndex];
+            etiqueta.visible = !etiqueta.visible;
+            
+            if (etiqueta.visible) {
+                if (etiqueta.marker && !map.hasLayer(etiqueta.marker)) {
+                    etiqueta.marker.addTo(map);
+                }
+            } else {
+                if (etiqueta.marker && map.hasLayer(etiqueta.marker)) {
+                    map.removeLayer(etiqueta.marker);
+                }
+            }
+            
+            // Cerrar menú contextual
+            const menu = document.getElementById('menu-contextual-etiqueta');
+            if (menu) menu.remove();
+        }
+    }
+}
+
+// NUEVA FUNCIÓN: Eliminar etiqueta
+function eliminarEtiqueta(etiquetaId, tipo) {
+    if (tipo === 'polygon') {
+        const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            const etiqueta = etiquetasPoligonos[etiquetaIndex];
+            if (etiqueta.marker && map.hasLayer(etiqueta.marker)) {
+                map.removeLayer(etiqueta.marker);
+            }
+            etiquetasPoligonos.splice(etiquetaIndex, 1);
+        }
+    } else {
+        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === etiquetaId);
+        if (etiquetaIndex !== -1) {
+            const etiqueta = etiquetasTuberias[etiquetaIndex];
+            if (etiqueta.marker && map.hasLayer(etiqueta.marker)) {
+                map.removeLayer(etiqueta.marker);
+            }
+            etiquetasTuberias.splice(etiquetaIndex, 1);
+        }
+    }
+    
+    // Cerrar menú contextual
+    const menu = document.getElementById('menu-contextual-etiqueta');
+    if (menu) menu.remove();
+}
+
+// NUEVA FUNCIÓN: Actualizar etiquetas de lados de polígono
+function actualizarEtiquetasLados(polygon, latlngs) {
+    // Eliminar etiquetas anteriores si existen
+    if (polygon.etiquetasLados) {
+        polygon.etiquetasLados.forEach(etiqueta => {
+            if (etiqueta && etiqueta.remove) {
+                map.removeLayer(etiqueta);
+            }
+        });
+    }
+    
+    polygon.etiquetasLados = [];
+    
+    // Crear etiquetas para cada lado
+    for (let i = 0; i < latlngs.length; i++) {
+        const puntoActual = latlngs[i];
+        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+        
+        const distancia = puntoActual.distanceTo(puntoSiguiente);
+        const centro = L.latLng(
+            (puntoActual.lat + puntoSiguiente.lat) / 2,
+            (puntoActual.lng + puntoSiguiente.lng) / 2
+        );
+        
+        // Calcular ángulo para orientar la etiqueta
+        const angulo = calcularAngulo(puntoActual, puntoSiguiente);
+        
+        // Desplazar la etiqueta para que no se superponga con el polígono
+        const desplazamiento = 0.00002; // Ajustar según zoom
+        const anguloRadianes = (90 - angulo) * Math.PI / 180;
+        const centroDesplazado = L.latLng(
+            centro.lat + Math.cos(anguloRadianes) * desplazamiento,
+            centro.lng + Math.sin(anguloRadianes) * desplazamiento
+        );
+        
+        const etiqueta = L.marker(centroDesplazado, {
+            icon: L.divIcon({
+                className: 'etiqueta-lado',
+                html: `
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 4px 8px; border-radius: 4px; 
+                           border: 1px solid #008a45; font-size: 10px; font-weight: bold; color: #333; 
+                           transform: rotate(${angulo}deg); transform-origin: center; cursor: move;">
+                        ${distancia.toFixed(1)} m
+                    </div>`,
+                iconSize: [70, 25],
+                iconAnchor: [35, 12.5]
+            }),
+            rotationAngle: angulo,
+            draggable: true,
+            interactive: true
+        }).addTo(map);
+        
+        // Configurar eventos de arrastre
+        etiqueta.on('dragend', function(e) {
+            const nuevaPos = e.target.getLatLng();
+            // Aquí podrías actualizar la posición en un array si quisieras guardarla
+        });
+        
+        // Configurar clic derecho para menú contextual
+        etiqueta.on('contextmenu', function(e) {
+            e.originalEvent.preventDefault();
+            mostrarMenuContextualEtiquetaLado(e.latlng, etiqueta, distancia, i);
+        });
+        
+        polygon.etiquetasLados.push(etiqueta);
+    }
+}
+
+// NUEVA FUNCIÓN: Menú contextual para etiquetas de lados
+function mostrarMenuContextualEtiquetaLado(posicion, etiqueta, distancia, indice) {
+    const menuDiv = document.createElement('div');
+    menuDiv.id = 'menu-contextual-lado';
+    menuDiv.style.cssText = `
+        position: absolute;
+        top: ${posicion.lat}px;
+        left: ${posicion.lng}px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        z-index: 10000;
+        min-width: 150px;
+    `;
+    
+    menuDiv.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
+            Lado ${indice + 1}
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+            <strong>Longitud:</strong> ${distancia.toFixed(2)} m
+        </div>
+        
+        <button onclick="eliminarEtiquetaLado(${indice})" 
+                style="width: 100%; padding: 5px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px;">
+            Ocultar Etiqueta
+        </button>
+        
+        <button onclick="document.getElementById('menu-contextual-lado').remove()" 
+                style="width: 100%; padding: 5px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+            Cerrar
+        </button>
+    `;
+    
+    // Eliminar menú anterior si existe
+    const menuAnterior = document.getElementById('menu-contextual-lado');
+    if (menuAnterior) menuAnterior.remove();
+    
+    document.body.appendChild(menuDiv);
+    
+    // Cerrar menú al hacer clic fuera
+    setTimeout(() => {
+        const cerrarMenu = function(e) {
+            if (!menuDiv.contains(e.target)) {
+                menuDiv.remove();
+                document.removeEventListener('click', cerrarMenu);
+            }
+        };
+        document.addEventListener('click', cerrarMenu);
+    }, 10);
+}
+
+// NUEVA FUNCIÓN: Eliminar etiqueta de lado
+function eliminarEtiquetaLado(indice) {
+    // Esta función sería más compleja ya que necesitarías saber a qué polígono pertenece
+    // Por simplicidad, aquí solo cerramos el menú
+    const menu = document.getElementById('menu-contextual-lado');
+    if (menu) menu.remove();
+}
 
 // ============================================
 // FUNCIONES DE PDF COMPLETAS CON MEDIDAS
@@ -2161,43 +2817,459 @@ async function exportarPDF() {
             return;
         }
         
-        mostrarMensaje('Generando PDF con imagen del diseño y mediciones... Esto puede tomar unos segundos.', 5000);
+        mostrarMensaje('Generando resumen técnico profesional...', 3000);
         
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         
-        // TÍTULO
-        doc.setFontSize(20);
-        doc.setTextColor(0, 165, 83);
-        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+        // ====================================================================
+        // CONFIGURACIÓN DE ESTILOS Y COLORES AGROSISTEMAS
+        // ====================================================================
+        const colores = {
+            primario: '#00a553',      // Verde Agrosistemas
+            secundario: '#008a45',    // Verde oscuro
+            acento: '#1772af',        // Azul
+            texto: '#333333',         // Texto principal
+            textoClaro: '#666666',    // Texto secundario
+            fondo: '#f8f9fa',         // Fondo claro
+            borde: '#e0e0e0',         // Borde gris claro
+            peligro: '#ff6b6b',       // Rojo para alertas
+            advertencia: '#ff9f43',   // Naranja
+            exito: '#4ecdc4'          // Verde turquesa
+        };
         
+        // ====================================================================
+        // CALCULAR DATOS PARA TODO EL DOCUMENTO
+        // ====================================================================
+        
+        // Calcular área total del terreno
+        let areaTotalTerreno = 0;
+        let perimetroTotalTerreno = 0;
+        let numPoligonos = 0;
+        const detallesPoligonos = [];
+        
+        drawnItems.eachLayer(function(layer) {
+            if (layer instanceof L.Polygon) {
+                const latlngs = layer.getLatLngs()[0];
+                const area = L.GeometryUtil.geodesicArea(latlngs);
+                let perimetro = 0;
+                
+                for (let i = 0; i < latlngs.length; i++) {
+                    const puntoActual = latlngs[i];
+                    const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                    perimetro += puntoActual.distanceTo(puntoSiguiente);
+                }
+                
+                areaTotalTerreno += area;
+                perimetroTotalTerreno += perimetro;
+                numPoligonos++;
+                
+                detallesPoligonos.push({
+                    numero: numPoligonos,
+                    area: area,
+                    perimetro: perimetro,
+                    lados: latlngs.length
+                });
+            }
+        });
+        
+        // Calcular resumen de tuberías
+        const resumenTuberias = {};
+        let longitudTotalTuberias = 0;
+        
+        tuberias.forEach(t => {
+            const key = `${t.tipo}_${t.diametro}`;
+            if (!resumenTuberias[key]) {
+                resumenTuberias[key] = {
+                    tipo: t.tipo,
+                    diametro: t.diametro,
+                    longitudTotal: 0,
+                    cantidad: 0,
+                    material: t.tipoMaterial || 'PVC'
+                };
+            }
+            resumenTuberias[key].longitudTotal += t.longitud || 0;
+            resumenTuberias[key].cantidad += 1;
+            longitudTotalTuberias += t.longitud || 0;
+        });
+        
+        // Calcular caudal total
+        let caudalTotalSistema = 0;
+        if (valvulas.length > 0) {
+            caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
+        }
+        
+        // ====================================================================
+        // PÁGINA 1: PORTADA PROFESIONAL
+        // ====================================================================
+        doc.setFillColor(240, 245, 242); // Fondo verde muy claro
+        doc.rect(0, 0, 210, 297, 'F');
+        
+        // Logo Agrosistemas (simulado)
+        doc.setFillColor(colores.primario);
+        doc.roundedRect(70, 40, 70, 70, 10, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(32);
+        doc.setFont('helvetica', 'bold');
+        doc.text('A', 105, 78, { align: 'center' });
+        doc.setFontSize(16);
+        doc.text('GRO', 123, 77);
+        doc.text('SISTEMAS', 105, 95, { align: 'center' });
+        
+        // Título principal
+        doc.setTextColor(colores.texto);
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.text('MEMORIA TÉCNICA', 105, 130, { align: 'center' });
+        doc.setFontSize(22);
+        doc.text('SISTEMA DE RIEGO', 105, 145, { align: 'center' });
+        
+        // Línea decorativa
+        doc.setDrawColor(colores.primario);
+        doc.setLineWidth(2);
+        doc.line(60, 155, 150, 155);
+        
+        // Información del proyecto
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Proyecto:', 60, 175);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        const nombreProyecto = `Diseño_${new Date().toLocaleDateString('es-MX').replace(/\//g, '-')}`;
+        doc.text(nombreProyecto, 90, 175);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Fecha:', 60, 185);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        doc.text(new Date().toLocaleDateString('es-MX', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }), 90, 185);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Versión:', 60, 195);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        doc.text('1.0', 90, 195);
+        
+        // Resumen ejecutivo en portada
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('RESUMEN EJECUTIVO', 105, 215, { align: 'center' });
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.texto);
+        doc.text(`• Área total: ${areaTotalTerreno > 0 ? areaTotalTerreno.toFixed(0) : '0'} m²`, 105, 225, { align: 'center' });
+        doc.text(`• Tuberías: ${longitudTotalTuberias.toFixed(0)} m`, 105, 232, { align: 'center' });
+        doc.text(`• Válvulas: ${valvulas.length}`, 105, 239, { align: 'center' });
+        
+        // Datos de contacto
         doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-        doc.text('Fecha: ' + new Date().toLocaleDateString('es-MX'), 105, 28, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 260, { align: 'center' });
+        doc.text('www.agrosistemas.com.mx | contacto@agrosistemas.com.mx', 105, 267, { align: 'center' });
+        doc.text('Tel: 668 123 4567 | Los Mochis, Sinaloa', 105, 274, { align: 'center' });
         
-        // CAPTURAR Y DIBUJAR MAPA CON ELEMENTOS PRECISOS
-        let currentY = 35;
+        // Pie de página portada
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(9);
+        doc.text('Documento confidencial - Uso exclusivo del cliente', 105, 285, { align: 'center' });
+        
+        // ====================================================================
+        // PÁGINA 2: ÍNDICE
+        // ====================================================================
+        doc.addPage();
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, 210, 297, 'F');
+        
+        // Encabezado
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ÍNDICE DE CONTENIDOS', 105, 20, { align: 'center' });
+        
+        let currentY = 50;
+        
+        // Secciones del índice
+        const secciones = [
+            { titulo: '1. RESUMEN EJECUTIVO', pagina: 3 },
+            { titulo: '2. PLANO DEL SISTEMA', pagina: 4 },
+            { titulo: '3. INFORMACIÓN DEL TERRENO', pagina: 5 },
+            { titulo: '4. DISEÑO HIDRÁULICO', pagina: 6 },
+            { titulo: '5. TUBERÍAS Y CONEXIONES', pagina: 7 },
+            { titulo: '6. EQUIPOS Y ELEMENTOS', pagina: 8 },
+            { titulo: '7. CÁLCULOS TÉCNICOS', pagina: 9 },
+            { titulo: '8. ESPECIFICACIONES TÉCNICAS', pagina: 10 },
+            { titulo: '9. RECOMENDACIONES', pagina: 11 },
+            { titulo: 'ANEXOS Y FIRMAS', pagina: 12 }
+        ];
+        
+        secciones.forEach((seccion, index) => {
+            doc.setTextColor(colores.texto);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(seccion.titulo, 20, currentY);
+            
+            // Puntos de guía
+            doc.setDrawColor(colores.borde);
+            doc.setLineWidth(0.5);
+            const xPuntos = 190;
+            for (let i = 0; i < 20; i++) {
+                doc.line(20 + (i * 2), currentY + 3, 20 + (i * 2) + 1, currentY + 3);
+            }
+            
+            doc.setTextColor(colores.acento);
+            doc.text(seccion.pagina.toString(), 195, currentY, { align: 'right' });
+            
+            currentY += 15;
+        });
+        
+        // Nota del índice
+        currentY += 10;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('* Este documento contiene información técnica para la implementación del sistema de riego.', 20, currentY);
+        
+        // ====================================================================
+        // PÁGINA 3: RESUMEN EJECUTIVO
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('1. RESUMEN EJECUTIVO', 105, 20, { align: 'center' });
+        
+        currentY = 40;
+        
+        // Cuadro resumen ejecutivo
+        doc.setFillColor(colores.fondo);
+        doc.roundedRect(15, currentY, 180, 60, 3, 3, 'F');
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('RESUMEN DEL PROYECTO', 105, currentY + 10, { align: 'center' });
+        
+        currentY += 25;
+        
+        // Datos clave
+        const datosResumen = [
+            ['Área Total del Terreno:', `${areaTotalTerreno > 0 ? areaTotalTerreno.toFixed(0) : '0'} m² (${(areaTotalTerreno / 10000).toFixed(2)} ha)`],
+            ['Longitud Total de Tuberías:', `${longitudTotalTuberias.toFixed(0)} m`],
+            ['Número de Válvulas:', `${valvulas.length}`],
+            ['Caudal Total del Sistema:', `${caudalTotalSistema.toFixed(0)} L/h (${(caudalTotalSistema / 3600).toFixed(1)} L/s)`],
+            ['Elementos Instalados:', `${elementosGraficos.length}`],
+            ['Cabezales de Bombeo:', `${cabezales.length}`]
+        ];
+        
+        datosResumen.forEach((dato, index) => {
+            const y = currentY + (index * 7);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.texto);
+            doc.text(dato[0], 20, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(colores.acento);
+            doc.text(dato[1], 100, y);
+        });
+        
+        currentY += 50;
+        
+        // Objetivo del proyecto
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('OBJETIVO DEL PROYECTO', 20, currentY);
+        
+        currentY += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.texto);
+        const objetivo = 'Diseñar e implementar un sistema de riego eficiente que maximice el uso del agua, ' +
+                        'garantice una distribución uniforme y optimice los recursos disponibles para el cultivo.';
+        doc.text(objetivo, 20, currentY, { maxWidth: 170 });
+        
+        currentY += 20;
+        
+        // Alcance
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('ALCANCE', 20, currentY);
+        
+        currentY += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.texto);
+        const alcances = [
+            '• Diseño completo del sistema de riego por goteo/aspersión',
+            '• Especificación de tuberías, válvulas y accesorios',
+            '• Cálculos hidráulicos y de requerimientos hídricos',
+            '• Dimensionamiento del cabezal de bombeo y filtración',
+            '• Estimación de materiales y costo preliminar'
+        ];
+        
+        alcances.forEach((alcance, index) => {
+            doc.text(alcance, 25, currentY + (index * 6), { maxWidth: 165 });
+        });
+        
+        // ====================================================================
+        // PÁGINA 4: PLANO DEL SISTEMA (IMAGEN)
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('2. PLANO DEL SISTEMA', 105, 20, { align: 'center' });
+        
+        currentY = 35;
         
         try {
-            // Obtener el bounds del mapa actual
-            const mapBounds = map.getBounds();
-            const mapCenter = map.getCenter();
-            const mapZoom = map.getZoom();
+            // Determinar los límites del diseño
+            let bounds = null;
+            
+            // Buscar todos los elementos para determinar el área total del diseño
+            const allLatLngs = [];
+            
+            // 1. Polígonos del terreno
+            drawnItems.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    latlngs.forEach(latlng => allLatLngs.push(latlng));
+                }
+            });
+            
+            // 2. Tuberías
+            tuberias.forEach(tuberia => {
+                if (tuberia.linea && tuberia.linea.getLatLngs) {
+                    const latlngs = tuberia.linea.getLatLngs();
+                    
+                    // Aplanar array de puntos
+                    if (Array.isArray(latlngs)) {
+                        if (Array.isArray(latlngs[0]) && typeof latlngs[0][0] === 'object') {
+                            // Es un array de arrays (polilínea con segmentos)
+                            latlngs.forEach(segment => {
+                                if (Array.isArray(segment)) {
+                                    segment.forEach(point => {
+                                        if (point && point.lat && point.lng) {
+                                            allLatLngs.push(point);
+                                        }
+                                    });
+                                }
+                            });
+                        } else if (latlngs[0].lat) {
+                            // Es un array simple de puntos
+                            latlngs.forEach(point => {
+                                if (point && point.lat && point.lng) {
+                                    allLatLngs.push(point);
+                                }
+                            });
+                        }
+                    }
+                }
+                
+                // Agregar puntos de inicio y fin
+                if (tuberia.puntoInicio) allLatLngs.push(tuberia.puntoInicio);
+                if (tuberia.puntoFin) allLatLngs.push(tuberia.puntoFin);
+            });
+            
+            // 3. Elementos gráficos
+            elementosGraficos.forEach(elemento => {
+                if (elemento.posicion) {
+                    allLatLngs.push(elemento.posicion);
+                }
+            });
+            
+            // Si no hay elementos, usar vista actual del mapa
+            if (allLatLngs.length === 0) {
+                bounds = map.getBounds();
+            } else {
+                // Crear bounds a partir de todos los puntos
+                const boundsArray = L.latLngBounds(allLatLngs);
+                
+                // Añadir un margen de 10% alrededor del diseño
+                const paddingPercent = 0.1;
+                const sw = boundsArray.getSouthWest();
+                const ne = boundsArray.getNorthEast();
+                
+                const latDiff = ne.lat - sw.lat;
+                const lngDiff = ne.lng - sw.lng;
+                
+                const paddedSW = L.latLng(
+                    sw.lat - (latDiff * paddingPercent),
+                    sw.lng - (lngDiff * paddingPercent)
+                );
+                
+                const paddedNE = L.latLng(
+                    ne.lat + (latDiff * paddingPercent),
+                    ne.lng + (lngDiff * paddingPercent)
+                );
+                
+                bounds = L.latLngBounds(paddedSW, paddedNE);
+            }
             
             // Calcular dimensiones para la imagen en el PDF
-            const pdfWidth = 140; // mm en A4
-            const pdfHeight = 140; // mm
+            const pdfPageWidth = 210; // mm en A4 horizontal
+            const pdfPageHeight = 297; // mm en A4 vertical
             
-            // Coordenadas en el PDF
-            const pdfX = (210 - pdfWidth) / 2;
-            const pdfY = currentY;
+            // Margen izquierdo y derecho de 10mm
+            const pdfMarginX = 10;
+            const pdfWidth = pdfPageWidth - (pdfMarginX * 2); // 190mm
             
-            // Crear canvas para dibujar todo exactamente
+            // Espacio para título y pie
+            const pdfMarginTop = currentY;
+            const pdfMarginBottom = 20;
+            const pdfHeight = pdfPageHeight - pdfMarginTop - pdfMarginBottom - 30; // Altura disponible
+            
+            // Calcular relación de aspecto
+            const boundsSize = bounds.getNorthEast().distanceTo(bounds.getSouthWest());
+            const boundsAspectRatio = Math.abs((bounds.getNorthEast().lng - bounds.getSouthWest().lng) / 
+                                             (bounds.getNorthEast().lat - bounds.getSouthWest().lat));
+            
+            let finalWidth, finalHeight;
+            const pdfAspectRatio = pdfWidth / pdfHeight;
+            
+            if (boundsAspectRatio > pdfAspectRatio) {
+                // El diseño es más ancho que alto respecto al espacio disponible
+                finalWidth = pdfWidth;
+                finalHeight = pdfWidth / boundsAspectRatio;
+            } else {
+                // El diseño es más alto que ancho
+                finalHeight = pdfHeight;
+                finalWidth = pdfHeight * boundsAspectRatio;
+            }
+            
+            // Centrar en el PDF
+            const pdfX = pdfMarginX + (pdfWidth - finalWidth) / 2;
+            const pdfY = currentY + (pdfHeight - finalHeight) / 2;
+            
+            // Crear canvas para dibujar el diseño
             const canvas = document.createElement('canvas');
-            const scaleFactor = 2; // Para mejor calidad
-            canvas.width = pdfWidth * 3.78 * scaleFactor; // Convertir mm a px (96 DPI)
-            canvas.height = pdfHeight * 3.78 * scaleFactor;
+            const dpi = 150; // Resolución media para buen balance calidad/tamaño
+            const scaleFactor = dpi / 96; // Factor de escala
+            
+            canvas.width = finalWidth * 3.78 * scaleFactor; // Convertir mm a px (3.78 px/mm * scale)
+            canvas.height = finalHeight * 3.78 * scaleFactor;
             
             const ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = true;
@@ -2213,24 +3285,20 @@ async function exportarPDF() {
             
             // Función para convertir coordenadas geográficas a píxeles en el canvas
             function latLngToCanvas(latlng) {
-                const point = map.project(latlng, mapZoom);
-                
-                // Calcular relación entre el mapa visible y el canvas
-                const mapPixelBounds = map.getPixelBounds();
-                const mapPixelSize = mapPixelBounds.getSize();
-                
-                // Posición relativa en el mapa
-                const relativeX = (point.x - mapPixelBounds.min.x) / mapPixelSize.x;
-                const relativeY = (point.y - mapPixelBounds.min.y) / mapPixelSize.y;
+                // Normalizar las coordenadas dentro del bounds
+                const normalizedX = (latlng.lng - bounds.getSouthWest().lng) / 
+                                  (bounds.getNorthEast().lng - bounds.getSouthWest().lng);
+                const normalizedY = 1 - ((latlng.lat - bounds.getSouthWest().lat) / 
+                                       (bounds.getNorthEast().lat - bounds.getSouthWest().lat));
                 
                 // Escalar al tamaño del canvas
-                const canvasX = relativeX * canvasWidth;
-                const canvasY = relativeY * canvasHeight;
+                const canvasX = normalizedX * canvasWidth;
+                const canvasY = normalizedY * canvasHeight;
                 
                 return { x: canvasX, y: canvasY };
             }
             
-            // 1. Dibujar polígonos del terreno CON MEDIDAS
+            // 1. Dibujar polígonos del terreno CON MEDIDAS Y ETIQUETAS
             drawnItems.eachLayer(function(layer) {
                 if (layer instanceof L.Polygon) {
                     const latlngs = layer.getLatLngs()[0];
@@ -2252,7 +3320,85 @@ async function exportarPDF() {
                     ctx.strokeStyle = '#008a45';
                     ctx.stroke();
                     
-                    // DIBUJAR MEDIDAS DE LOS LADOS DEL POLÍGONO
+                    // Calcular área y perímetro para la etiqueta
+                    const area = L.GeometryUtil.geodesicArea(latlngs);
+                    let perimetro = 0;
+                    for (let i = 0; i < latlngs.length; i++) {
+                        const puntoActual = latlngs[i];
+                        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                        perimetro += puntoActual.distanceTo(puntoSiguiente);
+                    }
+                    
+                    // Buscar la etiqueta del polígono para usar su posición actual
+                    let etiquetaPoligono = null;
+                    const polygonId = layer._leaflet_id;
+                    const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === polygonId);
+                    
+                    // Usar la posición de la etiqueta si existe y está visible
+                    let canvasCentro;
+                    if (etiquetaIndex !== -1 && etiquetasPoligonos[etiquetaIndex].visible !== false) {
+                        // Usar la posición actual de la etiqueta (si fue movida)
+                        const etiquetaData = etiquetasPoligonos[etiquetaIndex];
+                        if (etiquetaData.marker && etiquetaData.marker.getLatLng) {
+                            const posicionEtiqueta = etiquetaData.marker.getLatLng();
+                            canvasCentro = latLngToCanvas(posicionEtiqueta);
+                        } else {
+                            // Calcular centro como fallback
+                            let centroLat = 0, centroLng = 0;
+                            latlngs.forEach(punto => {
+                                centroLat += punto.lat;
+                                centroLng += punto.lng;
+                            });
+                            const centro = L.latLng(centroLat / latlngs.length, centroLng / latlngs.length);
+                            canvasCentro = latLngToCanvas(centro);
+                        }
+                    } else {
+                        // Calcular centro si no hay etiqueta
+                        let centroLat = 0, centroLng = 0;
+                        latlngs.forEach(punto => {
+                            centroLat += punto.lat;
+                            centroLng += punto.lng;
+                        });
+                        const centro = L.latLng(centroLat / latlngs.length, centroLng / latlngs.length);
+                        canvasCentro = latLngToCanvas(centro);
+                    }
+                    
+                    // Dibujar etiqueta del polígono
+                    const etiquetaWidth = 180 * scaleFactor;
+                    const etiquetaHeight = 80 * scaleFactor;
+                    
+                    // Fondo de etiqueta
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.fillRect(
+                        canvasCentro.x - etiquetaWidth/2, 
+                        canvasCentro.y - etiquetaHeight/2, 
+                        etiquetaWidth, 
+                        etiquetaHeight
+                    );
+                    
+                    ctx.strokeStyle = '#008a45';
+                    ctx.lineWidth = 2 * scaleFactor;
+                    ctx.strokeRect(
+                        canvasCentro.x - etiquetaWidth/2, 
+                        canvasCentro.y - etiquetaHeight/2, 
+                        etiquetaWidth, 
+                        etiquetaHeight
+                    );
+                    
+                    // Texto de la etiqueta
+                    ctx.fillStyle = '#008a45';
+                    ctx.font = `bold ${12 * scaleFactor}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('MEDIDAS DEL TERRENO', canvasCentro.x, canvasCentro.y - 25 * scaleFactor);
+                    
+                    ctx.fillStyle = '#333333';
+                    ctx.font = `${11 * scaleFactor}px Arial`;
+                    ctx.fillText(`Área: ${area.toFixed(1)} m²`, canvasCentro.x, canvasCentro.y - 5 * scaleFactor);
+                    ctx.fillText(`Hectáreas: ${(area / 10000).toFixed(3)} ha`, canvasCentro.x, canvasCentro.y + 5 * scaleFactor);
+                    ctx.fillText(`Perímetro: ${perimetro.toFixed(1)} m`, canvasCentro.x, canvasCentro.y + 15 * scaleFactor);
+                    
+                    // Dibujar medidas de los lados del polígono
                     for (let i = 0; i < canvasPoints.length; i++) {
                         const start = canvasPoints[i];
                         const end = canvasPoints[(i + 1) % canvasPoints.length];
@@ -2264,16 +3410,14 @@ async function exportarPDF() {
                         // Calcular distancia en píxeles
                         const dx = end.x - start.x;
                         const dy = end.y - start.y;
-                        const distanciaPixeles = Math.sqrt(dx * dx + dy * dy);
                         
-                        // Calcular distancia real aproximada
+                        // Calcular distancia real
                         const punto1 = latlngs[i];
                         const punto2 = latlngs[(i + 1) % latlngs.length];
                         const distanciaReal = punto1.distanceTo(punto2);
                         
                         // Calcular ángulo para rotar el texto
                         const angulo = Math.atan2(dy, dx);
-                        const anguloGrados = angulo * (180 / Math.PI);
                         
                         // Guardar estado del contexto
                         ctx.save();
@@ -2320,49 +3464,10 @@ async function exportarPDF() {
                         ctx.textBaseline = 'middle';
                         ctx.fillText((i + 1).toString(), start.x, start.y);
                     }
-                    
-                    // Calcular y mostrar área total del polígono
-                    let areaSum = 0;
-                    for (let i = 0; i < canvasPoints.length; i++) {
-                        const j = (i + 1) % canvasPoints.length;
-                        areaSum += canvasPoints[i].x * canvasPoints[j].y;
-                        areaSum -= canvasPoints[j].x * canvasPoints[i].y;
-                    }
-                    
-                    const areaPixeles = Math.abs(areaSum) / 2;
-                    
-                    // Calcular centro del polígono
-                    let centroX = 0, centroY = 0;
-                    canvasPoints.forEach(p => {
-                        centroX += p.x;
-                        centroY += p.y;
-                    });
-                    centroX /= canvasPoints.length;
-                    centroY /= canvasPoints.length;
-                    
-                    // Área real del polígono
-                    const areaReal = L.GeometryUtil.geodesicArea(latlngs);
-                    
-                    // Mostrar área en el centro del polígono
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    const areaAncho = 100 * scaleFactor;
-                    const areaAlto = 40 * scaleFactor;
-                    ctx.fillRect(centroX - areaAncho/2, centroY - areaAlto/2, areaAncho, areaAlto);
-                    
-                    ctx.strokeStyle = 'rgba(0, 138, 69, 0.5)';
-                    ctx.lineWidth = 2 * scaleFactor;
-                    ctx.strokeRect(centroX - areaAncho/2, centroY - areaAlto/2, areaAncho, areaAlto);
-                    
-                    ctx.fillStyle = '#008a45';
-                    ctx.font = `${9 * scaleFactor}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(`Área: ${areaReal.toFixed(0)} m²`, centroX, centroY - 5 * scaleFactor);
-                    ctx.fillText(`${(areaReal / 10000).toFixed(2)} ha`, centroX, centroY + 5 * scaleFactor);
                 }
             });
             
-            // 2. Dibujar tuberías (código existente)
+            // 2. Dibujar tuberías CON ETIQUETAS
             tuberias.forEach(tuberia => {
                 if (tuberia.linea && tuberia.linea.getLatLngs) {
                     const latlngs = tuberia.linea.getLatLngs();
@@ -2375,14 +3480,18 @@ async function exportarPDF() {
                             latlngs.forEach(segment => {
                                 if (Array.isArray(segment)) {
                                     segment.forEach(point => {
-                                        canvasPoints.push(latLngToCanvas(point));
+                                        if (point && point.lat && point.lng) {
+                                            canvasPoints.push(latLngToCanvas(point));
+                                        }
                                     });
                                 }
                             });
                         } else if (latlngs[0].lat) {
                             // Es un array simple de puntos
                             latlngs.forEach(point => {
-                                canvasPoints.push(latLngToCanvas(point));
+                                if (point && point.lat && point.lng) {
+                                    canvasPoints.push(latLngToCanvas(point));
+                                }
                             });
                         }
                     }
@@ -2396,19 +3505,19 @@ async function exportarPDF() {
                             ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
                         }
                         
-                        // Estilo según tipo de tubería
+                        // Estilo según tipo de tubería (COLORES ACTUALIZADOS)
                         let color, width;
                         switch(tuberia.tipo) {
                             case 'principal':
-                                color = '#ff6b6b'; // Rojo
+                                color = '#ff0000'; // ROJO
                                 width = 6 * scaleFactor;
                                 break;
                             case 'secundaria':
-                                color = '#4ecdc4'; // Turquesa
+                                color = '#0000ff'; // AZUL
                                 width = 4 * scaleFactor;
                                 break;
                             case 'regante':
-                                color = '#45b7d1'; // Azul claro
+                                color = '#00ff00'; // VERDE
                                 width = 3 * scaleFactor;
                                 break;
                             default:
@@ -2422,209 +3531,180 @@ async function exportarPDF() {
                         ctx.lineJoin = 'round';
                         ctx.stroke();
                         
-                        // AGREGAR MEDIDAS Y DIÁMETROS A LAS LÍNEAS
-                        if (canvasPoints.length === 2) {
-                            // Para líneas rectas simples
-                            const start = canvasPoints[0];
-                            const end = canvasPoints[1];
-                            const midX = (start.x + end.x) / 2;
-                            const midY = (start.y + end.y) / 2;
+                        // Buscar la etiqueta de la tubería para usar su posición actual
+                        let etiquetaTuberia = null;
+                        const tuberiaId = tuberia.id || tuberia._leaflet_id;
+                        const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === tuberiaId);
+                        
+                        // Dibujar etiqueta de tubería
+                        if (tuberia.longitud && tuberia.diametro) {
+                            let midX, midY;
                             
-                            // Calcular ángulo para posicionar el texto
-                            const angle = Math.atan2(end.y - start.y, end.x - start.x);
-                            const textAngle = Math.abs(angle) > Math.PI/2 ? angle + Math.PI : angle;
-                            
-                            // Guardar estado del contexto
-                            ctx.save();
-                            
-                            // Mover al punto medio y rotar
-                            ctx.translate(midX, midY);
-                            ctx.rotate(textAngle);
-                            
-                            // Fondo para el texto
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                            ctx.fillRect(-30, -10, 60, 20);
-                            
-                            // Borde sutil
-                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-                            ctx.lineWidth = 1 * scaleFactor;
-                            ctx.strokeRect(-30, -10, 60, 20);
-                            
-                            // Texto con medida y diámetro
-                            ctx.fillStyle = '#333333';
-                            ctx.font = `${8 * scaleFactor}px Arial`;
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            
-                            // Formato: "XX.Xm - YY"
-                            const distancia = tuberia.longitud || calcularDistancia(start, end) / (3.78 * scaleFactor);
-                            ctx.fillText(`${distancia.toFixed(1)}m - ${tuberia.diametro}"`, 0, 0);
-                            
-                            // Restaurar contexto
-                            ctx.restore();
-                        } else if (canvasPoints.length > 2) {
-                            // Para polilíneas con múltiples segmentos
-                            for (let i = 0; i < canvasPoints.length - 1; i++) {
-                                const start = canvasPoints[i];
-                                const end = canvasPoints[i + 1];
-                                const midX = (start.x + end.x) / 2;
-                                const midY = (start.y + end.y) / 2;
+                            // Usar la posición de la etiqueta si existe y está visible
+                            if (etiquetaIndex !== -1 && etiquetasTuberias[etiquetaIndex].visible !== false) {
+                                const etiquetaData = etiquetasTuberias[etiquetaIndex];
                                 
-                                // Calcular ángulo para posicionar el texto
-                                const angle = Math.atan2(end.y - start.y, end.x - start.x);
-                                const textAngle = Math.abs(angle) > Math.PI/2 ? angle + Math.PI : angle;
+                                // Usar position si está disponible (posición actual después de ser movida)
+                                if (etiquetaData.position) {
+                                    const canvasPos = latLngToCanvas(etiquetaData.position);
+                                    midX = canvasPos.x;
+                                    midY = canvasPos.y;
+                                } 
+                                // Si no, usar la posición del marcador
+                                else if (etiquetaData.marker && etiquetaData.marker.getLatLng) {
+                                    const posicionEtiqueta = etiquetaData.marker.getLatLng();
+                                    const canvasPos = latLngToCanvas(posicionEtiqueta);
+                                    midX = canvasPos.x;
+                                    midY = canvasPos.y;
+                                } else {
+                                    // Calcular punto medio como fallback
+                                    let sumX = 0, sumY = 0;
+                                    canvasPoints.forEach(p => {
+                                        sumX += p.x;
+                                        sumY += p.y;
+                                    });
+                                    midX = sumX / canvasPoints.length;
+                                    midY = sumY / canvasPoints.length;
+                                }
+                            } else {
+                                // Calcular punto medio como fallback
+                                let sumX = 0, sumY = 0;
+                                canvasPoints.forEach(p => {
+                                    sumX += p.x;
+                                    sumY += p.y;
+                                });
+                                midX = sumX / canvasPoints.length;
+                                midY = sumY / canvasPoints.length;
+                            }
+                            
+                            // Solo dibujar si la etiqueta está visible o no existe en el array
+                            if (etiquetaIndex === -1 || etiquetasTuberias[etiquetaIndex].visible !== false) {
+                                // Fondo de etiqueta
+                                const etiquetaWidth = 100 * scaleFactor;
+                                const etiquetaHeight = 30 * scaleFactor;
                                 
-                                // Guardar estado del contexto
-                                ctx.save();
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                                ctx.fillRect(midX - etiquetaWidth/2, midY - etiquetaHeight/2, etiquetaWidth, etiquetaHeight);
                                 
-                                // Mover al punto medio y rotar
-                                ctx.translate(midX, midY);
-                                ctx.rotate(textAngle);
-                                
-                                // Fondo para el texto
-                                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                                ctx.fillRect(-25, -8, 50, 16);
-                                
-                                // Borde sutil
-                                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                                ctx.strokeStyle = '#cccccc';
                                 ctx.lineWidth = 1 * scaleFactor;
-                                ctx.strokeRect(-25, -8, 50, 16);
+                                ctx.strokeRect(midX - etiquetaWidth/2, midY - etiquetaHeight/2, etiquetaWidth, etiquetaHeight);
                                 
-                                // Texto con diámetro (solo diámetro para no saturar)
+                                // Texto de la etiqueta con rotación si existe
+                                let anguloRotacion = 0;
+                                if (etiquetaIndex !== -1) {
+                                    anguloRotacion = etiquetasTuberias[etiquetaIndex].rotation || 0;
+                                }
+                                
+                                // Guardar estado del contexto para aplicar rotación
+                                ctx.save();
+                                ctx.translate(midX, midY);
+                                ctx.rotate(anguloRotacion * Math.PI / 180);
+                                
                                 ctx.fillStyle = '#333333';
-                                ctx.font = `${7 * scaleFactor}px Arial`;
+                                ctx.font = `bold ${9 * scaleFactor}px Arial`;
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
-                                ctx.fillText(`${tuberia.diametro}"`, 0, 0);
+                                ctx.fillText(`${tuberia.longitud.toFixed(1)}m - ${tuberia.diametro}"`, 0, 0);
                                 
                                 // Restaurar contexto
                                 ctx.restore();
-                            }
-                            
-                            // Mostrar longitud total al final de la polilínea
-                            if (canvasPoints.length > 1) {
-                                const lastPoint = canvasPoints[canvasPoints.length - 1];
-                                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                                ctx.fillRect(lastPoint.x - 40, lastPoint.y - 10, 80, 20);
-                                
-                                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-                                ctx.lineWidth = 1 * scaleFactor;
-                                ctx.strokeRect(lastPoint.x - 40, lastPoint.y - 10, 80, 20);
-                                
-                                ctx.fillStyle = '#333333';
-                                ctx.font = `${8 * scaleFactor}px Arial`;
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                const totalLength = tuberia.longitud || calcularLongitudPolilineaCanvas(canvasPoints) / (3.78 * scaleFactor);
-                                ctx.fillText(`${totalLength.toFixed(1)}m total`, lastPoint.x, lastPoint.y);
                             }
                         }
                     }
                 }
             });
             
-            // Función auxiliar para calcular distancia entre puntos canvas
-            function calcularDistancia(p1, p2) {
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                return Math.sqrt(dx*dx + dy*dy);
-            }
-            
-            // Función auxiliar para calcular longitud total de polilínea en canvas
-            function calcularLongitudPolilineaCanvas(puntos) {
-                let longitud = 0;
-                for (let i = 0; i < puntos.length - 1; i++) {
-                    longitud += calcularDistancia(puntos[i], puntos[i+1]);
-                }
-                return longitud;
-            }
-            
             // 3. Dibujar elementos gráficos (válvulas, cabezales, etc.)
             elementosGraficos.forEach(elemento => {
-                const canvasPoint = latLngToCanvas(elemento.posicion);
-                const radius = 12 * scaleFactor;
-                
-                // Color según tipo
-                let color;
-                let texto = '';
-                
-                switch(elemento.tipo) {
-                    case 'cabezal': 
-                        color = '#1772af'; 
-                        texto = 'C';
-                        break;
-                    case 'valvula': 
-                        color = '#ff6b6b'; 
-                        const nombreValvula = obtenerNombreValvulaPorElementoId(elemento.id);
-                        texto = nombreValvula || 'V';
-                        break;
-                    case 'purgaterminal': 
-                        color = '#ff9f43'; 
-                        texto = 'P';
-                        break;
-                    case 'tomagua': 
-                        color = '#00a553'; 
-                        texto = 'T';
-                        break;
-                    case 'filtro': 
-                        color = '#4ecdc4'; 
-                        texto = 'F';
-                        break;
-                    default: 
-                        color = '#000000';
-                        texto = elemento.tipo.charAt(0).toUpperCase();
-                }
-                
-                // Círculo del elemento
-                ctx.beginPath();
-                ctx.arc(canvasPoint.x, canvasPoint.y, radius, 0, Math.PI * 2);
-                ctx.fillStyle = color;
-                ctx.fill();
-                
-                // Borde blanco
-                ctx.lineWidth = 2 * scaleFactor;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
-                
-                // Texto del elemento
-                ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                if (elemento.tipo === 'valvula' && texto.length <= 2) {
-                    ctx.font = `bold ${10 * scaleFactor}px Arial`;
-                    ctx.fillText(texto, canvasPoint.x, canvasPoint.y);
-                } else {
-                    ctx.font = `${9 * scaleFactor}px Arial`;
-                    const textoMostrar = texto.length > 3 ? texto.substring(0, 3) + '.' : texto;
-                    ctx.fillText(textoMostrar, canvasPoint.x, canvasPoint.y);
+                if (elemento.posicion) {
+                    const canvasPoint = latLngToCanvas(elemento.posicion);
+                    const radius = 12 * scaleFactor;
+                    
+                    // Color según tipo
+                    let color;
+                    let texto = '';
+                    
+                    switch(elemento.tipo) {
+                        case 'cabezal': 
+                            color = '#1772af'; 
+                            texto = 'C';
+                            break;
+                        case 'valvula': 
+                            color = '#ff6b6b'; 
+                            const nombreValvula = obtenerNombreValvulaPorElementoId(elemento.id);
+                            texto = nombreValvula || 'V';
+                            break;
+                        case 'purgaterminal': 
+                            color = '#ff9f43'; 
+                            texto = 'P';
+                            break;
+                        case 'tomagua': 
+                            color = '#00a553'; 
+                            texto = 'T';
+                            break;
+                        case 'filtro': 
+                            color = '#4ecdc4'; 
+                            texto = 'F';
+                            break;
+                        default: 
+                            color = '#000000';
+                            texto = elemento.tipo.charAt(0).toUpperCase();
+                    }
+                    
+                    // Círculo del elemento
+                    ctx.beginPath();
+                    ctx.arc(canvasPoint.x, canvasPoint.y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    
+                    // Borde blanco
+                    ctx.lineWidth = 2 * scaleFactor;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.stroke();
+                    
+                    // Texto del elemento
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    if (elemento.tipo === 'valvula' && texto.length <= 2) {
+                        ctx.font = `bold ${10 * scaleFactor}px Arial`;
+                        ctx.fillText(texto, canvasPoint.x, canvasPoint.y);
+                    } else {
+                        ctx.font = `${9 * scaleFactor}px Arial`;
+                        const textoMostrar = texto.length > 3 ? texto.substring(0, 3) + '.' : texto;
+                        ctx.fillText(textoMostrar, canvasPoint.x, canvasPoint.y);
+                    }
                 }
             });
             
             // 4. Dibujar puntos de tuberías
             puntosTuberias.forEach(punto => {
-                const canvasPoint = latLngToCanvas(punto.latlng);
-                const radius = 8 * scaleFactor;
-                
-                ctx.beginPath();
-                ctx.arc(canvasPoint.x, canvasPoint.y, radius, 0, Math.PI * 2);
-                
-                // Color según tipo de tubería
-                let color;
-                switch(punto.tipo) {
-                    case 'principal': color = '#ff6b6b'; break;
-                    case 'secundaria': color = '#4ecdc4'; break;
-                    case 'regante': color = '#45b7d1'; break;
-                    default: color = '#000000';
+                if (punto.latlng) {
+                    const canvasPoint = latLngToCanvas(punto.latlng);
+                    const radius = 8 * scaleFactor;
+                    
+                    ctx.beginPath();
+                    ctx.arc(canvasPoint.x, canvasPoint.y, radius, 0, Math.PI * 2);
+                    
+                    // Color según tipo de tubería (COLORES ACTUALIZADOS)
+                    let color;
+                    switch(punto.tipo) {
+                        case 'principal': color = '#ff0000'; break; // ROJO
+                        case 'secundaria': color = '#0000ff'; break; // AZUL
+                        case 'regante': color = '#00ff00'; break; // VERDE
+                        default: color = '#000000';
+                    }
+                    
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    
+                    // Borde blanco
+                    ctx.lineWidth = 2 * scaleFactor;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.stroke();
                 }
-                
-                ctx.fillStyle = color;
-                ctx.fill();
-                
-                // Borde blanco
-                ctx.lineWidth = 2 * scaleFactor;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
             });
             
             // 5. DIBUJAR FLECHA DEL NORTE
@@ -2673,51 +3753,22 @@ async function exportarPDF() {
             ctx.font = `${9 * scaleFactor}px Arial`;
             ctx.fillText('Norte', norteX, norteY + 35 * scaleFactor);
             
-            // 6. Añadir leyenda
-            const legendX = 10 * scaleFactor;
-            const legendY = canvasHeight - 120 * scaleFactor;
-            const legendItemHeight = 20 * scaleFactor;
-            
-            // Fondo de leyenda
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(legendX, legendY, 160 * scaleFactor, 110 * scaleFactor);
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.lineWidth = 1 * scaleFactor;
-            ctx.strokeRect(legendX, legendY, 160 * scaleFactor, 110 * scaleFactor);
-            
-            ctx.fillStyle = '#333333';
-            ctx.font = `${12 * scaleFactor}px Arial`;
-            ctx.textAlign = 'left';
-            ctx.fillText('LEYENDA', legendX + 10 * scaleFactor, legendY + 15 * scaleFactor);
-            
-            // Ítems de leyenda
-            const legendItems = [
-                { color: '#008a45', text: 'Terreno (Polígono)' },
-                { color: '#ff6b6b', text: 'Tubería Principal' },
-                { color: '#4ecdc4', text: 'Tubería Secundaria' },
-                { color: '#45b7d1', text: 'Tubería Regante' },
-                { color: '#1772af', text: 'Cabezal' },
-                { color: '#ff6b6b', text: 'Válvula' }
-            ];
-            
-            legendItems.forEach((item, index) => {
-                const y = legendY + 30 * scaleFactor + (index * legendItemHeight);
-                
-                // Círculo de color
-                ctx.beginPath();
-                ctx.arc(legendX + 15 * scaleFactor, y, 6 * scaleFactor, 0, Math.PI * 2);
-                ctx.fillStyle = item.color;
-                ctx.fill();
-                
-                // Texto
-                ctx.fillStyle = '#333333';
-                ctx.font = `${9 * scaleFactor}px Arial`;
-                ctx.fillText(item.text, legendX + 30 * scaleFactor, y + 3 * scaleFactor);
-            });
-            
-            // 7. Añadir escala gráfica
+            // 6. Añadir escala gráfica profesional
             const scaleX = canvasWidth - 120 * scaleFactor;
             const scaleY = canvasHeight - 40 * scaleFactor;
+            
+            // Calcular escala real basada en la relación de latitud/longitud
+            const realWidthMeters = bounds.getNorthEast().distanceTo(
+                L.latLng(bounds.getNorthEast().lat, bounds.getSouthWest().lng)
+            );
+            
+            // Escala sugerida: 100m o la distancia más apropiada
+            let scaleMeters = 100;
+            if (realWidthMeters < 50) scaleMeters = 10;
+            else if (realWidthMeters < 200) scaleMeters = 50;
+            else if (realWidthMeters > 1000) scaleMeters = 500;
+            
+            const scalePixels = (scaleMeters / realWidthMeters) * canvasWidth;
             
             // Fondo de escala
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
@@ -2726,10 +3777,10 @@ async function exportarPDF() {
             ctx.lineWidth = 1 * scaleFactor;
             ctx.strokeRect(scaleX - 10, scaleY - 15, 130 * scaleFactor, 30 * scaleFactor);
             
-            // Línea de escala (100m aproximados)
+            // Línea de escala
             ctx.beginPath();
             ctx.moveTo(scaleX, scaleY);
-            ctx.lineTo(scaleX + 80 * scaleFactor, scaleY);
+            ctx.lineTo(scaleX + scalePixels, scaleY);
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2 * scaleFactor;
             ctx.stroke();
@@ -2738,10 +3789,10 @@ async function exportarPDF() {
             ctx.beginPath();
             ctx.moveTo(scaleX, scaleY - 5);
             ctx.lineTo(scaleX, scaleY + 5);
-            ctx.moveTo(scaleX + 40 * scaleFactor, scaleY - 5);
-            ctx.lineTo(scaleX + 40 * scaleFactor, scaleY + 5);
-            ctx.moveTo(scaleX + 80 * scaleFactor, scaleY - 5);
-            ctx.lineTo(scaleX + 80 * scaleFactor, scaleY + 5);
+            ctx.moveTo(scaleX + scalePixels/2, scaleY - 5);
+            ctx.lineTo(scaleX + scalePixels/2, scaleY + 5);
+            ctx.moveTo(scaleX + scalePixels, scaleY - 5);
+            ctx.lineTo(scaleX + scalePixels, scaleY + 5);
             ctx.stroke();
             
             // Texto de escala
@@ -2749,26 +3800,120 @@ async function exportarPDF() {
             ctx.font = `${8 * scaleFactor}px Arial`;
             ctx.textAlign = 'center';
             ctx.fillText('0', scaleX, scaleY + 15);
-            ctx.fillText('50', scaleX + 40 * scaleFactor, scaleY + 15);
-            ctx.fillText('100 m', scaleX + 80 * scaleFactor, scaleY + 15);
-            ctx.fillText('ESCALA APROX.', scaleX + 40 * scaleFactor, scaleY - 10);
+            ctx.fillText(`${scaleMeters/2}`, scaleX + scalePixels/2, scaleY + 15);
+            ctx.fillText(`${scaleMeters} m`, scaleX + scalePixels, scaleY + 15);
+            ctx.fillText('ESCALA', scaleX + scalePixels/2, scaleY - 10);
+            
+            // 7. Añadir leyenda profesional
+            const legendX = 10 * scaleFactor;
+            const legendY = canvasHeight - 150 * scaleFactor;
+            const legendItemHeight = 20 * scaleFactor;
+            
+            // Fondo de leyenda
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(legendX, legendY, 180 * scaleFactor, 140 * scaleFactor);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1 * scaleFactor;
+            ctx.strokeRect(legendX, legendY, 180 * scaleFactor, 140 * scaleFactor);
+            
+            ctx.fillStyle = '#333333';
+            ctx.font = `${12 * scaleFactor}px Arial`;
+            ctx.textAlign = 'left';
+            ctx.fillText('LEYENDA', legendX + 10 * scaleFactor, legendY + 15 * scaleFactor);
+            
+            // Ítems de leyenda
+            const legendItems = [
+                { color: '#008a45', text: 'Terreno (Polígono)', icon: 'fa-square' },
+                { color: '#ff0000', text: 'Tubería Principal', icon: 'fa-minus' },
+                { color: '#0000ff', text: 'Tubería Secundaria', icon: 'fa-minus' },
+                { color: '#00ff00', text: 'Tubería Regante', icon: 'fa-minus' },
+                { color: '#1772af', text: 'Cabezal', icon: 'fa-gear' },
+                { color: '#ff6b6b', text: 'Válvula', icon: 'fa-toggle-on' },
+                { color: '#ff9f43', text: 'Purga Terminal', icon: 'fa-faucet' },
+                { color: '#00a553', text: 'Toma de Agua', icon: 'fa-tint' },
+                { color: '#4ecdc4', text: 'Filtro', icon: 'fa-filter' }
+            ];
+            
+            legendItems.forEach((item, index) => {
+                const y = legendY + 30 * scaleFactor + (index * legendItemHeight);
+                
+                // Dibujar ícono/color
+                if (item.icon === 'fa-square') {
+                    // Para terreno: cuadrado
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(legendX + 10 * scaleFactor, y - 6 * scaleFactor, 12 * scaleFactor, 12 * scaleFactor);
+                } else if (item.icon === 'fa-minus') {
+                    // Para tuberías: línea
+                    ctx.beginPath();
+                    ctx.moveTo(legendX + 10 * scaleFactor, y);
+                    ctx.lineTo(legendX + 22 * scaleFactor, y);
+                    ctx.strokeStyle = item.color;
+                    ctx.lineWidth = 3 * scaleFactor;
+                    ctx.stroke();
+                } else {
+                    // Para elementos: círculo
+                    ctx.beginPath();
+                    ctx.arc(legendX + 16 * scaleFactor, y, 6 * scaleFactor, 0, Math.PI * 2);
+                    ctx.fillStyle = item.color;
+                    ctx.fill();
+                    
+                    // Borde blanco
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1 * scaleFactor;
+                    ctx.stroke();
+                    
+                    // Simular ícono con texto
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `${8 * scaleFactor}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    let iconChar = '';
+                    switch(item.icon) {
+                        case 'fa-gear': iconChar = '⚙'; break;
+                        case 'fa-toggle-on': iconChar = 'V'; break;
+                        case 'fa-faucet': iconChar = 'P'; break;
+                        case 'fa-tint': iconChar = 'T'; break;
+                        case 'fa-filter': iconChar = 'F'; break;
+                        default: iconChar = '●';
+                    }
+                    
+                    ctx.fillText(iconChar, legendX + 16 * scaleFactor, y);
+                }
+                
+                // Texto
+                ctx.fillStyle = '#333333';
+                ctx.font = `${9 * scaleFactor}px Arial`;
+                ctx.textAlign = 'left';
+                ctx.fillText(item.text, legendX + 30 * scaleFactor, y + 3 * scaleFactor);
+            });
             
             // Convertir a imagen y agregar al PDF
-            const imageData = canvas.toDataURL('image/jpeg', 0.95);
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
             
             // Añadir imagen al PDF
-            doc.addImage(imageData, 'JPEG', pdfX, pdfY, pdfWidth, pdfHeight);
-            currentY += pdfHeight + 10;
+            doc.addImage(imageData, 'JPEG', pdfX, pdfY, finalWidth, finalHeight);
+            currentY = pdfY + finalHeight + 10;
             
-            // Pie de foto
+            // Pie de foto profesional
             doc.setFontSize(9);
-            doc.setTextColor(100, 100, 100);
-            doc.text('Figura 1: Diseño del sistema de riego con mediciones', 105, currentY, { align: 'center' });
-            currentY += 8;
+            doc.setTextColor(colores.textoClaro);
             
-            // Información de escala
-            doc.setFontSize(8);
-            doc.text(`Escala aproximada 1:${Math.round(10000 / Math.pow(2, mapZoom - 10))} | Zoom: ${mapZoom}`, 105, currentY, { align: 'center' });
+            // Información de escala real
+            const escalaReal = `1:${Math.round(realWidthMeters / (finalWidth / 1000))}`;
+            doc.text(`Figura 1: Plano del sistema de riego | Escala aproximada: ${escalaReal}`, 
+                    105, currentY, { align: 'center' });
+            
+            // Mostrar dimensiones del diseño
+            const diseñoWidth = realWidthMeters.toFixed(0);
+            const diseñoHeight = bounds.getNorthEast().distanceTo(
+                L.latLng(bounds.getSouthWest().lat, bounds.getNorthEast().lng)
+            ).toFixed(0);
+            
+            currentY += 5;
+            doc.text(`Dimensiones del diseño: ${diseñoWidth}m × ${diseñoHeight}m`, 
+                    105, currentY, { align: 'center' });
+            
             currentY += 10;
             
         } catch (imageError) {
@@ -2776,39 +3921,18 @@ async function exportarPDF() {
             
             // Continuar sin imagen si hay error
             doc.setFontSize(10);
-            doc.setTextColor(200, 0, 0);
+            doc.setTextColor(colores.peligro);
             doc.text('Nota: No se pudo generar la imagen del diseño.', 105, currentY, { align: 'center' });
             currentY += 10;
             
             // Mostrar información de resumen
             doc.setFontSize(10);
-            doc.setTextColor(0, 0, 0);
-            
-            // Calcular total de polígonos
-            let areaTotalPoligonos = 0;
-            let perimetroTotal = 0;
-            let numPoligonos = 0;
-            
-            drawnItems.eachLayer(function(layer) {
-                if (layer instanceof L.Polygon) {
-                    const latlngs = layer.getLatLngs()[0];
-                    const area = L.GeometryUtil.geodesicArea(latlngs);
-                    areaTotalPoligonos += area;
-                    numPoligonos++;
-                    
-                    // Calcular perímetro
-                    for (let i = 0; i < latlngs.length; i++) {
-                        const puntoActual = latlngs[i];
-                        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
-                        perimetroTotal += puntoActual.distanceTo(puntoSiguiente);
-                    }
-                }
-            });
+            doc.setTextColor(colores.texto);
             
             if (numPoligonos > 0) {
-                doc.text(`Área del terreno: ${areaTotalPoligonos.toFixed(0)} m² (${(areaTotalPoligonos / 10000).toFixed(2)} ha)`, 20, currentY);
+                doc.text(`Área del terreno: ${areaTotalTerreno.toFixed(0)} m² (${(areaTotalTerreno / 10000).toFixed(2)} ha)`, 20, currentY);
                 currentY += 7;
-                doc.text(`Perímetro total: ${perimetroTotal.toFixed(0)} m`, 20, currentY);
+                doc.text(`Perímetro total: ${perimetroTotalTerreno.toFixed(0)} m`, 20, currentY);
                 currentY += 7;
                 doc.text(`Polígonos: ${numPoligonos}`, 20, currentY);
                 currentY += 7;
@@ -2823,782 +3947,854 @@ async function exportarPDF() {
         }
         
         // ====================================================================
-        // SECCIÓN 1: INFORMACIÓN GENERAL Y MEDIDAS DEL TERRENO
+        // PÁGINA 5: INFORMACIÓN DEL TERRENO
         // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('3. INFORMACIÓN DEL TERRENO', 105, 20, { align: 'center' });
         
-        doc.setFontSize(16);
-        doc.setTextColor(0, 138, 69); // Verde oscuro para sección terreno
-        doc.text('1. MEDIDAS DEL TERRENO', 20, currentY);
-        currentY += 8;
+        currentY = 40;
         
-        // Calcular total de áreas de todos los polígonos
-        let areaTotalPoligonos = 0;
-        let perimetroTotal = 0;
-        let numPoligonos = 0;
-        const poligonosDetalles = [];
-        
-        drawnItems.eachLayer(function(layer) {
-            if (layer instanceof L.Polygon) {
-                const latlngs = layer.getLatLngs()[0];
-                const area = L.GeometryUtil.geodesicArea(latlngs);
-                const medidasLados = [];
-                let perimetroPoligono = 0;
-                
-                // Calcular medidas de cada lado
-                for (let i = 0; i < latlngs.length; i++) {
-                    const puntoActual = latlngs[i];
-                    const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
-                    const distancia = puntoActual.distanceTo(puntoSiguiente);
-                    medidasLados.push(distancia);
-                    perimetroPoligono += distancia;
-                }
-                
-                areaTotalPoligonos += area;
-                perimetroTotal += perimetroPoligono;
-                numPoligonos++;
-                
-                poligonosDetalles.push({
-                    numero: numPoligonos,
-                    area: area,
-                    perimetro: perimetroPoligono,
-                    lados: latlngs.length,
-                    medidasLados: medidasLados
-                });
-            }
-        });
-        
-        // Mostrar resumen general del terreno
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        
-        if (numPoligonos > 0) {
-            doc.setFont(undefined, 'bold');
-            doc.text('RESUMEN GENERAL:', 25, currentY);
-            currentY += 7;
+        if (areaTotalTerreno > 0) {
+            // Información general del terreno
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('CARACTERÍSTICAS DEL TERRENO', 20, currentY);
             
-            doc.setFont(undefined, 'normal');
+            currentY += 10;
             
-            const infoGeneral = [
-                ['Área Total:', `${areaTotalPoligonos.toFixed(2)} m² (${(areaTotalPoligonos / 10000).toFixed(3)} ha)`],
-                ['Perímetro Total:', `${perimetroTotal.toFixed(2)} m`],
-                ['Número de Polígonos:', numPoligonos.toString()],
-                ['Coordenadas Centro:', map.getCenter().lat.toFixed(6) + ', ' + map.getCenter().lng.toFixed(6)]
+            const caracteristicas = [
+                ['Área Total:', `${areaTotalTerreno.toFixed(2)} m²`],
+                ['En Hectáreas:', `${(areaTotalTerreno / 10000).toFixed(3)} ha`],
+                ['Perímetro Total:', `${perimetroTotalTerreno.toFixed(2)} m`],
+                ['Número de Polígonos:', `${numPoligonos}`],
+                ['Ubicación Aproximada:', `${map.getCenter().lat.toFixed(6)}°, ${map.getCenter().lng.toFixed(6)}°`]
             ];
             
-            infoGeneral.forEach((item, index) => {
-                doc.setFont(undefined, 'bold');
-                doc.text(item[0], 25, currentY);
-                doc.setFont(undefined, 'normal');
-                doc.text(item[1], 70, currentY);
-                currentY += 7;
+            caracteristicas.forEach((caract, index) => {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.texto);
+                doc.text(caract[0], 25, currentY + (index * 7));
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(colores.acento);
+                doc.text(caract[1], 90, currentY + (index * 7));
             });
             
-            currentY += 5;
+            currentY += 40;
             
-            // Detalle de cada polígono
-            if (numPoligonos > 1) {
+            // Detalle de polígonos
+            if (detallesPoligonos.length > 0) {
                 doc.setFontSize(12);
-                doc.setTextColor(0, 138, 69);
-                doc.text('1.1. DETALLE POR POLÍGONO', 20, currentY);
-                currentY += 8;
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.primario);
+                doc.text('DETALLE DE POLÍGONOS', 20, currentY);
                 
-                poligonosDetalles.forEach((poligono, index) => {
-                    // Verificar si hay espacio en la página
-                    if (currentY > 250) {
-                        doc.addPage();
-                        currentY = 20;
-                        
-                        // Encabezado de página
-                        doc.setFontSize(20);
-                        doc.setTextColor(0, 165, 83);
-                        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
-                        
-                        doc.setFontSize(10);
-                        doc.setTextColor(100, 100, 100);
-                        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-                        doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
-                        
-                        currentY = 35;
-                    }
-                    
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'bold');
-                    doc.text(`Polígono ${poligono.numero}:`, 25, currentY);
-                    currentY += 6;
-                    
-                    // Información básica del polígono
-                    const infoPoligono = [
-                        ['Área:', `${poligono.area.toFixed(2)} m² (${(poligono.area / 10000).toFixed(3)} ha)`],
-                        ['Perímetro:', `${poligono.perimetro.toFixed(2)} m`],
-                        ['Número de lados:', poligono.lados.toString()]
-                    ];
-                    
-                    infoPoligono.forEach((item, index) => {
-                        doc.setFont(undefined, 'bold');
-                        doc.text(item[0], 30, currentY);
-                        doc.setFont(undefined, 'normal');
-                        doc.text(item[1], 60, currentY);
-                        currentY += 6;
-                    });
-                    
-                    // Tabla de medidas de lados
-                    if (poligono.lados <= 10) { // Solo mostrar si tiene 10 lados o menos
-                        doc.setFont(undefined, 'bold');
-                        doc.text('Medidas de lados:', 30, currentY);
-                        currentY += 6;
-                        
-                        // Crear tabla de lados
-                        const columnas = 2;
-                        const anchoColumna = 80;
-                        const altoFila = 6;
-                        
-                        for (let i = 0; i < poligono.lados; i++) {
-                            const columna = i % columnas;
-                            const fila = Math.floor(i / columnas);
-                            
-                            const x = 30 + (columna * anchoColumna);
-                            const y = currentY + (fila * altoFila);
-                            
-                            doc.setFont(undefined, 'normal');
-                            doc.text(`Lado ${i + 1}: ${poligono.medidasLados[i].toFixed(2)} m`, x, y);
-                            
-                            // Si es la última fila de esta columna, actualizar currentY
-                            if (i === poligono.lados - 1 || (i % columnas === columnas - 1)) {
-                                const maxFila = Math.ceil((i + 1) / columnas);
-                                if ((fila + 1) * altoFila > currentY) {
-                                    currentY += (fila + 1) * altoFila;
-                                }
-                            }
-                        }
+                currentY += 15;
+                
+                // Encabezado de tabla
+                doc.setFillColor(colores.fondo);
+                doc.rect(20, currentY, 170, 8, 'F');
+                
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.texto);
+                doc.text('Polígono', 25, currentY + 6);
+                doc.text('Área (m²)', 70, currentY + 6);
+                doc.text('Hectáreas', 100, currentY + 6);
+                doc.text('Perímetro (m)', 140, currentY + 6);
+                doc.text('Lados', 180, currentY + 6, { align: 'right' });
+                
+                currentY += 12;
+                
+                // Filas de polígonos
+                detallesPoligonos.forEach((poligono, index) => {
+                    if (index % 2 === 0) {
+                        doc.setFillColor(255, 255, 255);
                     } else {
-                        doc.setFont(undefined, 'normal');
-                        doc.text(`(Polígono de ${poligono.lados} lados - medidas disponibles en el plano)`, 30, currentY);
-                        currentY += 6;
+                        doc.setFillColor(colores.fondo);
                     }
+                    doc.rect(20, currentY, 170, 7, 'F');
                     
-                    currentY += 10;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(colores.texto);
+                    doc.text(`P-${poligono.numero}`, 25, currentY + 5);
+                    doc.text(poligono.area.toFixed(1), 70, currentY + 5);
+                    doc.text((poligono.area / 10000).toFixed(3), 100, currentY + 5);
+                    doc.text(poligono.perimetro.toFixed(1), 140, currentY + 5);
+                    doc.text(poligono.lados.toString(), 180, currentY + 5, { align: 'right' });
+                    
+                    currentY += 8;
                 });
-            } else if (numPoligonos === 1) {
-                // Mostrar detalle completo para un solo polígono
-                const poligono = poligonosDetalles[0];
-                
-                doc.setFontSize(12);
-                doc.setTextColor(0, 138, 69);
-                doc.text('1.1. MEDIDAS DETALLADAS DEL POLÍGONO', 20, currentY);
-                currentY += 8;
-                
-                // Crear tabla de medidas
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                
-                // Encabezado de la tabla
-                doc.text('Lado', 25, currentY);
-                doc.text('Longitud (m)', 80, currentY);
-                doc.text('Acumulado (m)', 140, currentY, { align: 'right' });
-                currentY += 6;
-                
-                // Dibujar línea separadora
-                doc.setDrawColor(200, 200, 200);
-                doc.line(20, currentY, 190, currentY);
-                currentY += 3;
-                
-                doc.setFont(undefined, 'normal');
-                
-                let acumulado = 0;
-                for (let i = 0; i < poligono.lados; i++) {
-                    const longitud = poligono.medidasLados[i];
-                    acumulado += longitud;
-                    
-                    doc.text(`Lado ${i + 1}`, 25, currentY);
-                    doc.text(longitud.toFixed(2), 80, currentY);
-                    doc.text(acumulado.toFixed(2), 140, currentY, { align: 'right' });
-                    currentY += 6;
-                    
-                    // Verificar espacio en página
-                    if (currentY > 250 && i < poligono.lados - 1) {
-                        doc.addPage();
-                        currentY = 20;
-                        
-                        // Encabezado de página
-                        doc.setFontSize(20);
-                        doc.setTextColor(0, 165, 83);
-                        doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
-                        
-                        doc.setFontSize(10);
-                        doc.setTextColor(100, 100, 100);
-                        doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-                        doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
-                        
-                        currentY = 35;
-                        
-                        // Reimprimir encabezado de tabla
-                        doc.setFontSize(10);
-                        doc.setFont(undefined, 'bold');
-                        doc.text('Lado', 25, currentY);
-                        doc.text('Longitud (m)', 80, currentY);
-                        doc.text('Acumulado (m)', 140, currentY, { align: 'right' });
-                        currentY += 6;
-                        
-                        doc.setDrawColor(200, 200, 200);
-                        doc.line(20, currentY, 190, currentY);
-                        currentY += 3;
-                        
-                        doc.setFont(undefined, 'normal');
-                    }
-                }
-                
-                // Línea separadora final
-                doc.setDrawColor(200, 200, 200);
-                doc.line(20, currentY, 190, currentY);
-                currentY += 3;
                 
                 // Totales
-                doc.setFont(undefined, 'bold');
-                doc.text('PERÍMETRO TOTAL:', 25, currentY);
-                doc.text(poligono.perimetro.toFixed(2) + ' m', 140, currentY, { align: 'right' });
-                currentY += 7;
+                currentY += 5;
+                doc.setDrawColor(colores.borde);
+                doc.setLineWidth(0.5);
+                doc.line(20, currentY, 190, currentY);
                 
-                doc.text('ÁREA TOTAL:', 25, currentY);
-                doc.text(poligono.area.toFixed(2) + ' m²', 140, currentY, { align: 'right' });
-                currentY += 7;
-                
-                doc.text('HECTÁREAS:', 25, currentY);
-                doc.text((poligono.area / 10000).toFixed(3) + ' ha', 140, currentY, { align: 'right' });
-                currentY += 10;
+                currentY += 8;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.primario);
+                doc.text('TOTALES:', 25, currentY);
+                doc.text(areaTotalTerreno.toFixed(1), 70, currentY);
+                doc.text((areaTotalTerreno / 10000).toFixed(3), 100, currentY);
+                doc.text(perimetroTotalTerreno.toFixed(1), 140, currentY);
             }
         } else {
-            doc.setFont(undefined, 'normal');
-            doc.text('No se han definido polígonos de terreno.', 25, currentY);
-            currentY += 10;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(colores.textoClaro);
+            doc.text('No se ha definido ningún polígono de terreno.', 20, currentY);
         }
         
         // ====================================================================
-        // SECCIÓN 2: TUBERÍAS POR DIÁMETRO
+        // PÁGINA 6: DISEÑO HIDRÁULICO
         // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('4. DISEÑO HIDRÁULICO', 105, 20, { align: 'center' });
         
-        if (tuberias.length > 0) {
-            doc.setFontSize(16);
-            doc.setTextColor(23, 114, 175); // Azul para sección tuberías
-            doc.text('2. TUBERÍAS POR DIÁMETRO', 20, currentY);
-            currentY += 8;
-            
-            const resumenTuberias = {};
-            let longitudTotalTuberias = 0;
-            
-            // Agrupar tuberías por tipo y diámetro
-            tuberias.forEach(t => {
-                const key = `${t.tipo}_${t.diametro}_${t.tipoMaterial}`;
-                if (!resumenTuberias[key]) {
-                    resumenTuberias[key] = {
-                        tipo: t.tipo,
-                        diametro: t.diametro,
-                        tipoMaterial: t.tipoMaterial,
-                        longitudTotal: 0,
-                        cantidad: 0
-                    };
-                }
-                resumenTuberias[key].longitudTotal += t.longitud || 0;
-                resumenTuberias[key].cantidad += 1;
-                longitudTotalTuberias += t.longitud || 0;
-            });
-            
-            // Crear tabla de resumen
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'bold');
-            
-            // Encabezado de la tabla
-            doc.text('Tipo', 25, currentY);
-            doc.text('Diámetro', 60, currentY);
-            doc.text('Material', 85, currentY);
-            doc.text('Cantidad', 115, currentY);
-            doc.text('Longitud (m)', 145, currentY, { align: 'right' });
-            currentY += 6;
-            
-            // Dibujar línea separadora
-            doc.setDrawColor(200, 200, 200);
-            doc.line(20, currentY, 190, currentY);
-            currentY += 3;
-            
-            doc.setFont(undefined, 'normal');
-            
-            // Ordenar por tipo: principal, secundaria, regante
-            const tiposOrdenados = ['principal', 'secundaria', 'regante'];
-            const itemsOrdenados = [];
-            
-            tiposOrdenados.forEach(tipo => {
-                const itemsTipo = Object.values(resumenTuberias).filter(item => item.tipo === tipo);
-                itemsOrdenados.push(...itemsTipo);
-            });
-            
-            // Agregar cualquier otro tipo que no esté en la lista ordenada
-            Object.values(resumenTuberias).forEach(item => {
-                if (!tiposOrdenados.includes(item.tipo)) {
-                    itemsOrdenados.push(item);
-                }
-            });
-            
-            itemsOrdenados.forEach(item => {
-                doc.text(item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1), 25, currentY);
-                doc.text(item.diametro + '"', 60, currentY);
-                doc.text(item.tipoMaterial, 85, currentY);
-                doc.text(item.cantidad.toString(), 115, currentY);
-                doc.text(item.longitudTotal.toFixed(2), 145, currentY, { align: 'right' });
-                currentY += 6;
-            });
-            
-            // Línea separadora final
-            doc.setDrawColor(200, 200, 200);
-            doc.line(20, currentY, 190, currentY);
-            currentY += 3;
-            
-            // Totales
-            doc.setFont(undefined, 'bold');
-            doc.text('LONGITUD TOTAL DE TUBERÍAS:', 25, currentY);
-            doc.text(longitudTotalTuberias.toFixed(2) + ' m', 145, currentY, { align: 'right' });
-            currentY += 10;
-        }
-        
-        // ====================================================================
-        // SECCIÓN 3: VÁLVULAS DE CONTROL
-        // ====================================================================
+        currentY = 40;
         
         if (valvulas.length > 0) {
-            // Verificar si necesitamos nueva página
-            if (currentY > 180) {
-                doc.addPage();
-                currentY = 20;
-                
-                // Encabezado de página
-                doc.setFontSize(20);
-                doc.setTextColor(0, 165, 83);
-                doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
-                
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-                doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
-                
-                currentY = 35;
-            }
+            // Resumen de válvulas
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('VÁLVULAS DE CONTROL', 20, currentY);
             
-            doc.setFontSize(16);
-            doc.setTextColor(255, 107, 107); // Rojo para sección válvulas
-            doc.text('3. VÁLVULAS DE CONTROL', 20, currentY);
-            currentY += 8;
+            currentY += 15;
+            
+            // Encabezado de tabla
+            doc.setFillColor(colores.fondo);
+            doc.rect(20, currentY, 170, 8, 'F');
             
             doc.setFontSize(9);
-            doc.setFont(undefined, 'bold');
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.texto);
+            doc.text('Válvula', 25, currentY + 6);
+            doc.text('Tipo', 50, currentY + 6);
+            doc.text('Diámetro', 75, currentY + 6);
+            doc.text('Presión', 95, currentY + 6);
+            doc.text('Emisores', 115, currentY + 6);
+            doc.text('Caudal (L/h)', 150, currentY + 6, { align: 'right' });
             
-            // Encabezado de la tabla
-            doc.text('Nombre', 25, currentY);
-            doc.text('Tipo', 45, currentY);
-            doc.text('Diámetro', 65, currentY);
-            doc.text('Presión', 80, currentY);
-            doc.text('Emisores', 95, currentY);
-            doc.text('Caudal E.', 115, currentY);
-            doc.text('Caudal T.', 145, currentY, { align: 'right' });
-            currentY += 5;
+            currentY += 12;
             
-            // Dibujar línea separadora
-            doc.setDrawColor(200, 200, 200);
-            doc.line(20, currentY, 190, currentY);
-            currentY += 3;
-            
-            doc.setFont(undefined, 'normal');
-            
-            let caudalTotalSistema = 0;
-            valvulas.forEach(valvula => {
-                // Verificar si necesitamos nueva página para esta fila
-                if (currentY > 250) {
-                    doc.addPage();
-                    currentY = 20;
-                    
-                    // Encabezado de página
-                    doc.setFontSize(20);
-                    doc.setTextColor(0, 165, 83);
-                    doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
-                    
-                    doc.setFontSize(10);
-                    doc.setTextColor(100, 100, 100);
-                    doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-                    doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
-                    
-                    currentY = 35;
-                    
-                    // Reimprimir encabezado de tabla
-                    doc.setFontSize(9);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Nombre', 25, currentY);
-                    doc.text('Tipo', 45, currentY);
-                    doc.text('Diámetro', 65, currentY);
-                    doc.text('Presión', 80, currentY);
-                    doc.text('Emisores', 95, currentY);
-                    doc.text('Caudal E.', 115, currentY);
-                    doc.text('Caudal T.', 145, currentY, { align: 'right' });
-                    currentY += 5;
-                    
-                    doc.setDrawColor(200, 200, 200);
-                    doc.line(20, currentY, 190, currentY);
-                    currentY += 3;
-                    
-                    doc.setFont(undefined, 'normal');
+            // Filas de válvulas
+            valvulas.forEach((valvula, index) => {
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(colores.fondo);
                 }
+                doc.rect(20, currentY, 170, 7, 'F');
                 
-                doc.text(valvula.nombre, 25, currentY);
-                doc.text(valvula.tipo, 45, currentY);
-                doc.text(valvula.diametro, 65, currentY);
-                doc.text(valvula.presion.toString() + ' bar', 80, currentY);
-                doc.text(valvula.numeroEmisores.toString(), 95, currentY);
-                doc.text(valvula.caudalEmisor.toString() + ' L/h', 115, currentY);
-                doc.text(valvula.caudalTotal.toString() + ' L/h', 145, currentY, { align: 'right' });
-                currentY += 5;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(colores.texto);
+                doc.text(valvula.nombre, 25, currentY + 5);
+                doc.text(valvula.tipo, 50, currentY + 5);
+                doc.text(valvula.diametro, 75, currentY + 5);
+                doc.text(`${valvula.presion} bar`, 95, currentY + 5);
+                doc.text(valvula.numeroEmisores.toString(), 115, currentY + 5);
+                doc.text(valvula.caudalTotal.toString(), 150, currentY + 5, { align: 'right' });
                 
-                caudalTotalSistema += valvula.caudalTotal;
+                currentY += 8;
             });
             
-            // Línea separadora final
-            doc.setDrawColor(200, 200, 200);
+            // Totales caudal
+            currentY += 5;
+            doc.setDrawColor(colores.borde);
+            doc.setLineWidth(0.5);
             doc.line(20, currentY, 190, currentY);
-            currentY += 3;
             
-            // Totales
-            doc.setFont(undefined, 'bold');
+            currentY += 8;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
             doc.text('CAUDAL TOTAL DEL SISTEMA:', 25, currentY);
-            doc.text(`${caudalTotalSistema.toFixed(2)} L/h (${(caudalTotalSistema / 3600).toFixed(2)} L/s)`, 145, currentY, { align: 'right' });
-            currentY += 10;
+            doc.text(`${caudalTotalSistema.toFixed(0)} L/h (${(caudalTotalSistema / 3600).toFixed(1)} L/s)`, 150, currentY, { align: 'right' });
+            
+            currentY += 20;
+            
+            // Cálculos de lámina de riego
+            if (areaTotalTerreno > 0 && caudalTotalSistema > 0) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.primario);
+                doc.text('CÁLCULOS DE RIEGO', 20, currentY);
+                
+                currentY += 10;
+                
+                const laminaPorHora = caudalTotalSistema / (areaTotalTerreno * 1000);
+                const horasPara10mm = 10 / laminaPorHora;
+                const horasPara20mm = 20 / laminaPorHora;
+                
+                const calculos = [
+                    ['Lámina de riego por hora:', `${laminaPorHora.toFixed(3)} mm/h`],
+                    ['Tiempo para aplicar 10 mm:', `${horasPara10mm.toFixed(1)} horas`],
+                    ['Tiempo para aplicar 20 mm:', `${horasPara20mm.toFixed(1)} horas`],
+                    ['Volumen diario (8 horas):', `${(caudalTotalSistema * 8 / 1000).toFixed(1)} m³/día`]
+                ];
+                
+                calculos.forEach((calc, index) => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(colores.texto);
+                    doc.text(calc[0], 25, currentY + (index * 7));
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(colores.acento);
+                    doc.text(calc[1], 120, currentY + (index * 7));
+                });
+            }
         }
         
         // ====================================================================
-        // SECCIÓN 4: CABEZAL DE BOMBEO Y FILTRACIÓN
+        // PÁGINA 7: TUBERÍAS Y CONEXIONES
         // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('5. TUBERÍAS Y CONEXIONES', 105, 20, { align: 'center' });
         
-        if (cabezales.length > 0) {
-            // Verificar espacio en página
-            if (currentY > 200) {
-                doc.addPage();
-                currentY = 20;
-                
-                // Encabezado de página
-                doc.setFontSize(20);
-                doc.setTextColor(0, 165, 83);
-                doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
-                
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-                doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
-                
-                currentY = 35;
-            }
+        currentY = 40;
+        
+        if (tuberias.length > 0) {
+            // Resumen por tipo de tubería
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('RESUMEN DE TUBERÍAS POR TIPO', 20, currentY);
             
-            doc.setFontSize(16);
-            doc.setTextColor(23, 114, 175); // Azul para sección cabezal
-            doc.text('4. CABEZAL DE BOMBEO Y FILTRACIÓN', 20, currentY);
+            currentY += 15;
+            
+            // Ordenar por tipo: principal, secundaria, regante
+            const tiposOrden = ['principal', 'secundaria', 'regante'];
+            const itemsOrdenados = Object.values(resumenTuberias).sort((a, b) => {
+                return tiposOrden.indexOf(a.tipo) - tiposOrden.indexOf(b.tipo);
+            });
+            
+            // Tabla de resumen
+            doc.setFillColor(colores.fondo);
+            doc.rect(20, currentY, 170, 8, 'F');
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.texto);
+            doc.text('Tipo', 25, currentY + 6);
+            doc.text('Diámetro', 70, currentY + 6);
+            doc.text('Material', 100, currentY + 6);
+            doc.text('Cantidad', 130, currentY + 6);
+            doc.text('Longitud (m)', 170, currentY + 6, { align: 'right' });
+            
+            currentY += 12;
+            
+            itemsOrdenados.forEach((item, index) => {
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(colores.fondo);
+                }
+                doc.rect(20, currentY, 170, 7, 'F');
+                
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(colores.texto);
+                
+                // Nombre del tipo con primera letra mayúscula
+                const tipoNombre = item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1);
+                doc.text(tipoNombre, 25, currentY + 5);
+                doc.text(`${item.diametro}"`, 70, currentY + 5);
+                doc.text(item.material, 100, currentY + 5);
+                doc.text(item.cantidad.toString(), 130, currentY + 5);
+                doc.text(item.longitudTotal.toFixed(1), 170, currentY + 5, { align: 'right' });
+                
+                currentY += 8;
+            });
+            
+            // Total general
+            currentY += 5;
+            doc.setDrawColor(colores.borde);
+            doc.setLineWidth(0.5);
+            doc.line(20, currentY, 190, currentY);
+            
             currentY += 8;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('LONGITUD TOTAL:', 25, currentY);
+            doc.text(`${longitudTotalTuberias.toFixed(1)} m`, 170, currentY, { align: 'right' });
+            
+            currentY += 20;
+            
+            // Conexiones y accesorios
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('CONEXIONES Y ACCESORIOS', 20, currentY);
+            
+            currentY += 10;
+            
+            // Calcular conexiones aproximadas
+            const conexionesEstimadas = Math.ceil(tuberias.length * 1.5);
+            const codosEstimados = Math.ceil(tuberias.length * 0.8);
+            const teesEstimadas = Math.ceil(tuberias.length * 0.3);
+            
+            const accesorios = [
+                ['Conexiones totales estimadas:', `${conexionesEstimadas}`],
+                ['Codos 90° aproximados:', `${codosEstimados}`],
+                ['Tees aproximadas:', `${teesEstimadas}`],
+                ['Uniones rápidas:', `${Math.ceil(tuberias.length * 0.5)}`]
+            ];
+            
+            accesorios.forEach((accesorio, index) => {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.texto);
+                doc.text(accesorio[0], 25, currentY + (index * 7));
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(colores.acento);
+                doc.text(accesorio[1], 120, currentY + (index * 7));
+            });
+        }
+        
+        // ====================================================================
+        // PÁGINA 8: EQUIPOS Y ELEMENTOS
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('6. EQUIPOS Y ELEMENTOS', 105, 20, { align: 'center' });
+        
+        currentY = 40;
+        
+        // Cabezal de bombeo
+        if (cabezales.length > 0) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('CABEZAL DE BOMBEO Y FILTRACIÓN', 20, currentY);
+            
+            currentY += 15;
             
             cabezales.forEach((cabezal, index) => {
-                doc.setFontSize(10);
-                
                 if (index > 0) {
-                    doc.setFont(undefined, 'bold');
-                    doc.text(`Cabezal ${index + 1}:`, 25, currentY);
-                    currentY += 7;
+                    currentY += 10;
                 }
                 
-                // Información del cabezal
-                const infoCabezal = [
-                    ['Caudal de Bomba:', `${cabezal.caudalBomba} L/s (${(cabezal.caudalBomba * 3600).toFixed(0)} L/h)`],
-                    ['Diámetro Succión:', cabezal.diametroSuccion],
-                    ['Diámetro Descarga:', cabezal.diametroDescarga],
-                    ['Número de Filtros:', cabezal.numeroFiltros.toString()],
-                    ['Tipo de Filtros:', cabezal.tipoFiltros]
+                const datosCabezal = [
+                    ['Caudal de bomba:', `${cabezal.caudalBomba} L/s (${(cabezal.caudalBomba * 3600).toFixed(0)} L/h)`],
+                    ['Diámetro succión:', cabezal.diametroSuccion],
+                    ['Diámetro descarga:', cabezal.diametroDescarga],
+                    ['Número de filtros:', cabezal.numeroFiltros.toString()],
+                    ['Tipo de filtros:', cabezal.tipoFiltros]
                 ];
                 
-                infoCabezal.forEach((item, idx) => {
-                    doc.setFont(undefined, 'bold');
-                    doc.text(item[0], 25, currentY);
-                    doc.setFont(undefined, 'normal');
-                    doc.text(item[1], 75, currentY);
+                datosCabezal.forEach((dato, idx) => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(colores.texto);
+                    doc.text(dato[0], 25, currentY);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(colores.acento);
+                    doc.text(dato[1], 100, currentY);
                     currentY += 7;
                 });
                 
                 if (cabezal.notas && cabezal.notas.trim() !== '') {
-                    doc.setFont(undefined, 'bold');
+                    currentY += 3;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setTextColor(colores.textoClaro);
                     doc.text('Notas:', 25, currentY);
-                    currentY += 7;
-                    
-                    doc.setFont(undefined, 'normal');
+                    currentY += 5;
                     const lineasNotas = doc.splitTextToSize(cabezal.notas, 150);
                     lineasNotas.forEach(linea => {
                         doc.text(linea, 30, currentY);
-                        currentY += 6;
+                        currentY += 5;
                     });
                 }
-                
-                currentY += 10;
-            });
-        }
-        
-        // ====================================================================
-        // SECCIÓN 5: CÁLCULOS HIDRÁULICOS
-        // ====================================================================
-        
-        if (valvulas.length > 0 && numPoligonos > 0) {
-            // Verificar espacio en página
-            if (currentY > 190) {
-                doc.addPage();
-                currentY = 20;
-                
-                // Encabezado de página
-                doc.setFontSize(20);
-                doc.setTextColor(0, 165, 83);
-                doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
-                
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-                doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
-                
-                currentY = 35;
-            }
-            
-            doc.setFontSize(16);
-            doc.setTextColor(0, 138, 69); // Verde para cálculos
-            doc.text('5. CÁLCULOS HIDRÁULICOS', 20, currentY);
-            currentY += 8;
-            
-            doc.setFontSize(10);
-            
-            const caudalTotalSistema = valvulas.reduce((sum, v) => sum + v.caudalTotal, 0);
-            const caudalLps = caudalTotalSistema / 3600;
-            
-            // Información general de cálculos
-            const infoCalculos = [
-                ['Caudal Total Requerido:', `${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)`],
-                ['Área Total de Riego:', `${areaTotalPoligonos.toFixed(2)} m² (${(areaTotalPoligonos / 10000).toFixed(3)} ha)`]
-            ];
-            
-            infoCalculos.forEach((item, idx) => {
-                doc.setFont(undefined, 'bold');
-                doc.text(item[0], 25, currentY);
-                doc.setFont(undefined, 'normal');
-                doc.text(item[1], 85, currentY);
-                currentY += 7;
-            });
-            
-            currentY += 5;
-            
-            // Cálculo de lámina de riego
-            const laminaPorHora = caudalTotalSistema / (areaTotalPoligonos * 1000);
-            const horasPara10mm = 10 / laminaPorHora;
-            const horasPara20mm = 20 / laminaPorHora;
-            
-            doc.setFont(undefined, 'bold');
-            doc.text('Lámina de Riego:', 25, currentY);
-            currentY += 7;
-            
-            const calculosLamina = [
-                ['Por hora:', `${laminaPorHora.toFixed(3)} mm/h`],
-                ['Tiempo para 10 mm:', `${horasPara10mm.toFixed(1)} horas`],
-                ['Tiempo para 20 mm:', `${horasPara20mm.toFixed(1)} horas`]
-            ];
-            
-            calculosLamina.forEach((item, idx) => {
-                doc.setFont(undefined, 'bold');
-                doc.text(item[0], 30, currentY);
-                doc.setFont(undefined, 'normal');
-                doc.text(item[1], 85, currentY);
-                currentY += 7;
-            });
-            
-            currentY += 5;
-            
-            // Comparación con cabezal si existe
-            if (cabezales.length > 0) {
-                const cabezalPrincipal = cabezales[0];
-                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000; // Convertir L/s a L/h
-                const diferencia = caudalCabezal - caudalTotalSistema;
-                const porcentaje = (diferencia / caudalCabezal) * 100;
-                
-                doc.setFont(undefined, 'bold');
-                doc.text('Comparación con Cabezal:', 25, currentY);
-                currentY += 7;
-                
-                const comparaciones = [
-                    ['Caudal Disponible:', `${caudalCabezal.toFixed(2)} L/h (${cabezalPrincipal.caudalBomba} L/s)`],
-                    ['Caudal Requerido:', `${caudalTotalSistema.toFixed(2)} L/h (${caudalLps.toFixed(2)} L/s)`],
-                    ['Diferencia:', `${diferencia.toFixed(2)} L/h (${(diferencia / 3600).toFixed(2)} L/s)`]
-                ];
-                
-                comparaciones.forEach((item, idx) => {
-                    doc.setFont(undefined, 'bold');
-                    doc.text(item[0], 30, currentY);
-                    doc.setFont(undefined, 'normal');
-                    doc.text(item[1], 85, currentY);
-                    currentY += 7;
-                });
-                
-                doc.setFont(undefined, 'bold');
-                doc.text('Estado del Sistema:', 25, currentY);
-                doc.setFont(undefined, 'normal');
-                
-                if (diferencia >= 0) {
-                    doc.setTextColor(0, 138, 69); // Verde
-                    doc.text(`Sobrecapacidad del ${Math.abs(porcentaje).toFixed(1)}% - SISTEMA ADECUADO`, 85, currentY);
-                } else {
-                    doc.setTextColor(255, 107, 107); // Rojo
-                    doc.text(`Déficit del ${Math.abs(porcentaje).toFixed(1)}% - SISTEMA INSUFICIENTE`, 85, currentY);
-                }
-                
-                doc.setTextColor(0, 0, 0);
-                currentY += 10;
-            }
-            
-            currentY += 5;
-            
-            // Recomendaciones según el cálculo
-            doc.setFont(undefined, 'bold');
-            doc.text('RECOMENDACIONES:', 25, currentY);
-            currentY += 7;
-            
-            doc.setFont(undefined, 'normal');
-            doc.setFontSize(9);
-            
-            const recomendaciones = [];
-            
-            if (laminaPorHora > 2) {
-                recomendaciones.push('• Lámina de riego alta (>2 mm/h). Considerar reducir tiempo de riego.');
-            } else if (laminaPorHora < 0.5) {
-                recomendaciones.push('• Lámina de riego baja (<0.5 mm/h). Considerar aumentar tiempo de riego.');
-            } else {
-                recomendaciones.push('• Lámina de riego adecuada para la mayoría de cultivos.');
-            }
-            
-            if (cabezales.length > 0) {
-                const cabezalPrincipal = cabezales[0];
-                const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
-                const diferencia = caudalCabezal - caudalTotalSistema;
-                
-                if (diferencia < 0) {
-                    recomendaciones.push(`• El cabezal tiene insuficiente capacidad. Se requiere aumentar en ${Math.abs(diferencia).toFixed(0)} L/h.`);
-                } else if (diferencia > caudalTotalSistema * 0.5) {
-                    recomendaciones.push(`• El cabezal tiene excesiva capacidad. Considerar reducir tamaño para ahorro energético.`);
-                } else {
-                    recomendaciones.push('• El cabezal está correctamente dimensionado para el sistema.');
-                }
-            }
-            
-            if (valvulas.length < 3 && areaTotalPoligonos > 5000) {
-                recomendaciones.push('• Pocas válvulas para el área. Considerar dividir en más sectores.');
-            }
-            
-            if (recomendaciones.length === 0) {
-                recomendaciones.push('• El sistema está bien dimensionado. No se requieren ajustes importantes.');
-            }
-            
-            recomendaciones.forEach((recomendacion, idx) => {
-                const lineas = doc.splitTextToSize(recomendacion, 150);
-                lineas.forEach(linea => {
-                    doc.text(linea, 30, currentY);
-                    currentY += 6;
-                });
             });
             
             currentY += 10;
         }
         
-        // ====================================================================
-        // SECCIÓN 6: FIRMAS Y OBSERVACIONES
-        // ====================================================================
-        
-        // Verificar espacio para firma
-        if (currentY > 230) {
-            doc.addPage();
-            currentY = 20;
+        // Resumen de elementos
+        if (elementosGraficos.length > 0) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('ELEMENTOS DEL SISTEMA', 20, currentY);
             
-            // Encabezado de página
-            doc.setFontSize(20);
-            doc.setTextColor(0, 165, 83);
-            doc.text('MEMORIA DE CÁLCULO - SISTEMA DE RIEGO', 105, 15, { align: 'center' });
+            currentY += 15;
             
-            doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            doc.text('Agrosistemas - Asesoría Técnica Agrícola', 105, 22, { align: 'center' });
-            doc.text('Página ' + (doc.internal.getNumberOfPages()), 105, 28, { align: 'center' });
+            // Contar elementos por tipo
+            const elementosPorTipo = {};
+            elementosGraficos.forEach(elemento => {
+                if (!elementosPorTipo[elemento.tipo]) {
+                    elementosPorTipo[elemento.tipo] = 0;
+                }
+                elementosPorTipo[elemento.tipo]++;
+            });
             
-            currentY = 35;
+            // Mostrar resumen
+            const tiposElementos = ['cabezal', 'valvula', 'purgaterminal', 'tomagua', 'filtro'];
+            let columna = 0;
+            const anchoColumna = 85;
+            
+            tiposElementos.forEach((tipo, index) => {
+                if (elementosPorTipo[tipo]) {
+                    const x = 25 + (columna * anchoColumna);
+                    const y = currentY + (Math.floor(columna / 2) * 15);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(colores.texto);
+                    
+                    // Nombre del tipo
+                    let nombreTipo = '';
+                    switch(tipo) {
+                        case 'cabezal': nombreTipo = 'Cabezales'; break;
+                        case 'valvula': nombreTipo = 'Válvulas'; break;
+                        case 'purgaterminal': nombreTipo = 'Purgas'; break;
+                        case 'tomagua': nombreTipo = 'Tomas agua'; break;
+                        case 'filtro': nombreTipo = 'Filtros'; break;
+                        default: nombreTipo = tipo;
+                    }
+                    
+                    doc.text(nombreTipo, x, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(colores.acento);
+                    doc.text(`: ${elementosPorTipo[tipo]}`, x + 40, y);
+                    
+                    columna++;
+                }
+            });
         }
         
+        // ====================================================================
+        // PÁGINA 9: CÁLCULOS TÉCNICOS
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('7. CÁLCULOS TÉCNICOS', 105, 20, { align: 'center' });
+        
+        currentY = 40;
+        
+        // Análisis hidráulico
         doc.setFontSize(12);
-        doc.setTextColor(100, 100, 100);
-        doc.text('6. FIRMAS Y OBSERVACIONES', 20, currentY);
-        currentY += 8;
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('ANÁLISIS HIDRÁULICO', 20, currentY);
         
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
+        currentY += 10;
         
-        // Línea para firma del diseñador
-        doc.text('Diseñador:', 25, currentY);
-        doc.setDrawColor(200, 200, 200);
-        doc.line(60, currentY, 150, currentY);
-        currentY += 15;
+        if (cabezales.length > 0 && valvulas.length > 0) {
+            const cabezalPrincipal = cabezales[0];
+            const caudalCabezal = cabezalPrincipal.caudalBomba * 1000; // L/h
+            const diferencia = caudalCabezal - caudalTotalSistema;
+            const porcentaje = (diferencia / caudalCabezal) * 100;
+            
+            const analisis = [
+                ['Caudal disponible (cabezal):', `${caudalCabezal.toFixed(0)} L/h (${cabezalPrincipal.caudalBomba} L/s)`],
+                ['Caudal requerido (válvulas):', `${caudalTotalSistema.toFixed(0)} L/h (${(caudalTotalSistema / 3600).toFixed(1)} L/s)`],
+                ['Diferencia:', `${diferencia.toFixed(0)} L/h (${(diferencia / 3600).toFixed(1)} L/s)`],
+                ['Porcentaje:', `${Math.abs(porcentaje).toFixed(1)}%`]
+            ];
+            
+            analisis.forEach((item, index) => {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(colores.texto);
+                doc.text(item[0], 25, currentY + (index * 7));
+                doc.setFont('helvetica', 'normal');
+                
+                // Color según si hay déficit o sobrecapacidad
+                if (index === 3) { // Porcentaje
+                    if (diferencia >= 0) {
+                        doc.setTextColor(colores.exito); // Verde para sobrecapacidad
+                    } else {
+                        doc.setTextColor(colores.peligro); // Rojo para déficit
+                    }
+                } else {
+                    doc.setTextColor(colores.acento);
+                }
+                
+                doc.text(item[1], 120, currentY + (index * 7));
+            });
+            
+            currentY += 35;
+            
+            // Evaluación del sistema
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(colores.primario);
+            doc.text('EVALUACIÓN DEL SISTEMA', 20, currentY);
+            
+            currentY += 10;
+            
+            let evaluacion = '';
+            let colorEvaluacion = colores.texto;
+            
+            if (diferencia >= (caudalTotalSistema * 0.2)) {
+                evaluacion = 'SOBRECAPACIDAD - El cabezal tiene capacidad suficiente con margen de seguridad adecuado.';
+                colorEvaluacion = colores.exito;
+            } else if (diferencia >= 0) {
+                evaluacion = 'CAPACIDAD ADECUADA - El cabezal cubre los requerimientos del sistema.';
+                colorEvaluacion = colores.exito;
+            } else if (diferencia >= -(caudalTotalSistema * 0.1)) {
+                evaluacion = 'LIGERO DÉFICIT - El cabezal está ligeramente subdimensionado. Considerar ajustes menores.';
+                colorEvaluacion = colores.advertencia;
+            } else {
+                evaluacion = 'DÉFICIT SIGNIFICATIVO - El cabezal no cubre los requerimientos. Se requiere rediseño.';
+                colorEvaluacion = colores.peligro;
+            }
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(colorEvaluacion);
+            const lineasEvaluacion = doc.splitTextToSize(evaluacion, 160);
+            lineasEvaluacion.forEach(linea => {
+                doc.text(linea, 25, currentY);
+                currentY += 6;
+            });
+        }
         
-        doc.text('Firma:', 25, currentY);
-        doc.line(60, currentY, 150, currentY);
-        currentY += 20;
+        // ====================================================================
+        // PÁGINA 10: ESPECIFICACIONES TÉCNICAS
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('8. ESPECIFICACIONES TÉCNICAS', 105, 20, { align: 'center' });
         
-        // Línea para firma del cliente
-        doc.text('Cliente:', 25, currentY);
-        doc.line(60, currentY, 150, currentY);
-        currentY += 15;
+        currentY = 40;
         
-        doc.text('Firma:', 25, currentY);
-        doc.line(60, currentY, 150, currentY);
-        currentY += 20;
+        // Especificaciones generales
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('ESPECIFICACIONES GENERALES', 20, currentY);
         
-        // Observaciones finales
-        doc.setFont(undefined, 'bold');
-        doc.text('Observaciones finales:', 25, currentY);
-        currentY += 8;
+        currentY += 10;
         
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(9);
-        
-        const observaciones = [
-            '1. Las mediciones mostradas son aproximadas. Para mediciones exactas, utilice herramientas profesionales de topografía.',
-            '2. Los cálculos hidráulicos son estimaciones basadas en los datos proporcionados.',
-            '3. Se recomienda realizar pruebas de campo para verificar el funcionamiento del sistema.',
-            '4. Considere factores como pendiente del terreno, tipo de suelo y cultivo para ajustes finales.',
-            '5. Este documento es una memoria técnica preliminar. Consulte con un ingeniero especializado para el diseño final.'
+        const especificaciones = [
+            '• Todas las tuberías deben ser de PVC grado hidráulico',
+            '• Las conexiones deben ser del mismo material que las tuberías',
+            '• Válvulas manuales con cuerpo de latón o PVC',
+            '• Filtración mínima de 120 mesh para sistemas de goteo',
+            '• Presión de trabajo: 2-4 bar según diseño',
+            '• Todas las uniones deben ser herméticas y probadas',
+            '• Protección catódica en zonas con alta conductividad',
+            '• Marcado de tuberías según norma de colores'
         ];
         
-        observaciones.forEach((obs, idx) => {
-            const lineas = doc.splitTextToSize(obs, 160);
+        especificaciones.forEach((espec, index) => {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(colores.texto);
+            doc.text(espec, 25, currentY + (index * 7), { maxWidth: 160 });
+        });
+        
+        currentY += 60;
+        
+        // Normas aplicables
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('NORMAS Y ESTÁNDARES', 20, currentY);
+        
+        currentY += 10;
+        
+        const normas = [
+            '• NMX-AA-XXX Sistemas de riego agrícola',
+            '• NMX-E-XXX Tuberías de PVC para riego',
+            '• ISO 9001:2015 Sistemas de gestión de calidad',
+            '• Normas oficiales mexicanas de la CONAGUA',
+            '• Reglamento de construcción local'
+        ];
+        
+        normas.forEach((norma, index) => {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(colores.texto);
+            doc.text(norma, 25, currentY + (index * 7), { maxWidth: 160 });
+        });
+        
+        // ====================================================================
+        // PÁGINA 11: RECOMENDACIONES
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('9. RECOMENDACIONES', 105, 20, { align: 'center' });
+        
+        currentY = 40;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('RECOMENDACIONES TÉCNICAS', 20, currentY);
+        
+        currentY += 10;
+        
+        // Generar recomendaciones basadas en el análisis
+        const recomendaciones = [];
+        
+        if (areaTotalTerreno > 0 && caudalTotalSistema > 0) {
+            const laminaPorHora = caudalTotalSistema / (areaTotalTerreno * 1000);
+            
+            if (laminaPorHora > 2) {
+                recomendaciones.push('• Lámina de riego alta (>2 mm/h). Considerar reducir tiempo de riego o aumentar área regada.');
+            } else if (laminaPorHora < 0.5) {
+                recomendaciones.push('• Lámina de riego baja (<0.5 mm/h). Considerar aumentar tiempo de riego o caudal.');
+            } else {
+                recomendaciones.push('• Lámina de riego adecuada para la mayoría de cultivos (0.5-2 mm/h).');
+            }
+        }
+        
+        if (cabezales.length > 0 && valvulas.length > 0) {
+            const cabezalPrincipal = cabezales[0];
+            const caudalCabezal = cabezalPrincipal.caudalBomba * 1000;
+            const diferencia = caudalCabezal - caudalTotalSistema;
+            
+            if (diferencia < 0) {
+                recomendaciones.push(`• El cabezal tiene insuficiente capacidad. Se requiere aumentar en ${Math.abs(diferencia).toFixed(0)} L/h.`);
+            } else if (diferencia > caudalTotalSistema * 0.5) {
+                recomendaciones.push('• El cabezal tiene excesiva capacidad. Considerar reducir tamaño para ahorro energético.');
+            } else {
+                recomendaciones.push('• El cabezal está correctamente dimensionado para el sistema.');
+            }
+        }
+        
+        if (valvulas.length < 3 && areaTotalTerreno > 5000) {
+            recomendaciones.push('• Pocas válvulas para el área. Considerar dividir en más sectores para mejor control.');
+        }
+        
+        if (tuberias.length > 20) {
+            recomendaciones.push('• Sistema extenso de tuberías. Considerar válvulas de purga en puntos bajos.');
+        }
+        
+        if (recomendaciones.length === 0) {
+            recomendaciones.push('• El sistema está bien dimensionado. Continuar con el diseño detallado.');
+            recomendaciones.push('• Realizar pruebas de presión antes de la puesta en marcha.');
+            recomendaciones.push('• Implementar programa de mantenimiento preventivo.');
+        }
+        
+        // Recomendaciones estándar
+        recomendaciones.push('• Realizar pruebas hidráulicas antes de la puesta en marcha.');
+        recomendaciones.push('• Capacitar al personal en operación y mantenimiento.');
+        recomendaciones.push('• Implementar programa de monitoreo de presión y caudal.');
+        recomendaciones.push('• Considerar automatización para optimizar el uso de agua.');
+        
+        recomendaciones.forEach((recom, index) => {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(colores.texto);
+            const lineas = doc.splitTextToSize(recom, 160);
             lineas.forEach(linea => {
-                doc.text(linea, 30, currentY);
-                currentY += 5;
+                doc.text(linea, 25, currentY);
+                currentY += 6;
             });
             currentY += 2;
         });
         
-        // ====================================================================
-        // PIE DE PÁGINA FINAL
-        // ====================================================================
+        currentY += 10;
         
+        // Observaciones finales
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('OBSERVACIONES FINALES', 20, currentY);
+        
+        currentY += 10;
+        
+        const observaciones = [
+            'Este documento constituye una memoria técnica preliminar.',
+            'Para el diseño ejecutivo, se requiere:',
+            '  - Topografía detallada del terreno',
+            '  - Análisis de suelo y agua',
+            '  - Diseño estructural de soportes',
+            '  - Cálculo eléctrico para automatización',
+            '  - Presupuesto detallado'
+        ];
+        
+        observaciones.forEach((obs, index) => {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', index === 0 ? 'bold' : 'normal');
+            doc.setTextColor(index === 0 ? colores.texto : colores.textoClaro);
+            doc.text(obs, 25, currentY);
+            currentY += 7;
+        });
+        
+        // ====================================================================
+        // PÁGINA 12: FIRMAS Y ANEXOS
+        // ====================================================================
+        doc.addPage();
+        // Encabezado de página
+        doc.setFillColor(colores.primario);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ANEXOS Y FIRMAS', 105, 20, { align: 'center' });
+        
+        currentY = 60;
+        
+        // Firma diseñador
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        doc.text('ELABORADO POR:', 20, currentY);
+        
+        doc.setDrawColor(colores.borde);
+        doc.setLineWidth(0.5);
+        doc.line(20, currentY + 5, 100, currentY + 5);
+        
+        currentY += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Ing. Responsable del Diseño', 20, currentY);
+        
+        currentY += 30;
+        
+        // Firma revisión
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        doc.text('REVISADO POR:', 20, currentY);
+        
+        doc.setDrawColor(colores.borde);
+        doc.line(20, currentY + 5, 100, currentY + 5);
+        
+        currentY += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Ing. Responsable de Proyectos', 20, currentY);
+        
+        currentY += 30;
+        
+        // Firma aprobación
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        doc.text('APROBADO POR:', 20, currentY);
+        
+        doc.setDrawColor(colores.borde);
+        doc.line(20, currentY + 5, 100, currentY + 5);
+        
+        currentY += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Director Técnico Agrosistemas', 20, currentY);
+        
+        currentY += 40;
+        
+        // Firma cliente
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.texto);
+        doc.text('CONFORMIDAD DEL CLIENTE:', 20, currentY);
+        
+        doc.setDrawColor(colores.borde);
+        doc.line(20, currentY + 5, 100, currentY + 5);
+        
+        currentY += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.textoClaro);
+        doc.text('Representante Legal del Cliente', 20, currentY);
+        
+        currentY += 40;
+        
+        // Sello y fecha
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('FECHA DE EMISIÓN:', 20, currentY);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.texto);
+        doc.text(new Date().toLocaleDateString('es-MX'), 70, currentY);
+        
+        currentY += 10;
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colores.primario);
+        doc.text('VIGENCIA:', 20, currentY);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(colores.texto);
+        
+        // Calcular fecha de vigencia (6 meses)
+        const fechaVigencia = new Date();
+        fechaVigencia.setMonth(fechaVigencia.getMonth() + 6);
+        doc.text(fechaVigencia.toLocaleDateString('es-MX'), 70, currentY);
+        
+        // ====================================================================
+        // NUMERAR PÁGINAS Y PIE DE PÁGINA
+        // ====================================================================
         const totalPaginas = doc.internal.getNumberOfPages();
+        
         for (let i = 1; i <= totalPaginas; i++) {
             doc.setPage(i);
+            
+            // Pie de página
             doc.setFontSize(8);
-            doc.setTextColor(100, 100, 100);
-            doc.text(`Documento técnico generado por Agrosistemas - Página ${i} de ${totalPaginas}`, 105, 290, { align: 'center' });
-            doc.text('www.agrosistemas.com.mx | contacto@agrosistemas.com.mx | Tel: 668 123 4567', 105, 295, { align: 'center' });
+            doc.setTextColor(colores.textoClaro);
+            
+            // Línea separadora
+            doc.setDrawColor(colores.borde);
+            doc.setLineWidth(0.3);
+            doc.line(15, 285, 195, 285);
+            
+            // Información pie de página
+            doc.text(`Agrosistemas - Memoria Técnica Sistema de Riego - Página ${i} de ${totalPaginas}`, 105, 290, { align: 'center' });
+            
+            if (i > 1 && i < totalPaginas) {
+                // Número de página en esquina
+                doc.setFontSize(9);
+                doc.setTextColor(colores.primario);
+                doc.text(i.toString(), 200, 15, { align: 'right' });
+            }
         }
         
+        // ====================================================================
         // GUARDAR PDF
+        // ====================================================================
         const fechaHora = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-        const nombreArchivo = `Memoria_Calculo_Riego_${fechaHora}.pdf`;
+        const nombreArchivo = `Memoria_Tecnica_Riego_Agrosistemas_${fechaHora}.pdf`;
         
-        mostrarMensaje(`PDF generado exitosamente: ${nombreArchivo}`, 5000);
+        mostrarMensaje(`Memoria técnica generada exitosamente: ${nombreArchivo}`, 5000);
         
         doc.save(nombreArchivo);
         
@@ -3612,55 +4808,6 @@ async function exportarPDF() {
 // FUNCIONES DE UTILIDAD (MODIFICADAS)
 // ============================================
 
-function calcularAreaPoligono(polygon) {
-    const latlngs = polygon.getLatLngs()[0];
-    areaTotal = L.GeometryUtil.geodesicArea(latlngs);
-    
-    // Calcular perímetro
-    let perimetro = 0;
-    for (let i = 0; i < latlngs.length; i++) {
-        const puntoActual = latlngs[i];
-        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
-        perimetro += puntoActual.distanceTo(puntoSiguiente);
-    }
-    
-    // Calcular centro para la etiqueta
-    const centro = calcularCentroPoligono(latlngs);
-    
-    // Crear o actualizar etiqueta del polígono
-    if (!polygon.etiquetaArea) {
-        polygon.etiquetaArea = L.marker(centro, {
-            icon: L.divIcon({
-                className: 'etiqueta-poligono',
-                html: crearHTMLMedidasPoligono(areaTotal, perimetro),
-                iconSize: [200, 80],
-                iconAnchor: [100, 40]
-            }),
-            interactive: false
-        }).addTo(map);
-    } else {
-        polygon.etiquetaArea.setLatLng(centro);
-        polygon.etiquetaArea.setIcon(L.divIcon({
-            className: 'etiqueta-poligono',
-            html: crearHTMLMedidasPoligono(areaTotal, perimetro),
-            iconSize: [200, 80],
-            iconAnchor: [100, 40]
-        }));
-    }
-    
-    // Calcular medidas de cada lado y agregar etiquetas
-    actualizarEtiquetasLados(polygon, latlngs);
-    
-    // Actualizar display principal
-    document.getElementById('areaDisplay').textContent = 
-        `Área: ${areaTotal.toFixed(2)} m² (${(areaTotal / 10000).toFixed(2)} ha) | Perímetro: ${perimetro.toFixed(2)} m`;
-    
-    ocultarControlesMapa();
-    actualizarResultados();
-    
-    return { area: areaTotal, perimetro: perimetro };
-}
-
 function calcularCentroPoligono(latlngs) {
     let latSum = 0, lngSum = 0;
     latlngs.forEach(punto => {
@@ -3668,82 +4815,6 @@ function calcularCentroPoligono(latlngs) {
         lngSum += punto.lng;
     });
     return L.latLng(latSum / latlngs.length, lngSum / latlngs.length);
-}
-
-function crearHTMLMedidasPoligono(area, perimetro) {
-    return `
-        <div style="background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 8px; border: 2px solid #008a45; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center; min-width: 180px;">
-            <div style="font-weight: bold; color: #008a45; font-size: 12px; margin-bottom: 5px;">MEDIDAS DEL TERRENO</div>
-            <div style="font-size: 11px; color: #333;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                    <span>Área:</span>
-                    <span style="font-weight: bold;">${area.toFixed(1)} m²</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                    <span>Hectáreas:</span>
-                    <span style="font-weight: bold;">${(area / 10000).toFixed(3)} ha</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Perímetro:</span>
-                    <span style="font-weight: bold;">${perimetro.toFixed(1)} m</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function actualizarEtiquetasLados(polygon, latlngs) {
-    // Eliminar etiquetas anteriores si existen
-    if (polygon.etiquetasLados) {
-        polygon.etiquetasLados.forEach(etiqueta => {
-            if (etiqueta && etiqueta.remove) {
-                map.removeLayer(etiqueta);
-            }
-        });
-    }
-    
-    polygon.etiquetasLados = [];
-    
-    // Crear etiquetas para cada lado
-    for (let i = 0; i < latlngs.length; i++) {
-        const puntoActual = latlngs[i];
-        const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
-        
-        const distancia = puntoActual.distanceTo(puntoSiguiente);
-        const centro = L.latLng(
-            (puntoActual.lat + puntoSiguiente.lat) / 2,
-            (puntoActual.lng + puntoSiguiente.lng) / 2
-        );
-        
-        // Calcular ángulo para orientar la etiqueta
-        const angulo = calcularAngulo(puntoActual, puntoSiguiente);
-        
-        // Desplazar la etiqueta para que no se superponga con el polígono
-        const desplazamiento = 0.00002; // Ajustar según zoom
-        const anguloRadianes = (90 - angulo) * Math.PI / 180;
-        const centroDesplazado = L.latLng(
-            centro.lat + Math.cos(anguloRadianes) * desplazamiento,
-            centro.lng + Math.sin(anguloRadianes) * desplazamiento
-        );
-        
-        const etiqueta = L.marker(centroDesplazado, {
-            icon: L.divIcon({
-                className: 'etiqueta-lado',
-                html: `
-                    <div style="background: rgba(255, 255, 255, 0.9); padding: 4px 8px; border-radius: 4px; 
-                           border: 1px solid #008a45; font-size: 10px; font-weight: bold; color: #333; 
-                           transform: rotate(${angulo}deg); transform-origin: center;">
-                        ${distancia.toFixed(1)} m
-                    </div>`,
-                iconSize: [70, 25],
-                iconAnchor: [35, 12.5]
-            }),
-            rotationAngle: angulo,
-            interactive: false
-        }).addTo(map);
-        
-        polygon.etiquetasLados.push(etiqueta);
-    }
 }
 
 // Modificar el evento de edición para actualizar medidas
@@ -3773,17 +4844,8 @@ map.on(L.Draw.Event.DELETED, function(event) {
     const layers = event.layers;
     layers.eachLayer(function(layer) {
         if (layer instanceof L.Polygon) {
-            // Eliminar etiquetas del polígono
-            if (layer.etiquetaArea) {
-                map.removeLayer(layer.etiquetaArea);
-            }
-            if (layer.etiquetasLados) {
-                layer.etiquetasLados.forEach(etiqueta => {
-                    if (etiqueta && etiqueta.remove) {
-                        map.removeLayer(etiqueta);
-                    }
-                });
-            }
+            // Eliminar etiquetas del polígono usando la nueva función
+            eliminarEtiquetasPoligono(layer);
             
             areaTotal = 0;
             document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
@@ -3840,7 +4902,7 @@ function buscarUbicacion() {
 }
 
 // ============================================
-// FUNCIONES DE GESTIÓN DE DISEÑOS (MEJORADAS)
+// FUNCIONES DE GESTIÓN DE DISEÑOS (MEJORADAS CON ETIQUETAS)
 // ============================================
 
 function guardarDiseño(nombre = null) {
@@ -3976,7 +5038,7 @@ function guardarDiseño(nombre = null) {
         return longitud;
     }
     
-    // GUARDAR TODOS LOS DATOS DE LAS VÁLVULAS COMPLETAMENTE
+    // GUARDAR TODOS LOS DATOS, INCLUYENDO ETIQUETAS
     const diseño = {
         id: Date.now(),
         nombre: nombre,
@@ -3996,6 +5058,9 @@ function guardarDiseño(nombre = null) {
             
             const longitudReal = puntosGuardar.length > 1 ? calcularLongitudLinea(puntosGuardar) : (t.longitud || 0);
             
+            // Buscar datos de etiqueta asociada
+            const etiquetaData = etiquetasTuberias.find(e => e.id === t.id);
+            
             return {
                 tipo: t.tipo,
                 puntos: puntosGuardar,
@@ -4008,21 +5073,27 @@ function guardarDiseño(nombre = null) {
                 tipoMaterial: t.tipoMaterial,
                 conexiones: t.conexiones || [],
                 esConexion: t.esConexion || false,
-                tieneAristas: puntosGuardar.length > 2
+                tieneAristas: puntosGuardar.length > 2,
+                // GUARDAR DATOS DE ETIQUETA
+                etiqueta: etiquetaData ? {
+                    position: etiquetaData.position ? [etiquetaData.position.lat, etiquetaData.position.lng] : null,
+                    visible: etiquetaData.visible !== false,
+                    fontSize: etiquetaData.fontSize || 9,
+                    rotation: etiquetaData.rotation || 0
+                } : null
             };
         }),
         elementos: elementosGraficos.filter(e => e.type === 'elemento').map(e => ({
             id: e.id,
             tipo: e.tipo,
             posicion: [e.posicion.lat, e.posicion.lng],
-            // GUARDAMOS EL NOMBRE DE LA VÁLVULA EN LOS ELEMENTOS
             nombre: e.nombre || ''
         })),
         // GUARDAR VÁLVULAS CON TODOS LOS DATOS
         valvulas: valvulas.map(v => ({
             id: v.id,
-            nombre: v.nombre, // NOMBRE GUARDADO
-            elementoId: v.elementoId, // ID DEL ELEMENTO GRÁFICO
+            nombre: v.nombre,
+            elementoId: v.elementoId,
             posicion: v.posicion ? [v.posicion.lat, v.posicion.lng] : null,
             caudalEmisor: v.caudalEmisor,
             numeroEmisores: v.numeroEmisores,
@@ -4042,9 +5113,17 @@ function guardarDiseño(nombre = null) {
             tipoFiltros: c.tipoFiltros,
             notas: c.notas
         })),
+        // GUARDAR ETIQUETAS DE POLÍGONOS
+        etiquetasPoligonos: etiquetasPoligonos.map(ep => ({
+            polygonId: ep.id,
+            position: ep.marker && ep.marker.getLatLng ? [ep.marker.getLatLng().lat, ep.marker.getLatLng().lng] : null,
+            visible: ep.visible !== false,
+            fontSize: ep.fontSize || 11,
+            rotation: ep.rotation || 0
+        })),
         miniatura: imagenDiseñoDataUrl,
         metadata: {
-            version: '1.3', // Incrementamos la versión para las mejoras
+            version: '1.4', // Incrementamos la versión para las nuevas funcionalidades
             software: 'Agrosistemas Diseñador CAD',
             fechaExportacion: new Date().toISOString(),
             totalElementos: tuberias.length + elementosGraficos.length + valvulas.length + cabezales.length,
@@ -4052,7 +5131,8 @@ function guardarDiseño(nombre = null) {
                 const puntos = extraerPuntosLinea(t.linea);
                 return puntos.length > 2;
             }).length,
-            valvulasConNombre: valvulas.filter(v => v.nombre && v.nombre !== '').length
+            valvulasConNombre: valvulas.filter(v => v.nombre && v.nombre !== '').length,
+            etiquetasGuardadas: etiquetasPoligonos.length + etiquetasTuberias.length
         }
     };
     
@@ -4099,7 +5179,7 @@ function importarDiseño(event) {
     reader.readAsText(file);
 }
 
-// FUNCIÓN MEJORADA PARA CARGAR DISEÑOS
+// FUNCIÓN MEJORADA PARA CARGAR DISEÑOS CON ETIQUETAS
 function cargarDiseño(diseño) {
     limpiarDiseño();
     
@@ -4116,6 +5196,48 @@ function cargarDiseño(diseño) {
             
             const area = L.GeometryUtil.geodesicArea(poligono.getLatLngs()[0]);
             areaTotal += area;
+            
+            // Calcular medidas para la etiqueta
+            const latlngs = poligono.getLatLngs()[0];
+            let perimetro = 0;
+            for (let i = 0; i < latlngs.length; i++) {
+                const puntoActual = latlngs[i];
+                const puntoSiguiente = latlngs[(i + 1) % latlngs.length];
+                perimetro += puntoActual.distanceTo(puntoSiguiente);
+            }
+            
+            const centro = calcularCentroPoligono(latlngs);
+            
+            // Verificar si hay datos de etiqueta guardados
+            const etiquetaGuardada = diseño.etiquetasPoligonos?.find(ep => ep.polygonId === poligono._leaflet_id);
+            
+            if (etiquetaGuardada && etiquetaGuardada.position) {
+                centro = L.latLng(etiquetaGuardada.position[0], etiquetaGuardada.position[1]);
+            }
+            
+            // Crear etiqueta del polígono
+            poligono.etiquetaArea = crearEtiquetaPoligono(centro, area, perimetro, poligono);
+            poligono.etiquetaArea.addTo(map);
+            
+            // Aplicar propiedades guardadas de la etiqueta
+            if (etiquetaGuardada) {
+                const etiquetaIndex = etiquetasPoligonos.findIndex(e => e.id === poligono._leaflet_id);
+                if (etiquetaIndex !== -1) {
+                    etiquetasPoligonos[etiquetaIndex].visible = etiquetaGuardada.visible !== false;
+                    etiquetasPoligonos[etiquetaIndex].fontSize = etiquetaGuardada.fontSize || 11;
+                    etiquetasPoligonos[etiquetaIndex].rotation = etiquetaGuardada.rotation || 0;
+                    
+                    if (!etiquetasPoligonos[etiquetaIndex].visible) {
+                        map.removeLayer(etiquetasPoligonos[etiquetaIndex].marker);
+                    } else {
+                        // Actualizar visualmente con las propiedades guardadas
+                        actualizarContenidoEtiquetaPoligono(etiquetasPoligonos[etiquetaIndex].marker, area, perimetro);
+                    }
+                }
+            }
+            
+            // Crear etiquetas de lados
+            actualizarEtiquetasLados(poligono, latlngs);
         });
         
         if (areaTotal > 0) {
@@ -4171,40 +5293,36 @@ function cargarDiseño(diseño) {
                 centroLat /= puntosLatLng.length;
                 centroLng /= puntosLatLng.length;
                 
-                const centro = L.latLng(centroLat, centroLng);
+                let centro = L.latLng(centroLat, centroLng);
+                
+                // Usar posición de etiqueta guardada si existe
+                if (tData.etiqueta && tData.etiqueta.position) {
+                    centro = L.latLng(tData.etiqueta.position[0], tData.etiqueta.position[1]);
+                }
                 
                 const longitud = tData.longitud || calcularLongitudTotal(puntosLatLng);
-                const etiqueta = L.marker(centro, {
-                    icon: L.divIcon({
-                        className: 'tuberia-label',
-                        html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                                ${longitud.toFixed(1)}m - ${tData.diametro}"</div>`,
-                        iconSize: [80, 20],
-                        iconAnchor: [40, 10]
-                    })
-                }).addTo(map);
                 
-                linea.on('edit', function(e) {
-                    const nuevosLatlngs = e.target.getLatLngs();
-                    const nuevaLongitud = calcularLongitudTotal(nuevosLatlngs);
-                    
-                    const nuevoCentro = calcularCentroPolilinea(nuevosLatlngs);
-                    etiqueta.setLatLng(nuevoCentro);
-                    etiqueta.setIcon(L.divIcon({
-                        className: 'tuberia-label',
-                        html: `<div style="background: white; padding: 2px 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 9px; font-weight: bold;">
-                                ${nuevaLongitud.toFixed(1)}m - ${tData.diametro}"</div>`,
-                        iconSize: [80, 20],
-                        iconAnchor: [40, 10]
-                    }));
-                    
-                    const tuberia = tuberias.find(t => t.id === tuberiaActualId);
-                    if (tuberia) {
-                        tuberia.longitud = nuevaLongitud;
-                        actualizarResumenTuberias();
-                        actualizarResultados();
+                // Crear etiqueta de tubería
+                const etiqueta = crearEtiquetaTuberia(centro, longitud, tData.diametro, tData.tipo, tData.id || Date.now());
+                
+                // Aplicar propiedades guardadas de la etiqueta
+                if (tData.etiqueta) {
+                    const etiquetaIndex = etiquetasTuberias.findIndex(e => e.id === (tData.id || Date.now()));
+                    if (etiquetaIndex !== -1) {
+                        etiquetasTuberias[etiquetaIndex].visible = tData.etiqueta.visible !== false;
+                        etiquetasTuberias[etiquetaIndex].fontSize = tData.etiqueta.fontSize || 9;
+                        etiquetasTuberias[etiquetaIndex].rotation = tData.etiqueta.rotation || 0;
+                        
+                        if (!etiquetasTuberias[etiquetaIndex].visible) {
+                            // No agregar al mapa si no es visible
+                        } else {
+                            etiqueta.addTo(map);
+                            actualizarContenidoEtiquetaTuberia(etiqueta, longitud, tData.diametro);
+                        }
                     }
-                });
+                } else {
+                    etiqueta.addTo(map);
+                }
                 
                 const tuberiaActualId = tData.id || Date.now() + Math.random();
                 
@@ -4245,7 +5363,7 @@ function cargarDiseño(diseño) {
         });
     }
     
-    // PRIMERO CARGAR ELEMENTOS GRÁFICOS
+    // CARGAR ELEMENTOS GRÁFICOS Y VÁLVULAS (código existente)
     if (diseño.elementos) {
         elementosGraficos = [];
         
@@ -4334,7 +5452,7 @@ function cargarDiseño(diseño) {
         });
     }
     
-    // LUEGO CARGAR VÁLVULAS CON SUS DATOS COMPLETOS
+    // CARGAR VÁLVULAS
     if (diseño.valvulas) {
         valvulas = [];
         
@@ -4489,7 +5607,7 @@ function cargarDiseño(diseño) {
     
     actualizarResumenTuberias();
     actualizarResultados();
-    mostrarMensaje(`Diseño "${diseño.nombre}" cargado correctamente. Válvulas: ${valvulas.length}`);
+    mostrarMensaje(`Diseño "${diseño.nombre}" cargado correctamente. Válvulas: ${valvulas.length}, Etiquetas: ${etiquetasPoligonos.length + etiquetasTuberias.length}`);
 }
 
 function calcularCentroPolilinea(latlngs) {
@@ -4581,12 +5699,13 @@ function eliminarDiseño(diseñoId, event) {
 }
 
 // ============================================
-// FUNCIÓN DE LIMPIAR DISEÑO
+// FUNCIÓN DE LIMPIAR DISEÑO (MEJORADA)
 // ============================================
 
 function limpiarDiseño() {
     deseleccionarElemento();
     
+    // Eliminar tuberías y sus etiquetas
     tuberias.forEach(t => {
         if (t.marcadorInicio) map.removeLayer(t.marcadorInicio);
         if (t.marcadorFin) map.removeLayer(t.marcadorFin);
@@ -4604,15 +5723,29 @@ function limpiarDiseño() {
     });
     tuberias = [];
     
+    // Eliminar etiquetas de tuberías del array global
+    etiquetasTuberias = [];
+    
     puntosTuberias = [];
     
+    // Eliminar elementos gráficos
     elementosGraficos.forEach(e => map.removeLayer(e.layer));
     elementosGraficos = [];
     
     valvulas = [];
     cabezales = [];
     
+    // Eliminar polígonos y sus etiquetas
+    drawnItems.eachLayer(function(layer) {
+        if (layer instanceof L.Polygon) {
+            eliminarEtiquetasPoligono(layer);
+        }
+    });
     drawnItems.clearLayers();
+    
+    // Limpiar array global de etiquetas de polígonos
+    etiquetasPoligonos = [];
+    
     areaTotal = 0;
     document.getElementById('areaDisplay').textContent = 'Área: 0 m²';
     
@@ -4650,6 +5783,18 @@ function limpiarDiseño() {
     if (panelInfo) {
         panelInfo.style.display = 'none';
     }
+    
+    const menuContextual = document.getElementById('menu-contextual-etiqueta');
+    if (menuContextual) {
+        menuContextual.remove();
+    }
+    
+    const menuLado = document.getElementById('menu-contextual-lado');
+    if (menuLado) {
+        menuLado.remove();
+    }
+    
+    mostrarMensaje('Diseño limpiado completamente');
 }
 
 // ============================================
