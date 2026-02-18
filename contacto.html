@@ -34,19 +34,15 @@
       text-align: center;
     }
 
-    /* LOGO: única línea con los dos colores, sin caja, sin fondo */
+    /* LOGO: imagen reducida al 50% manteniendo proporciones */
     .logo {
-      font-size: 3.5rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
       margin-bottom: 1rem;
-      line-height: 1.1;
     }
-    .agro {
-      color: #00A551; /* verde exacto */
-    }
-    .sistemas {
-      color: #1B75BB; /* azul exacto */
+    .logo img {
+      width: 50%;              /* 50% más pequeño que el original (la mitad) */
+      height: auto;
+      display: inline-block;
+      max-width: 400px;        /* opcional: límite para que no sea demasiado ancho en pantallas grandes */
     }
 
     /* eslogan mínimo, casi invisible de tan limpio */
@@ -134,8 +130,8 @@
     /* sin footer, sin header, sin líneas extras, sin elementos decorativos */
     /* responsivo perfecto */
     @media (max-width: 700px) {
-      .logo {
-        font-size: 2.8rem;
+      .logo img {
+        width: 70%;            /* un poco más grande en tablet para mantener presencia */
       }
       .claim {
         font-size: 1rem;
@@ -146,6 +142,9 @@
       }
     }
     @media (max-width: 480px) {
+      .logo img {
+        width: 85%;            /* más grande en móvil, pero aún reducido respecto al original */
+      }
       .btn {
         min-width: 100%;
       }
@@ -161,8 +160,7 @@
   <!-- único bloque: logo, línea de texto, botones. sin nada más -->
   <div class="landing">
 
-    <!-- logo: dos palabras, dos colores, ni un píxel de más -->
-
+    <!-- logo: imagen reducida al 50% (width:50%) con transición suave -->
     <div class="logo">
       <img src="logo.png" alt="Agrosistemas Logo">
     </div>
