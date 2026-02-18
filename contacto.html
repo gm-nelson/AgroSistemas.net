@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgroSistemas · landing</title>
+  <!-- Font Awesome solo para los iconos (favicon-style) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* reset extremo: cero decoración, solo lo necesario */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: white;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;      /* vertical center */
+      justify-content: center;  /* horizontal center */
+      color: #1a1e2b;
+      line-height: 1.2;
+    }
+
+    /* contenedor único: sin header, sin footer, solo el centro */
+    .landing {
+      max-width: 1000px;
+      width: 100%;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    /* LOGO: única línea con los dos colores, sin caja, sin fondo */
+    .logo {
+      font-size: 3.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      line-height: 1.1;
+    }
+    .agro {
+      color: #00A551; /* verde exacto */
+    }
+    .sistemas {
+      color: #1B75BB; /* azul exacto */
+    }
+
+    /* eslogan mínimo, casi invisible de tan limpio */
+    .claim {
+      font-size: 1.2rem;
+      color: #2f4858;
+      max-width: 550px;
+      margin: 0 auto 2.8rem auto;
+      font-weight: 350;
+      border: none;
+      padding: 0 0.5rem;
+    }
+
+    /* GRID de botones: 3 columnas iguales, sin adornos */
+    .botones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    /* cada botón es un link enorme sin bordes redondeados exagerados,
+       fondo blanco, solo un borde sutil y nada de sombras pesadas */
+    .btn {
+      flex: 1 1 200px;          /* crecen pero arrancan en 200px */
+      min-width: 200px;
+      background: white;
+      border: 1.5px solid #e0e8ef;
+      border-radius: 18px;       /* solo un toque, nada de "cards" */
+      padding: 2rem 1rem 1.8rem;
+      text-decoration: none;
+      color: black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9rem;
+      transition: 0.15s ease;
+    }
+
+    /* sin sombras al hover, solo el color del borde cambia al respectivo */
+    .btn-wsp:hover {
+      border-color: #00A551;
+    }
+    .btn-cad:hover {
+      border-color: #1B75BB;
+    }
+    .btn-catalogo:hover {
+      border-color: #00A551; 
+    }
+    /* también se puede usar el azul en hover del catálogo, pero minimal: solo un color */
+
+    /* íconos planos, sin círculo de fondo, sin relleno, solo el glyph */
+    .btn i {
+      font-size: 3.2rem;
+      color: #2e4056;           /* gris muy oscuro neutro */
+      transition: color 0.1s;
+    }
+
+    /* en hover el icono toma el color respectivo (guiño muy sutil) */
+    .btn-wsp:hover i {
+      color: #00A551;
+    }
+    .btn-cad:hover i {
+      color: #1B75BB;
+    }
+    .btn-catalogo:hover i {
+      color: #1B75BB;  /* o el verde, da igual, pero mantenemos el azul para variar */
+    }
+
+    /* texto del botón: minimal, sin pesos pesados */
+    .btn span {
+      font-size: 1.3rem;
+      font-weight: 450;
+      color: #1d2b36;
+    }
+
+    /* descripción secundaria ultra fina */
+    .btn small {
+      font-size: 0.9rem;
+      color: #5c6f82;
+      font-weight: 350;
+    }
+
+    /* sin footer, sin header, sin líneas extras, sin elementos decorativos */
+    /* responsivo perfecto */
+    @media (max-width: 700px) {
+      .logo {
+        font-size: 2.8rem;
+      }
+      .claim {
+        font-size: 1rem;
+        margin-bottom: 2.2rem;
+      }
+      .botones {
+        gap: 1.2rem;
+      }
+    }
+    @media (max-width: 480px) {
+      .btn {
+        min-width: 100%;
+      }
+    }
+
+    /* desactivamos cualquier adorno que pueda aparecer */
+    hr, footer, header, nav {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- único bloque: logo, línea de texto, botones. sin nada más -->
+  <div class="landing">
+
+    <!-- logo: dos palabras, dos colores, ni un píxel de más -->
+    <div class="logo">
+      <span class="agro">Agro</span><span class="sistemas">Sistemas</span>
+    </div>
+
+    <!-- mini frase de identidad, casi transparente -->
+    <div class="claim">
+      riego de precisión · tecnología agrícola
+    </div>
+
+    <!-- contenedor de tres botones con enlaces directos (target blank por comodidad, pero se puede quitar) -->
+    <div class="botones">
+
+      <!-- whatsapp con favicon whatsapp -->
+      <a href="https://wa.me/526681715096" target="_blank" rel="noopener noreferrer" class="btn btn-wsp">
+        <i class="fab fa-whatsapp"></i>
+        <span>Cotizar vía WhatsApp</span>
+        <small>asesoría inmediata</small>
+      </a>
+
+      <!-- CAD diseñador (icono de dibujo técnico) -->
+      <a href="https://gm-nelson.github.io/AgroSistemas.net/CAD.html" target="_blank" rel="noopener noreferrer" class="btn btn-cad">
+        <i class="fas fa-draw-polygon"></i>
+        <span>CAD · Diseñador de Riego</span>
+        <small>planos a medida</small>
+      </a>
+
+      <!-- catálogo (icono de libro / lista) -->
+      <a href="https://gm-nelson.github.io/AgroSistemas.net/Catalogo.html" target="_blank" rel="noopener noreferrer" class="btn btn-catalogo">
+        <i class="fas fa-book-open"></i>
+        <span>Catálogo</span>
+        <small>equipos y sistemas</small>
+      </a>
+
+    </div>
+
+    <!-- no hay nada más: ni pie, ni créditos, ni líneas decorativas, ni headers. -->
+    <!-- la página termina aquí -->
+
+  </div>
+  <!-- sin footer, sin nada -->
+</body>
+</html>
